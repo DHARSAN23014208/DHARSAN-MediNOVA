@@ -147,5 +147,5 @@ This project is for educational use only. The datasets used are from public sour
 ---
 
 <p align="center">
-  Made with ❤️ by Sanjay Sivaramakrishnan M and Team
+  Made with ❤️ by Dharsan and Team
 </p>
