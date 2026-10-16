@@ -1,18 +1,18 @@
 :root {
-    --primary: #6366f1;
-    --primary-dark: #4f46e5;
-    --secondary: #8b5cf6;
-    --accent: #a78bfa;
-    --cyan: #22d3ee;
-    --background: #0a0a1a;
-    --surface: #12122a;
-    --surface-light: #1a1a3a;
-    --text: #f8fafc;
-    --text-muted: #94a3b8;
-    --success: #10b981;
-    --danger: #ef4444;
-    --glass: rgba(255, 255, 255, 0.05);
-    --glass-border: rgba(255, 255, 255, 0.1);
+    --primary: #ff6b6b;          /* vibrant coral */
+    --primary-dark: #c94444;
+    --secondary: #6a5acd;        /* deep slate blue */
+    --accent: #ffa500;           /* bright orange */
+    --cyan: #00bcd4;             /* fresh cyan */
+    --background: #0d0d1a;      /* very dark navy */
+    --surface: #151525;          /* subtle dark surface */
+    --surface-light: #1e1e3a;
+    --text: #fafafa;             /* light text */
+    --text-muted: #b0b0c4;
+    --success: #00c853;          /* green accent */
+    --danger: #ff5252;           /* red accent */
+    --glass: rgba(255, 255, 255, 0.07);
+    --glass-border: rgba(255, 255, 255, 0.15);
 }
 
 * {
@@ -496,13 +496,15 @@ body {
 }
 
 .card {
-    background: var(--surface);
+    background: var(--glass);
     border-radius: 1rem;
     padding: 2rem;
     border: 1px solid var(--glass-border);
+    backdrop-filter: blur(12px);
     display: flex;
     flex-direction: column;
     transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
 }
 
 .card:hover {
