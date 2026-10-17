@@ -16,18 +16,19 @@ app.secret_key = os.environ.get('SECRET_KEY', 'medinova-clinical-secret-key-2026
 
 def to_python_type(obj):
     if isinstance(obj, dict):
-        return {k: to_python_type(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
+        return {str(k): to_python_type(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple, set)):
         return [to_python_type(v) for v in obj]
     elif isinstance(obj, (np.bool_, bool)):
         return bool(obj)
-    elif isinstance(obj, np.integer):
+    elif isinstance(obj, (np.integer, int)):
         return int(obj)
-    elif isinstance(obj, np.floating):
+    elif isinstance(obj, (np.floating, float)):
         return float(obj)
     elif isinstance(obj, np.ndarray):
         return [to_python_type(x) for x in obj.tolist()]
     return obj
+
 
 # Configure Upload & Sample Folders
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
@@ -813,7 +814,7 @@ def liver():
                 {'label': 'Total Bilirubin', 'value': f"{features[2]:.1f} mg/dL"},
                 {'label': 'Direct Bilirubin', 'value': f"{features[3]:.1f} mg/dL"},
                 {'label': 'Alkaline Phosphatase (ALP)', 'value': f"{int(features[4])} U/L"},
-                {'label': 'Alamine Aminotransferase (ALT)', 'value': f"{int(features[4])} U/L"},
+                {'label': 'Alamine Aminotransferase (ALT)', 'value': f"{int(features[5])} U/L"},
                 {'label': 'Aspartate Aminotransferase (AST)', 'value': f"{int(features[6])} U/L"},
                 {'label': 'Total Proteins', 'value': f"{features[7]:.1f} g/dL"},
                 {'label': 'Albumin', 'value': f"{features[8]:.1f} g/dL"},
@@ -1923,6 +1924,388 @@ def medinova_clinical_copilot_engine(user_msg, current_page, page_context, last_
 
 
 # ============================================================================
+# INTERACTIVE CLINICAL DOCTOR ADVISOR & SITUATION-HANDLING ENGINE
+# ============================================================================
+
+CLINICAL_DOMAINS = {
+    'heart': {
+        'name': 'Cardiovascular Health & Chest Symptoms',
+        'route': '/heart',
+        'action_label': '🫀 Open Heart Screening',
+        'insight_key': 'heart_disease',
+        'keywords': [
+            'chest pain', 'chest pressure', 'heart palpitations', 'left arm pain', 'angina',
+            'palpitations', 'high bp', 'blood pressure', 'hypertension', 'shortness of breath on walking',
+            'heart attack', 'cardiac', 'heart', 'bp'
+        ],
+        'q1_text': "To help you handle this safely, how severe are your chest symptoms or blood pressure readings right now, and how long have you had them?",
+        'q1_chips': ["🔴 Severe / Started suddenly", "🟡 Moderate / Past few days", "🟢 Mild / Just checking", "📊 High Blood Pressure"],
+        'q2_text': "Are you experiencing shortness of breath, unexplained cold sweating, dizziness, nausea, or pain radiating to your left arm, neck, or jaw?",
+        'q2_chips': ["Yes, I have those symptoms", "No, none of those", "Only mild chest tightness", "I already ran a MediNova test"],
+        'emergency_advice': (
+            "🚨 **CRITICAL FIRST-AID — CALL 112 / 911 / 108 IMMEDIATELY:**\n"
+            "- **Sit Down & Rest:** Sit upright and rest immediately in a well-ventilated room. Do not walk, climb stairs, or exert yourself.\n"
+            "- **Loosen Tight Clothing:** Loosen collar, necktie, and waistband to reduce vascular resistance.\n"
+            "- **Alert Someone Nearby:** Alert a family member, neighbor, or colleague right now. Do not drive yourself to the emergency department.\n"
+            "- **Emergency Dispatch:** Call 112 / 911 / 108 right away and request an ambulance with cardiac life-support."
+        ),
+        'immediate_care': (
+            "✅ **Immediate Action — How to Handle This Right Now:**\n"
+            "1. **Rest in an Upright Posture:** Sit with your back supported. Take slow, regulated abdominal breaths.\n"
+            "2. **Check Resting Vitals:** Measure your resting blood pressure and pulse rate with a home cuff if available. Write down the numbers.\n"
+            "3. **Zero Stimulants:** Avoid all caffeine, energy drinks, nicotine, alcohol, and high-sodium meals.\n"
+            "4. **Monitor Warning Signs:** If you notice sudden chest pressure radiating to your arm or jaw, seek emergency medical care immediately."
+        )
+    },
+    'diabetes': {
+        'name': 'Diabetes & Glycemic Regulation',
+        'route': '/diabetes',
+        'action_label': '🩸 Open Diabetes Screening',
+        'insight_key': 'diabetes',
+        'keywords': [
+            'diabetes', 'sugar', 'blood sugar', 'glucose', 'hba1c', 'frequent thirst',
+            'excessive urination', 'peeing a lot', 'polydipsia', 'polyuria', 'sweet smelling urine',
+            'fruity breath', 'insulin'
+        ],
+        'q1_text': "To help you handle your blood sugar safely, what are your current glucose levels or symptoms, and how long have you noticed these changes?",
+        'q1_chips': ["🔴 Very High (>250 mg/dL) / Sudden", "🟡 Moderately High / Past few days", "🟢 Mild / Routine checking", "📉 Low Blood Sugar (<70 mg/dL)"],
+        'q2_text': "Are you having extreme unquenchable thirst, frequent urination at night, sudden blurred vision, nausea, or fruity-smelling breath?",
+        'q2_chips': ["Yes, I have those symptoms", "No, none of those", "Just thirst & fatigue", "I already ran a MediNova test"],
+        'emergency_advice': (
+            "🚨 **CRITICAL FIRST-AID — DKA / ACUTE HYPERGLYCEMIA ALERT:**\n"
+            "- **Immediate Glucose & Ketone Test:** Test blood glucose and urine ketones if a home meter is accessible.\n"
+            "- **Call Emergency (112 / 911 / 108):** If glucose is >250–300 mg/dL accompanied by nausea, vomiting, confusion, or fruity breath, seek emergency care to rule out Diabetic Ketoacidosis (DKA).\n"
+            "- **Do Not Strenuously Exercise:** Strenuous exertion with high ketones accelerates dehydration and metabolic acidosis."
+        ),
+        'immediate_care': (
+            "✅ **Immediate Action — How to Handle This Right Now:**\n"
+            "1. **Hydrate with Plain Water:** Drink 2 to 3 glasses of clean room-temperature water to help your kidneys clear excess glucose.\n"
+            "2. **Strictly Cut Simple Sugars:** Avoid fruit juices, sodas, sweets, refined flours, and high-glycemic carbohydrates.\n"
+            "3. **Gentle Walking:** A light 15-minute flat walk after meals activates peripheral muscle GLUT-4 glucose transporters.\n"
+            "4. **Log Biomarkers:** Record fasting and 2-hour post-prandial blood glucose along with recent HbA1c values."
+        )
+    },
+    'kidney': {
+        'name': 'Kidney & Renal Health',
+        'route': '/kidney',
+        'action_label': '🩺 Open Kidney Screening',
+        'insight_key': 'kidney_disease',
+        'keywords': [
+            'kidney', 'foamy urine', 'frothy urine', 'swollen ankles', 'swelling in feet',
+            'edema', 'puffiness around eyes', 'flank pain', 'kidney pain', 'creatinine', 'blood urea', 'renal'
+        ],
+        'q1_text': "To assess your kidney health safely, how severe is the swelling or urine change, and when did you first notice it?",
+        'q1_chips': ["🔴 Severe swelling / Sudden drop in urine", "🟡 Moderate swelling / Foamy urine", "🟢 Mild puffiness / Just checking", "🧪 Abnormal lab creatinine"],
+        'q2_text': "Have you noticed persistent foamy/bubbly urine, cola-colored or bloody urine, swelling around your ankles/eyes, or lower back flank pain?",
+        'q2_chips': ["Yes, swelling and foamy urine", "No, none of those", "Only foamy urine", "I already ran a MediNova test"],
+        'emergency_advice': (
+            "🚨 **CRITICAL FIRST-AID — ACUTE RENAL / FLUID OVERLOAD ALERT:**\n"
+            "- A sudden severe decrease in urine output paired with breathing difficulty or rapid full-body edema suggests acute renal compromise or pulmonary fluid overload.\n"
+            "- Seek immediate emergency medical assessment (112 / 911 / 108) or proceed to the nearest acute dialysis/nephrology hospital."
+        ),
+        'immediate_care': (
+            "✅ **Immediate Action — How to Handle This Right Now:**\n"
+            "1. **Discontinue OTC NSAID Painkillers:** Completely avoid ibuprofen, naproxen, and diclofenac—they constrict renal blood flow.\n"
+            "2. **Strict Low-Sodium Diet:** Keep sodium intake under 1,500 mg/day; avoid table salt and processed foods to reduce fluid retention.\n"
+            "3. **Monitor Urine Output & Fluid Intake:** Record your daily fluid intake and track urine color and volume.\n"
+            "4. **Control Blood Pressure:** Keep your resting blood pressure well below 130/80 mm Hg to prevent glomerular capillary injury."
+        )
+    },
+    'liver': {
+        'name': 'Liver & Hepatic Function',
+        'route': '/liver',
+        'action_label': '🧬 Open Liver Screening',
+        'insight_key': 'liver_disease',
+        'keywords': [
+            'liver', 'yellow eyes', 'yellow skin', 'jaundice', 'dark urine', 'pale stools',
+            'right abdominal pain', 'bilirubin', 'alt', 'ast', 'hepatic', 'cirrhosis', 'fatty liver'
+        ],
+        'q1_text': "To evaluate your liver status safely, how noticeable is the jaundice, abdominal pain, or fatigue, and how quickly did it develop?",
+        'q1_chips': ["🔴 Sudden deep yellowing / Upper pain", "🟡 Noticeable jaundice / Past few days", "🟢 Mild fatigue / Routine check", "🧪 Elevated SGOT/SGPT enzymes"],
+        'q2_text': "Have you observed yellowing in the whites of your eyes, tea-colored dark urine, clay-colored pale stools, or right upper abdominal swelling?",
+        'q2_chips': ["Yes, yellow eyes and dark urine", "No, none of those", "Only fatigue & abdominal ache", "I already ran a MediNova test"],
+        'emergency_advice': (
+            "🚨 **CRITICAL FIRST-AID — ACUTE HEPATIC ENCEPHALOPATHY ALERT:**\n"
+            "- Acute jaundice accompanied by mental confusion, severe drowsiness, slurred speech, or persistent vomiting requires immediate emergency hospitalization."
+        ),
+        'immediate_care': (
+            "✅ **Immediate Action — How to Handle This Right Now:**\n"
+            "1. **Complete Alcohol Cessation:** Eliminate 100% of alcohol intake immediately to protect hepatocytes from acute toxic stress.\n"
+            "2. **Avoid Hepatotoxic Drugs:** Avoid paracetamol in high doses and discontinue unverified herbal remedies.\n"
+            "3. **Clean Low-Fat Nutrition:** Eat light, easily digestible meals (boiled vegetables, lean chicken, lentils) and stay hydrated with clean water.\n"
+            "4. **Complete Liver Panel (LFT):** Test Total Bilirubin, Direct Bilirubin, ALT, AST, ALP, and Albumin/Globulin ratio."
+        )
+    },
+    'breast_cancer': {
+        'name': 'Breast Oncology & Tissue Screening',
+        'route': '/breast_cancer',
+        'action_label': '🔬 Open Breast Oncology Screening',
+        'insight_key': 'breast_cancer',
+        'keywords': [
+            'breast lump', 'lump in breast', 'nipple discharge', 'breast skin dimpling',
+            'inverted nipple', 'peau d orange', 'breast pain', 'breast mass', 'breast cancer', 'mammogram'
+        ],
+        'q1_text': "To guide your clinical evaluation safely, how long have you noticed this breast lump or tissue change, and does it feel tender or hard?",
+        'q1_chips': ["🔴 Hard / Fixed / Rapidly growing", "🟡 New palpable lump / Past weeks", "🟢 Cyclical tenderness / Hormonal", "🔬 Have biopsy/mammogram numbers"],
+        'q2_text': "Have you observed any skin dimpling, spontaneous bloody/clear nipple discharge, recent nipple retraction, or swollen armpit lymph nodes?",
+        'q2_chips': ["Yes, I have noticed those signs", "No, none of those", "Only a localized movable lump", "I already have cytology values"],
+        'emergency_advice': (
+            "🚨 **CLINICAL ONCOLOGY ADVICE:**\n"
+            "- Rapidly developing inflammatory skin changes (red, hot, swollen breast skin with an orange-peel texture) or rapidly growing hard masses should be evaluated by a breast oncology specialist within 24–48 hours."
+        ),
+        'immediate_care': (
+            "✅ **Immediate Action — How to Handle This Right Now:**\n"
+            "1. **Do Not Squeeze or Massage:** Avoid repetitive squeezing or palpating, which causes local tissue edema and irritation.\n"
+            "2. **Record Symptom Timeline:** Note the exact date noticed, relationship to menstrual cycles, and any family oncological history.\n"
+            "3. **Schedule Dedicated Imaging:** Arrange a clinical breast exam (CBE) along with bilateral breast ultrasound or digital mammogram.\n"
+            "4. **Run MediNova Cytology Analysis:** Screen your fine-needle aspiration (FNA) cell morphometrics with MediNova's machine learning model."
+        )
+    },
+    'malaria': {
+        'name': 'Malaria Parasitology & Febrile Illness',
+        'route': '/malaria',
+        'action_label': '🦟 Open Malaria Smear Screening',
+        'insight_key': 'malaria',
+        'keywords': [
+            'malaria', 'shaking chills', 'rigors', 'high fever spikes', 'tropical travel',
+            'mosquito bite', 'cyclic sweating', 'fever with chills', 'intermittent fever'
+        ],
+        'q1_text': "To assess possible malaria parasite infection, what is your highest fever temperature, and when did the chills or fever begin?",
+        'q1_chips': ["🔴 High fever (>103°F) + Shaking chills", "🟡 Moderate fever (100-102°F) / Past 3 days", "🟢 Low-grade fever / Mild body ache", "🦟 Recent mosquito bites / Travel"],
+        'q2_text': "Are the fevers occurring in periodic cycles (e.g., every 24–48 hours) with teeth-chattering chills followed by heavy sweating, severe headache, or vomiting?",
+        'q2_chips': ["Yes, cyclic chills and sweating", "No, constant unremitting fever", "Fever with severe body aches", "I have a blood smear slide ready"],
+        'emergency_advice': (
+            "🚨 **CRITICAL FIRST-AID — SEVERE FALCIPARUM MALARIA WARNING:**\n"
+            "- High fever accompanied by delirium, extreme lethargy, dark/blackish urine (hemoglobinuria), or shortness of breath requires immediate emergency hospital admission for intravenous antiparasitic therapy."
+        ),
+        'immediate_care': (
+            "✅ **Immediate Action — How to Handle This Right Now:**\n"
+            "1. **Aggressive Hydration:** Fevers and rigors cause severe dehydration; drink Oral Rehydration Salts (ORS), coconut water, and clean fluids.\n"
+            "2. **Tepid Sponging & Antipyretics:** Sponge forehead and limbs with lukewarm water; take doctor-recommended paracetamol to reduce fever. Avoid aspirin.\n"
+            "3. **Avoid Random Antibiotics:** Malaria is an intraerythrocytic protozoan parasite (Plasmodium), not a bacteria. Antibiotics will not treat it.\n"
+            "4. **Prompt Smear Test:** Get a thin and thick peripheral Giemsa blood smear or Rapid Diagnostic Antigen Test (RDT) immediately."
+        )
+    },
+    'pneumonia': {
+        'name': 'Pneumonia & Respiratory Health',
+        'route': '/pneumonia',
+        'action_label': '🫁 Open Pneumonia X-Ray Screening',
+        'insight_key': 'pneumonia',
+        'keywords': [
+            'pneumonia', 'cough with phlegm', 'coughing up mucus', 'chest pain when coughing',
+            'crackles', 'lung infection', 'breathing hurts', 'shortness of breath', 'difficulty breathing',
+            'persistent cough', 'wheezing', 'spo2', 'oxygen'
+        ],
+        'q1_text': "To evaluate your respiratory status, how severe is your cough or shortness of breath, and what color is the mucus?",
+        'q1_chips': ["🔴 Severe shortness of breath / High fever", "🟡 Deep cough with yellow/green phlegm", "🟢 Mild dry cough / Past few days", "📉 Low SpO2 (<94%) on oximeter"],
+        'q2_text': "Are you experiencing sharp chest pain when inhaling deeply or coughing, breathing difficulty while resting, or pulse oximeter SpO2 below 94%?",
+        'q2_chips': ["Yes, chest pain & low oxygen", "No, just cough and mild fever", "Breathing is harder when lying down", "I already have a chest X-Ray image"],
+        'emergency_advice': (
+            "🚨 **CRITICAL FIRST-AID — RESPIRATORY COMPROMISE ALERT:**\n"
+            "- If your pulse oximeter SpO2 is below 92–94%, breathing is rapid or shallow, lips/fingernails appear cyanotic (bluish), or confusion occurs, call **112 / 911 / 108** immediately.\n"
+            "- Sit propped upright. Do not lie flat on your back."
+        ),
+        'immediate_care': (
+            "✅ **Immediate Action — How to Handle This Right Now:**\n"
+            "1. **Maintain Upright Seated Posture:** Sit with your back elevated at 45–90 degrees to assist diaphragmatic expansion and air entry.\n"
+            "2. **Check Oxygen Saturation (SpO2):** Use a fingertip pulse oximeter every 3–4 hours and record each reading.\n"
+            "3. **Inhale Warm Steam & Hydrate:** Inhaling steam loosens thick pulmonary secretions. Sip warm water with honey and lemon.\n"
+            "4. **Chest X-Ray Analysis:** Upload a PA chest radiograph to MediNova's deep convolutional radiography scanner for lung consolidation analysis."
+        )
+    },
+    'general': {
+        'name': 'General Health & Clinical Triage',
+        'route': '/features',
+        'action_label': '🔍 Explore MediNova Diagnostic Suite',
+        'insight_key': 'general',
+        'keywords': [
+            'dizzy', 'dizziness', 'lightheaded', 'faint', 'weakness', 'fatigue', 'nausea',
+            'vomiting', 'headache', 'body ache', 'pain', 'unwell', 'sick'
+        ],
+        'q1_text': "To help guide your situation safely, how intense are your symptoms and did they start suddenly or gradually?",
+        'q1_chips': ["🔴 Started suddenly & feels intense", "🟡 Moderate discomfort for a few days", "🟢 Mild / Just feeling run down", "📊 I want to check a specific organ"],
+        'q2_text': "Are you having any focal red flags such as chest tightness, sudden shortness of breath, extreme thirst, jaundice, or focal weakness?",
+        'q2_chips': ["Yes, chest or breathing issues", "Yes, blood sugar or thirst issues", "Yes, fever and shaking chills", "No specific red flags"],
+        'emergency_advice': (
+            "🚨 **GENERAL EMERGENCY REMINDER:**\n"
+            "- If you experience sudden crushing chest pressure, severe shortness of breath, sudden facial droop or arm weakness, or loss of consciousness, call **112 / 911 / 108** immediately."
+        ),
+        'immediate_care': (
+            "✅ **Immediate Action — How to Handle This Right Now:**\n"
+            "1. **Rest & Hydrate:** Sit or lie down in a quiet, cool space. Sip water with electrolytes slowly.\n"
+            "2. **Monitor Resting Vitals:** Check your temperature, resting pulse, and blood pressure if home devices are available.\n"
+            "3. **Avoid Sudden Posture Shifts:** Rise slowly from sitting or lying down to prevent orthostatic dizziness.\n"
+            "4. **Screen Prominent Symptoms:** Use MediNova's organ-specific diagnostic suites to screen targeted biomarkers."
+        )
+    }
+}
+
+def detect_clinical_domain(message):
+    msg = (message or '').lower()
+    for domain_key in ['heart', 'diabetes', 'kidney', 'liver', 'breast_cancer', 'malaria', 'pneumonia', 'general']:
+        domain_info = CLINICAL_DOMAINS[domain_key]
+        if any(kw in msg for kw in domain_info['keywords']):
+            return domain_key
+    return None
+
+def generate_situation_action_plan(domain_key, severity, associated_symptoms):
+    d_info = CLINICAL_DOMAINS.get(domain_key, CLINICAL_DOMAINS['general'])
+    insight_key = d_info.get('insight_key', 'general')
+    
+    sev_str = (severity or '').lower()
+    assoc_str = (associated_symptoms or '').lower()
+    is_high_risk = any(w in sev_str for w in ['severe', 'sudden', 'high', 'critical', 'red', '🔴', '103', '250', 'bad']) or \
+                   any(w in assoc_str for w in ['yes', 'shortness of breath', 'severe', 'pain', 'sweating', 'arm', 'jaw', 'low oxygen', 'chills'])
+    
+    immediate_section = d_info['emergency_advice'] if is_high_risk else d_info['immediate_care']
+    
+    diet_section = ""
+    if insight_key in DISEASE_INSIGHTS:
+        disease_dict = DISEASE_INSIGHTS[insight_key]
+        sub_key = 'malignant' if 'malignant' in disease_dict else ('infected' if 'infected' in disease_dict else 'positive')
+        insight_data = disease_dict.get(sub_key, {})
+        
+        dos = insight_data.get('diet_dos', [])
+        donts = insight_data.get('diet_donts', [])
+        recs = insight_data.get('recommendations', [])
+        doc_qs = insight_data.get('doctor_questions', [])
+        
+        diet_section = (
+            "\n\n#### 🥗 3. Safe Diet & Care Protocol\n"
+            "**✅ Recommended Evidence-Based Nutritional Dos:**\n"
+            + "\n".join([f"- {item}" for item in dos[:3]]) + "\n\n"
+            "**❌ Foods & Habits to Strictly Avoid:**\n"
+            + "\n".join([f"- {item}" for item in donts[:3]]) + "\n\n"
+            "**📋 Clinical Recommendations:**\n"
+            + "\n".join([f"- {item}" for item in recs[:3]]) + "\n\n"
+            "**❓ High-Yield Questions for Your Physician:**\n"
+            + "\n".join([f"- \"{item}\"" for item in doc_qs[:3]])
+        )
+    
+    reply = (
+        f"### 🩺 MediNova Situation-Handling Action Plan: {d_info['name']}\n\n"
+        f"Based on your clinical consultation (*Severity: {severity or 'Noted'}* | *Associated Indicators: {associated_symptoms or 'Evaluated'}*), here is your tailored step-by-step action plan:\n\n"
+        f"#### 🚨 1. Immediate Action — How to Handle This Right Now\n"
+        f"{immediate_section}\n\n"
+        f"#### 🩺 2. Recommended MediNova AI Screening\n"
+        f"- **Recommended Modality:** **{d_info['name']}**\n"
+        f"- **Direct Route:** Click the screening button below to launch the automated AI model and test your clinical biomarkers.\n"
+        f"{diet_section}\n\n"
+        f"> 💡 **Clinical Reminder:** MediNova is an AI clinical decision support tool. If your symptoms worsen or you feel acute distress, contact emergency responders (**112 / 911 / 108**) immediately."
+    )
+    
+    actions = [
+        {"label": d_info['action_label'], "url": d_info['route']},
+        {"label": "🏥 Emergency Directory & Specialists", "url": "/contact"}
+    ]
+    
+    quick_replies = [
+        "📊 Explain my latest test result",
+        "🫀 Check cardiovascular symptoms",
+        "🩸 Check blood sugar / diabetes",
+        "🌡️ Check fever or cough",
+        "↺ Reset Consultation"
+    ]
+    
+    return {
+        "reply": reply,
+        "quick_replies": quick_replies,
+        "actions": actions,
+        "confidence_badge": f"Action Plan • {d_info['name']}",
+        "is_emergency": is_high_risk,
+        "suggested_actions": actions,
+        "follow_up_chips": quick_replies
+    }
+
+def handle_explain_test_result(last_diagnosis):
+    if not last_diagnosis:
+        reply = (
+            "### 📊 MediNova Diagnostic Results Analysis\n\n"
+            "No completed diagnostic screening was detected in your active session.\n\n"
+            "**How to run a screening and receive an instant AI biomarker analysis:**\n"
+            "1. Choose any of MediNova's **7 clinical diagnostic suites** below.\n"
+            "2. Enter patient biomarkers, or click **⚡ Fill High-Risk / Healthy Sample** for instant test automation.\n"
+            "3. Click **Submit** to run the validated machine learning model.\n"
+            "4. On your result card, click **🤖 Ask MediNova AI to Explain This Result** for an automatic breakdown!\n\n"
+            "Which diagnostic suite would you like to explore?"
+        )
+        actions = [
+            {"label": "🫀 Heart Screening", "url": "/heart"},
+            {"label": "🩸 Diabetes Screening", "url": "/diabetes"},
+            {"label": "🩺 Kidney Screening", "url": "/kidney"},
+            {"label": "🧬 Liver Screening", "url": "/liver"},
+            {"label": "🔍 All 7 Suites", "url": "/features"}
+        ]
+        chips = [
+            "🫀 Chest pain or high BP",
+            "🩸 High blood sugar advice",
+            "🌡️ Fever or cough check",
+            "🧪 Kidney / Liver check"
+        ]
+        return {
+            "reply": reply,
+            "quick_replies": chips,
+            "actions": actions,
+            "confidence_badge": "Session Context • No Active Test",
+            "is_emergency": False,
+            "suggested_actions": actions,
+            "follow_up_chips": chips
+        }
+        
+    condition = last_diagnosis.get('condition', 'Diagnostic Screening')
+    route = last_diagnosis.get('route', '/features')
+    prediction = last_diagnosis.get('prediction', 'Evaluated')
+    is_pos = bool(last_diagnosis.get('is_positive', False))
+    patient_summary = last_diagnosis.get('patient_summary', [])
+    specialist = last_diagnosis.get('specialist', 'Clinical Specialist')
+    urgency = last_diagnosis.get('urgency_window', 'Within 24-48 hours')
+    recommended_tests = last_diagnosis.get('recommended_tests', [])
+    
+    summary_lines = []
+    for item in patient_summary:
+        summary_lines.append(f"- **{item.get('label')}**: `{item.get('value')}`")
+    summary_md = "\n".join(summary_lines) if summary_lines else "- General scan parameters evaluated within clinical thresholds."
+    
+    status_badge = "🚨 High Clinical Alert / Elevated Risk" if is_pos else "✅ Optimal / Low Risk Detected"
+    
+    reply = (
+        f"### 🩺 MediNova AI Doctor: Diagnostic Result Explanation\n\n"
+        f"**Screening Condition:** {condition}\n"
+        f"**Algorithmic Assessment:** `{prediction}`\n"
+        f"**Clinical Status:** **{status_badge}**\n\n"
+        f"#### 📊 Biomarker Breakdown Recorded for Patient:\n"
+        f"{summary_md}\n\n"
+        f"#### 🏥 Recommended Specialist & Urgency:\n"
+        f"- **Specialist:** **{specialist}**\n"
+        f"- **Urgency Window:** **{urgency}**\n"
+        f"- **Confirmatory Clinical Tests:** {', '.join(['`' + t + '`' for t in recommended_tests]) if recommended_tests else 'Routine primary care checkup'}\n\n"
+        f"#### 📋 How to Handle This Result:\n"
+        f"{'Our machine learning models detected elevated physiological risk markers. Schedule an in-person clinical consultation with your specialist and assemble previous medical records for review.' if is_pos else 'All submitted biomarkers and imaging features align with healthy physiological reference ranges. Continue routine preventive wellness checkups.'}"
+    )
+    
+    actions = [
+        {"label": f"📄 Re-open {condition} Suite", "url": route},
+        {"label": "🏥 Specialist & Emergency Directory", "url": "/contact"}
+    ]
+    quick_replies = [
+        "What diet should I follow?",
+        "What questions should I ask my doctor?",
+        "Check another symptom",
+        "↺ Reset Consultation"
+    ]
+    
+    return {
+        "reply": reply,
+        "quick_replies": quick_replies,
+        "actions": actions,
+        "confidence_badge": f"Result Breakdown • {condition}",
+        "is_emergency": is_pos,
+        "suggested_actions": actions,
+        "follow_up_chips": quick_replies
+    }
+
+
+# ============================================================================
 # API ENDPOINTS: CHATBOT INTEGRATION
 # ============================================================================
 
@@ -1934,58 +2317,219 @@ def api_chat():
         current_page = data.get('current_page', '')
         page_context = data.get('page_context', {})
         
+        initial_chips = [
+            "🫀 Chest pain or high BP",
+            "🩸 High blood sugar / Diabetes advice",
+            "🌡️ Fever, chills, or persistent cough",
+            "🧪 Kidney or Liver symptom check",
+            "📊 Explain my latest test result"
+        ]
+        initial_actions = [
+            {"label": "🫀 Heart Screening", "url": "/heart"},
+            {"label": "🩸 Diabetes Screening", "url": "/diabetes"},
+            {"label": "🩺 Kidney Screening", "url": "/kidney"},
+            {"label": "🔍 All 7 Suites", "url": "/features"}
+        ]
+        
         if not user_message:
             return jsonify({
-                "reply": "Please provide a clinical question, symptom description, or request to explain your results.",
-                "confidence_badge": "Clinical Copilot",
+                "reply": "Hi! I'm your **MediNova Clinical AI Advisor**. Tell me how you're feeling or pick a situation below—I'll ask a couple of quick clinical questions and guide you step-by-step on how to handle it safely.",
+                "quick_replies": initial_chips,
+                "actions": initial_actions,
+                "confidence_badge": "Clinical Advisor Online",
                 "is_emergency": False,
-                "suggested_actions": [],
-                "follow_up_chips": ["Explain my results", "Heart screening", "Diabetes test"]
+                "suggested_actions": initial_actions,
+                "follow_up_chips": initial_chips
             })
             
-        last_diagnosis = session.get('last_diagnosis')
+        msg_lower = user_message.lower()
         
-        # Try Live LLM Mode (Engine 1) if API key configured
+        # 1. Reset / restart check
+        if msg_lower in ['reset', 'restart', 'clear', 'start over', '↺ reset consultation', 'reset chat', 'start new']:
+            session['chat_state'] = {'stage': 'idle', 'topic': None, 'severity': None, 'associated_symptoms': None}
+            session.modified = True
+            return jsonify({
+                "reply": "I have reset our consultation. How are you feeling right now? Pick a symptom or situation below, or describe how you feel in your own words:",
+                "quick_replies": initial_chips,
+                "actions": initial_actions,
+                "confidence_badge": "Advisor Reset",
+                "is_emergency": False,
+                "suggested_actions": initial_actions,
+                "follow_up_chips": initial_chips
+            })
+            
+        # 2. Check "Explain my test result"
+        is_explain_query = any(k in msg_lower for k in [
+            'explain', 'latest test', 'my test', 'my result', 'my diagnosis',
+            'explain my results', 'explain my test result', 'explain my latest test result',
+            'biomarker analysis'
+        ])
+        if is_explain_query:
+            last_diag = session.get('last_diagnosis')
+            resp = handle_explain_test_result(last_diag)
+            return jsonify(resp)
+            
+        # 3. Retrieve conversation state
+        chat_state = session.get('chat_state')
+        if not isinstance(chat_state, dict):
+            chat_state = {'stage': 'idle', 'topic': None, 'severity': None, 'associated_symptoms': None}
+            
+        current_stage = chat_state.get('stage', 'idle')
+        current_topic = chat_state.get('topic')
+        
+        # Check if user is answering Turn 1 (Severity & Duration)
+        if current_stage == 'turn1_asked' and current_topic and current_topic in CLINICAL_DOMAINS:
+            d_info = CLINICAL_DOMAINS[current_topic]
+            chat_state['severity'] = user_message
+            chat_state['stage'] = 'turn2_asked'
+            session['chat_state'] = chat_state
+            session.modified = True
+            
+            is_emergency = any(trig in msg_lower for trig in EMERGENCY_TRIGGERS)
+            
+            reply = (
+                f"### 🩺 MediNova Clinical AI Advisor\n"
+                f"**Noted Severity & Duration:** *\"{user_message}\"*\n\n"
+                f"Thank you for sharing that important context. To check for critical complications or red-flag warning signs:\n\n"
+                f"👉 **Follow-Up Question 2 of 2:**\n"
+                f"{d_info['q2_text']}"
+            )
+            actions = [{"label": d_info['action_label'], "url": d_info['route']}]
+            if is_emergency:
+                actions.insert(0, {"label": "🚨 Call 112 / 911 / 108 Immediately", "url": "/contact"})
+                
+            return jsonify({
+                "reply": reply,
+                "quick_replies": d_info['q2_chips'],
+                "actions": actions,
+                "confidence_badge": f"Triage Step 2/2 • {d_info['name']}",
+                "is_emergency": is_emergency,
+                "suggested_actions": actions,
+                "follow_up_chips": d_info['q2_chips']
+            })
+            
+        # Check if user is answering Turn 2 (Red-Flag / Associated Symptoms -> Action Plan)
+        elif current_stage == 'turn2_asked' and current_topic and current_topic in CLINICAL_DOMAINS:
+            chat_state['associated_symptoms'] = user_message
+            chat_state['stage'] = 'completed'
+            session['chat_state'] = chat_state
+            session.modified = True
+            
+            plan_response = generate_situation_action_plan(
+                current_topic,
+                chat_state.get('severity'),
+                user_message
+            )
+            return jsonify(plan_response)
+            
+        # Otherwise, check if user describes a symptom / picks a clinical domain
+        matched_domain = detect_clinical_domain(user_message)
+        
+        # If user directly asks for diet or physician questions
+        if any(k in msg_lower for k in ['diet', 'food', 'eat', 'avoid', 'doctor questions', 'nutrition']) and matched_domain:
+            plan_response = generate_situation_action_plan(matched_domain, "Routine Dietary Inquiry", "General Guidance")
+            return jsonify(plan_response)
+            
+        if matched_domain:
+            # Turn 1: Start multi-turn triage consultation
+            d_info = CLINICAL_DOMAINS[matched_domain]
+            session['chat_state'] = {
+                'stage': 'turn1_asked',
+                'topic': matched_domain,
+                'severity': None,
+                'associated_symptoms': None
+            }
+            session.modified = True
+            
+            is_emergency = any(trig in msg_lower for trig in EMERGENCY_TRIGGERS)
+            
+            reply = (
+                f"### 🩺 MediNova Clinical AI Advisor\n"
+                f"**Symptom Domain Identified:** {d_info['name']}\n\n"
+                f"I hear your concern, and I will help you handle this safely and step-by-step. To recommend the right immediate first-aid, safe diet protocol, and matching MediNova AI screening:\n\n"
+                f"👉 **Follow-Up Question 1 of 2:**\n"
+                f"{d_info['q1_text']}"
+            )
+            actions = [{"label": d_info['action_label'], "url": d_info['route']}]
+            if is_emergency:
+                actions.insert(0, {"label": "🚨 Call Emergency (112 / 911 / 108)", "url": "/contact"})
+                
+            return jsonify({
+                "reply": reply,
+                "quick_replies": d_info['q1_chips'],
+                "actions": actions,
+                "confidence_badge": f"Triage Step 1/2 • {d_info['name']}",
+                "is_emergency": is_emergency,
+                "suggested_actions": actions,
+                "follow_up_chips": d_info['q1_chips']
+            })
+            
+        # Check LLM mode if configured
+        last_diagnosis = session.get('last_diagnosis')
         llm_response = call_live_llm(user_message, current_page, page_context, last_diagnosis)
         if llm_response:
-            # Check emergency triggers even in LLM mode for safety
-            is_emergency = any(trig in user_message.lower() for trig in EMERGENCY_TRIGGERS)
+            is_emergency = any(trig in msg_lower for trig in EMERGENCY_TRIGGERS)
             actions = [{"label": "📄 Print Medical Report", "action": "print"}]
             if is_emergency:
                 actions = [{"label": "🚨 Emergency Directory", "url": "/contact"}]
+            chips = ["Explain my results", "What are my next steps?", "Questions for my doctor"]
             return jsonify({
                 "reply": llm_response['reply'],
                 "confidence_badge": llm_response['confidence_badge'],
                 "is_emergency": is_emergency,
+                "actions": actions,
+                "quick_replies": chips,
                 "suggested_actions": actions,
-                "follow_up_chips": ["Explain my results", "What are my next steps?", "Questions for my doctor"]
+                "follow_up_chips": chips
             })
             
-        # Built-in Clinical Reasoning Engine (Engine 2 - Zero-Key Guaranteed Fallback)
+        # Fallback to local clinical copilot engine
         response_data = medinova_clinical_copilot_engine(user_message, current_page, page_context, last_diagnosis)
+        if 'quick_replies' not in response_data:
+            response_data['quick_replies'] = response_data.get('follow_up_chips', initial_chips)
+        if 'actions' not in response_data:
+            response_data['actions'] = response_data.get('suggested_actions', initial_actions)
         return jsonify(response_data)
         
     except Exception as e:
         print(f"Error in /api/chat: {e}")
         return jsonify({
-            "reply": f"An error occurred while analyzing clinical request: {str(e)}",
+            "reply": f"An error occurred while analyzing your clinical request: {str(e)}",
             "confidence_badge": "System Alert",
             "is_emergency": False,
-            "suggested_actions": [],
-            "follow_up_chips": ["Try again", "Go to Home", "Emergency Directory"]
+            "actions": [{"label": "🏠 Return to Home", "url": "/"}],
+            "quick_replies": ["🫀 Chest pain or high BP", "🩸 High blood sugar advice", "🌡️ Fever or cough", "↺ Reset Consultation"]
         }), 500
 
 
+@app.route('/api/chat/reset', methods=['POST'])
 @app.route('/api/chat/clear', methods=['POST'])
-def api_chat_clear():
+def api_chat_reset():
+    session['chat_state'] = {'stage': 'idle', 'topic': None, 'severity': None, 'associated_symptoms': None}
     session.pop('last_diagnosis', None)
+    session.modified = True
     return jsonify({
-        "status": "cleared",
-        "message": "Clinical diagnostic context and chat session reset successfully."
+        "status": "success",
+        "message": "Chat session and diagnostic state reset successfully.",
+        "reply": "I've reset our conversation. How can I help you today? Tell me how you're feeling or choose a situation below:",
+        "quick_replies": [
+            "🫀 Chest pain or high BP",
+            "🩸 High blood sugar / Diabetes advice",
+            "🌡️ Fever, chills, or persistent cough",
+            "🧪 Kidney or Liver symptom check",
+            "📊 Explain my latest test result"
+        ],
+        "actions": [
+            {"label": "🫀 Heart Screening", "url": "/heart"},
+            {"label": "🩸 Diabetes Screening", "url": "/diabetes"},
+            {"label": "🩺 Kidney Screening", "url": "/kidney"},
+            {"label": "🔍 All 7 Diagnostic Suites", "url": "/features"}
+        ]
     })
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=True)
+
 
 

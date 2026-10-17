@@ -1,849 +1,732 @@
 /**
- * MediNova Clinical AI Copilot — Frontend Controller (v2.0 Bulletproof)
- * Self-contained, context-aware clinical assistant for MediNova.
- * Features:
- * - Bulletproof initialization & DOM auto-injection
- * - Exposed global API: window.toggleMediNovaChat, window.openMediNovaChat, window.closeMediNovaChat, etc.
- * - Guaranteed visibility via explicit inline styles & class toggling
- * - Delegated document-level click listener for robust launcher response
- * - Live biomarker breakdown, symptom triage, medical explanations, form auto-fill
- * - Voice Input (Speech-to-Text) & Voice Readout (TTS)
+ * MediNova Clinical AI Advisor — Interactive Doctor Advisor & Situation-Handling Engine
+ * Version: 3.0 (Self-contained, DOM & CSS auto-injected, high-specificity z-index: 2147483647)
  */
 
 (function () {
     'use strict';
 
-    // State management
-    let isChatOpen = false;
-    let isMaximized = false;
-    let isSpeechEnabled = false;
-    let isListening = false;
-    let recognition = null;
-    let speechSynth = window.speechSynthesis || null;
+    // Guard against multiple initializations
+    if (window.__MEDINOVA_CHATBOT_INITIALIZED__) return;
+    window.__MEDINOVA_CHATBOT_INITIALIZED__ = true;
 
-    // Detect Active Context based on DOM and URL
-    function detectPageContext() {
-        const path = window.location.pathname.toLowerCase();
-        let pageName = 'Diagnostic Suite Overview';
-        let condition = null;
+    // Inject styles
+    function injectStyles() {
+        if (document.getElementById('medinova-chatbot-styles')) return;
 
-        if (path.includes('heart')) {
-            pageName = 'Cardiovascular Screening (/heart)';
-            condition = 'Heart Disease';
-        } else if (path.includes('diabetes')) {
-            pageName = 'Diabetes Risk Screening (/diabetes)';
-            condition = 'Diabetes';
-        } else if (path.includes('kidney')) {
-            pageName = 'Chronic Kidney Disease (/kidney)';
-            condition = 'Kidney Disease';
-        } else if (path.includes('liver')) {
-            pageName = 'Hepatic Panel Screening (/liver)';
-            condition = 'Liver Disease';
-        } else if (path.includes('breast_cancer')) {
-            pageName = 'Oncology Malignancy Screening (/breast_cancer)';
-            condition = 'Breast Cancer';
-        } else if (path.includes('malaria')) {
-            pageName = 'Microscopic Cell Triage (/malaria)';
-            condition = 'Malaria';
-        } else if (path.includes('pneumonia')) {
-            pageName = 'Chest Radiograph Analysis (/pneumonia)';
-            condition = 'Pneumonia';
-        } else if (path.includes('features')) {
-            pageName = 'Diagnostic Modalities & Features';
-        } else if (path.includes('contact')) {
-            pageName = 'Emergency Directory & 24/7 Hotlines';
-        } else if (path === '/' || path.includes('home')) {
-            pageName = 'MediNova Diagnostic Hub';
-        }
-
-        // Check if there is an active screening outcome displayed on page
-        const resultCard = document.querySelector('.result-card, .result-header, .alert-success, .alert-danger, [class*="result"]');
-        let resultSnippet = null;
-        if (resultCard) {
-            const heading = resultCard.querySelector('h2, h3, h4, .prediction-title, strong');
-            if (heading) {
-                resultSnippet = heading.innerText.trim();
+        const style = document.createElement('style');
+        style.id = 'medinova-chatbot-styles';
+        style.textContent = `
+            /* High-specificity FAB Launcher */
+            .mn-fab {
+                position: fixed !important;
+                bottom: 24px !important;
+                right: 24px !important;
+                z-index: 2147483647 !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 10px !important;
+                padding: 12px 20px !important;
+                background: #0f172a !important;
+                color: #f8fafc !important;
+                border: 1.5px solid #06b6d4 !important;
+                border-radius: 9999px !important;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+                font-size: 14px !important;
+                font-weight: 600 !important;
+                cursor: pointer !important;
+                pointer-events: auto !important;
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 16px rgba(6, 182, 212, 0.45) !important;
+                transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease !important;
+                user-select: none !important;
+                outline: none !important;
             }
-        }
+            .mn-fab:hover {
+                transform: translateY(-2px) scale(1.02) !important;
+                box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.7), 0 0 24px rgba(6, 182, 212, 0.75) !important;
+                border-color: #22d3ee !important;
+            }
+            .mn-fab:active {
+                transform: translateY(0) scale(0.98) !important;
+            }
+            .mn-fab-dot {
+                width: 9px !important;
+                height: 9px !important;
+                background-color: #10b981 !important;
+                border-radius: 50% !important;
+                box-shadow: 0 0 8px #10b981 !important;
+                display: inline-block !important;
+                animation: mn-pulse 2s infinite ease-in-out !important;
+            }
+            @keyframes mn-pulse {
+                0%, 100% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.25); opacity: 0.7; }
+            }
 
-        let contextPillText = `📍 Context: ${pageName}`;
-        if (resultSnippet) {
-            contextPillText = `📍 Context: ${condition || 'Screening'} (${resultSnippet})`;
-        }
+            /* Glassmorphic Drawer Window */
+            .mn-drawer {
+                position: fixed !important;
+                bottom: 90px !important;
+                right: 24px !important;
+                width: 390px !important;
+                height: 560px !important;
+                max-height: calc(100vh - 120px) !important;
+                z-index: 2147483647 !important;
+                background: #070b14 !important;
+                border: 1.5px solid rgba(6, 182, 212, 0.35) !important;
+                border-radius: 18px !important;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 30px rgba(6, 182, 212, 0.2) !important;
+                display: none;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+                color: #f8fafc !important;
+                pointer-events: auto !important;
+                transform: translateY(12px) !important;
+                opacity: 0 !important;
+                visibility: hidden !important;
+                transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease !important;
+            }
+            .mn-drawer.mn-open {
+                display: flex !important;
+                flex-direction: column !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                pointer-events: auto !important;
+                transform: translateY(0) !important;
+            }
 
-        return {
-            pageName: pageName,
-            path: path,
-            condition: condition,
-            hasResult: !!resultSnippet,
-            resultSnippet: resultSnippet,
-            pillText: contextPillText
-        };
-    }
+            /* Header */
+            .mn-header {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                padding: 14px 16px !important;
+                background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+                border-bottom: 1px solid rgba(6, 182, 212, 0.2) !important;
+            }
+            .mn-header-info {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 2px !important;
+            }
+            .mn-header-title {
+                font-size: 14.5px !important;
+                font-weight: 700 !important;
+                color: #f8fafc !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 6px !important;
+                margin: 0 !important;
+            }
+            .mn-header-subtitle {
+                font-size: 11.5px !important;
+                color: #94a3b8 !important;
+                margin: 0 !important;
+            }
+            .mn-header-actions {
+                display: flex !important;
+                align-items: center !important;
+                gap: 6px !important;
+            }
+            .mn-btn-header {
+                background: rgba(255, 255, 255, 0.08) !important;
+                border: 1px solid rgba(255, 255, 255, 0.12) !important;
+                color: #cbd5e1 !important;
+                border-radius: 8px !important;
+                padding: 5px 9px !important;
+                font-size: 12px !important;
+                cursor: pointer !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                transition: all 0.18s ease !important;
+                outline: none !important;
+            }
+            .mn-btn-header:hover {
+                background: rgba(6, 182, 212, 0.25) !important;
+                color: #ffffff !important;
+                border-color: #06b6d4 !important;
+            }
 
-    // Injects the entire Chatbot DOM structure if missing
-    function injectChatbotDOM() {
-        if (document.getElementById('medinova-chat-root')) return;
+            /* Messages Container */
+            .mn-messages {
+                flex: 1 !important;
+                overflow-y: auto !important;
+                padding: 16px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 14px !important;
+                scroll-behavior: smooth !important;
+            }
+            .mn-messages::-webkit-scrollbar {
+                width: 6px !important;
+            }
+            .mn-messages::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.18) !important;
+                border-radius: 3px !important;
+            }
 
-        const root = document.createElement('div');
-        root.id = 'medinova-chat-root';
+            /* Chat Bubbles */
+            .mn-msg {
+                display: flex !important;
+                flex-direction: column !important;
+                max-width: 90% !important;
+                animation: mn-fade-in 0.2s ease-out !important;
+            }
+            @keyframes mn-fade-in {
+                from { opacity: 0; transform: translateY(6px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .mn-msg-user {
+                align-self: flex-end !important;
+                background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+                color: #ffffff !important;
+                padding: 10px 14px !important;
+                border-radius: 14px 14px 3px 14px !important;
+                font-size: 13.5px !important;
+                line-height: 1.45 !important;
+                box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25) !important;
+                word-break: break-word !important;
+            }
+            .mn-msg-bot {
+                align-self: flex-start !important;
+                background: rgba(15, 23, 42, 0.9) !important;
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                color: #e2e8f0 !important;
+                padding: 12px 14px !important;
+                border-radius: 14px 14px 14px 3px !important;
+                font-size: 13.5px !important;
+                line-height: 1.5 !important;
+                word-break: break-word !important;
+                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+            }
+            .mn-msg-bot h3, .mn-msg-bot h4 {
+                color: #38bdf8 !important;
+                margin: 6px 0 4px 0 !important;
+                font-size: 14px !important;
+                font-weight: 700 !important;
+            }
+            .mn-msg-bot p {
+                margin: 0 0 6px 0 !important;
+            }
+            .mn-msg-bot p:last-child {
+                margin-bottom: 0 !important;
+            }
+            .mn-msg-bot ul, .mn-msg-bot ol {
+                margin: 4px 0 6px 18px !important;
+                padding: 0 !important;
+            }
+            .mn-msg-bot li {
+                margin-bottom: 4px !important;
+            }
+            .mn-msg-bot blockquote {
+                border-left: 3px solid #06b6d4 !important;
+                background: rgba(6, 182, 212, 0.08) !important;
+                margin: 8px 0 !important;
+                padding: 6px 10px !important;
+                border-radius: 0 8px 8px 0 !important;
+                font-size: 12.5px !important;
+                color: #cbd5e1 !important;
+            }
+            .mn-msg-bot strong {
+                color: #ffffff !important;
+            }
 
-        root.innerHTML = `
-            <!-- Floating Action Button (FAB) -->
-            <button id="medinova-chat-fab" class="medinova-chat-fab" type="button" aria-label="Open MediNova AI Copilot" title="Open MediNova AI Copilot">
-                <span class="pulse-ring"></span>
-                <span class="fab-icon">🤖</span>
-                <span class="fab-badge">MediNova AI</span>
-            </button>
+            /* Quick Reply Chips */
+            .mn-chips-container {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 6px !important;
+                margin-top: 10px !important;
+            }
+            .mn-chip {
+                background: rgba(15, 23, 42, 0.95) !important;
+                border: 1px solid rgba(6, 182, 212, 0.5) !important;
+                color: #38bdf8 !important;
+                padding: 6px 12px !important;
+                border-radius: 9999px !important;
+                font-size: 12px !important;
+                font-weight: 500 !important;
+                cursor: pointer !important;
+                transition: all 0.18s ease !important;
+                user-select: none !important;
+                outline: none !important;
+                display: inline-flex !important;
+                align-items: center !important;
+            }
+            .mn-chip:hover {
+                background: rgba(6, 182, 212, 0.2) !important;
+                color: #ffffff !important;
+                border-color: #38bdf8 !important;
+                transform: translateY(-1px) !important;
+            }
 
-            <!-- Expandable Copilot Drawer -->
-            <div id="medinova-chat-widget" class="medinova-chat-widget" style="display: none; opacity: 0; visibility: hidden; pointer-events: none;" role="dialog" aria-modal="true" aria-labelledby="chat-title">
-                <!-- Header -->
-                <div class="chat-header">
-                    <div class="chat-title-group">
-                        <div class="chat-avatar">
-                            <span class="avatar-icon">⚕️</span>
-                            <span class="status-indicator-dot online" title="Copilot Online"></span>
-                        </div>
-                        <div>
-                            <div id="chat-title" class="chat-brand-name">MediNova Clinical AI Copilot</div>
-                            <div class="chat-status-sub">Online • Context-Aware Clinical Engine</div>
-                        </div>
-                    </div>
-                    <div class="chat-header-actions">
-                        <button id="btn-toggle-tts" class="chat-tool-btn" type="button" title="Toggle Voice Readout (TTS)">
-                            <span id="tts-icon">🔇</span>
-                        </button>
-                        <button id="btn-maximize-chat" class="chat-tool-btn" type="button" title="Maximize / Dock View">
-                            <span id="maximize-icon">⤢</span>
-                        </button>
-                        <button id="btn-clear-chat" class="chat-tool-btn" type="button" title="Clear Chat History">
-                            <span>🗑️</span>
-                        </button>
-                        <button id="btn-close-chat" class="chat-tool-btn close-btn" type="button" title="Minimize Copilot">
-                            <span>✕</span>
-                        </button>
-                    </div>
-                </div>
+            /* Action Buttons (Screening Links) */
+            .mn-actions-container {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 6px !important;
+                margin-top: 10px !important;
+            }
+            .mn-action-btn {
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 6px !important;
+                background: linear-gradient(135deg, #06b6d4 0%, #0284c7 100%) !important;
+                color: #ffffff !important;
+                padding: 8px 14px !important;
+                border-radius: 8px !important;
+                font-size: 12.5px !important;
+                font-weight: 600 !important;
+                text-decoration: none !important;
+                box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3) !important;
+                transition: transform 0.18s ease, box-shadow 0.18s ease !important;
+            }
+            .mn-action-btn:hover {
+                transform: translateY(-1px) !important;
+                box-shadow: 0 6px 16px rgba(6, 182, 212, 0.45) !important;
+                color: #ffffff !important;
+            }
 
-                <!-- Active Context Banner -->
-                <div id="chat-context-banner" class="chat-context-banner">
-                    <span id="chat-context-text">📍 Context: Detecting Active Session...</span>
-                </div>
+            /* Typing Indicator */
+            .mn-typing {
+                align-self: flex-start !important;
+                background: rgba(15, 23, 42, 0.8) !important;
+                border: 1px solid rgba(255, 255, 255, 0.08) !important;
+                padding: 10px 14px !important;
+                border-radius: 14px 14px 14px 3px !important;
+                display: none;
+                align-items: center !important;
+                gap: 8px !important;
+                font-size: 12.5px !important;
+                color: #94a3b8 !important;
+            }
+            .mn-typing.active {
+                display: flex !important;
+            }
+            .mn-dots {
+                display: flex !important;
+                gap: 4px !important;
+            }
+            .mn-dot {
+                width: 6px !important;
+                height: 6px !important;
+                background: #06b6d4 !important;
+                border-radius: 50% !important;
+                animation: mn-dot-bounce 1.4s infinite ease-in-out both !important;
+            }
+            .mn-dot:nth-child(1) { animation-delay: -0.32s !important; }
+            .mn-dot:nth-child(2) { animation-delay: -0.16s !important; }
+            @keyframes mn-dot-bounce {
+                0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
+                40% { transform: scale(1); opacity: 1; }
+            }
 
-                <!-- Messages Container -->
-                <div id="chat-messages-container" class="chat-messages-container">
-                    <!-- Welcome Message -->
-                    <div class="chat-message assistant-message">
-                        <div class="message-avatar">🤖</div>
-                        <div class="message-bubble">
-                            <div class="message-sender">MediNova Clinical Copilot</div>
-                            <div class="message-body">
-                                <p>Hello, I am your <strong>MediNova AI Clinical Copilot</strong>. I am integrated directly with MediNova's 7 diagnostic screening modalities, validated biomarker ranges, and clinical emergency protocols.</p>
-                                <p>How can I assist your clinical evaluation today?</p>
-                                <ul>
-                                    <li>Ask to <strong>explain your test results</strong> and compare biomarkers.</li>
-                                    <li>Describe patient symptoms for <strong>smart triage & tool routing</strong>.</li>
-                                    <li>Provide vitals for <strong>conversational form auto-filling</strong>.</li>
-                                    <li>Inquire about clinical targets (e.g. <em>"Normal Biomarker Reference Ranges"</em>).</li>
-                                </ul>
-                            </div>
-                            <div class="message-meta">Zero-Key Clinical Knowledge Graph Ready</div>
-                        </div>
-                    </div>
-                </div>
+            /* Footer & Input */
+            .mn-footer {
+                padding: 12px !important;
+                background: #070b14 !important;
+                border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+            }
+            .mn-input-box {
+                display: flex !important;
+                align-items: center !important;
+                gap: 8px !important;
+                background: #0f172a !important;
+                border: 1px solid rgba(6, 182, 212, 0.3) !important;
+                border-radius: 12px !important;
+                padding: 6px 10px !important;
+                transition: border-color 0.2s ease !important;
+            }
+            .mn-input-box:focus-within {
+                border-color: #06b6d4 !important;
+                box-shadow: 0 0 10px rgba(6, 182, 212, 0.3) !important;
+            }
+            .mn-input {
+                flex: 1 !important;
+                background: transparent !important;
+                border: none !important;
+                outline: none !important;
+                color: #f8fafc !important;
+                font-size: 13.5px !important;
+                font-family: inherit !important;
+                padding: 4px !important;
+            }
+            .mn-input::placeholder {
+                color: #64748b !important;
+            }
+            .mn-send-btn {
+                background: linear-gradient(135deg, #06b6d4 0%, #0284c7 100%) !important;
+                border: none !important;
+                color: #ffffff !important;
+                width: 32px !important;
+                height: 32px !important;
+                border-radius: 8px !important;
+                cursor: pointer !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                font-size: 13px !important;
+                font-weight: bold !important;
+                transition: transform 0.15s ease, opacity 0.15s ease !important;
+                outline: none !important;
+                flex-shrink: 0 !important;
+            }
+            .mn-send-btn:hover {
+                transform: scale(1.06) !important;
+            }
+            .mn-send-btn:active {
+                transform: scale(0.95) !important;
+            }
+            .mn-disclaimer {
+                font-size: 10px !important;
+                color: #64748b !important;
+                text-align: center !important;
+                margin-top: 6px !important;
+                line-height: 1.3 !important;
+            }
 
-                <!-- Step-by-Step Thinking Indicator -->
-                <div id="chat-thinking-indicator" class="chat-thinking-indicator" style="display: none;">
-                    <div class="thinking-spinner"></div>
-                    <span id="thinking-step-text">Analyzing clinical context & biomarkers...</span>
-                </div>
-
-                <!-- Quick-Action Suggestion Chips -->
-                <div id="chat-followups-container" class="chat-followups-container">
-                    <button type="button" class="chat-chip" data-query="Check my symptoms and recommend a MediNova screening test">🩺 Check Symptoms & Recommend a Test</button>
-                    <button type="button" class="chat-chip" data-query="Explain my latest diagnostic test result and biomarker analysis">📊 Explain My Latest Test Result</button>
-                    <button type="button" class="chat-chip" data-query="What are normal clinical biomarker reference ranges?">🧪 Normal Biomarker Reference Ranges</button>
-                    <button type="button" class="chat-chip" data-query="What are acute red-flag emergency symptoms requiring immediate care?">🚨 Red-Flag Emergency Warning Signs</button>
-                </div>
-
-                <!-- Input Footer -->
-                <div class="chat-footer">
-                    <div class="chat-input-wrapper">
-                        <textarea id="chat-input-field" placeholder="Ask MediNova Copilot or speak symptoms..." rows="1"></textarea>
-                        <button id="btn-mic-input" class="chat-mic-btn" type="button" title="Voice Input (Speech to Text)">
-                            <span id="mic-icon">🎙️</span>
-                        </button>
-                        <button id="btn-send-message" class="chat-send-btn" type="button" title="Send Message">
-                            <span>➤</span>
-                        </button>
-                    </div>
-                    <div class="chat-disclaimer">
-                        <span>MediNova Copilot provides clinical decision support. Always consult a licensed physician for medical diagnosis.</span>
-                    </div>
-                </div>
-            </div>
+            /* Mobile & Print Responsiveness */
+            @media (max-width: 480px) {
+                .mn-drawer {
+                    width: calc(100vw - 32px) !important;
+                    right: 16px !important;
+                    bottom: 84px !important;
+                    height: calc(100vh - 110px) !important;
+                }
+                .mn-fab {
+                    bottom: 16px !important;
+                    right: 16px !important;
+                    padding: 10px 16px !important;
+                    font-size: 13px !important;
+                }
+            }
+            @media print {
+                .mn-fab, .mn-drawer, .medinova-chat-fab, .medinova-chat-widget, #medinova-chat-root {
+                    display: none !important;
+                }
+            }
         `;
-
-        document.body.appendChild(root);
-        bindChatEvents();
-        updateContextBanner();
+        document.head.appendChild(style);
     }
 
-    // Update Top Context Banner
-    function updateContextBanner() {
-        const ctx = detectPageContext();
-        const bannerText = document.getElementById('chat-context-text');
-        if (bannerText) {
-            bannerText.innerText = ctx.pillText;
-        }
-    }
-
-    // Markdown & Table Formatter
-    function formatMarkdown(text) {
+    // Markdown-like formatting helper
+    function renderMarkdown(text) {
         if (!text) return '';
+        let html = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
 
-        let html = text;
-
-        // Escape dangerous HTML entities
-        html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-        // Tables
-        const lines = html.split('\n');
-        let inTable = false;
-        let tableHtml = [];
-        let newLines = [];
-
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line.startsWith('|') && line.endsWith('|')) {
-                const cells = line.split('|').slice(1, -1).map(c => c.trim());
-                if (cells.every(c => /^[-:\s]+$/.test(c))) {
-                    continue; // table separator
-                }
-                if (!inTable) {
-                    inTable = true;
-                    tableHtml.push('<div class="copilot-table-responsive"><table class="copilot-biomarker-table"><thead><tr>');
-                    cells.forEach(c => tableHtml.push(`<th>${c}</th>`));
-                    tableHtml.push('</tr></thead><tbody>');
-                } else {
-                    tableHtml.push('<tr>');
-                    cells.forEach((c) => {
-                        let cellContent = c;
-                        if (c.includes('⚠️ Elevated') || c.includes('Elevated') || c.includes('High Risk') || c.includes('Abnormal')) {
-                            cellContent = `<span class="badge-abnormal">${c}</span>`;
-                        } else if (c.includes('✅ Optimal') || c.includes('Optimal') || c.includes('Normal')) {
-                            cellContent = `<span class="badge-normal">${c}</span>`;
-                        }
-                        tableHtml.push(`<td>${cellContent}</td>`);
-                    });
-                    tableHtml.push('</tr>');
-                }
-            } else {
-                if (inTable) {
-                    inTable = false;
-                    tableHtml.push('</tbody></table></div>');
-                    newLines.push(tableHtml.join(''));
-                    tableHtml = [];
-                }
-                newLines.push(line);
-            }
-        }
-        if (inTable) {
-            tableHtml.push('</tbody></table></div>');
-            newLines.push(tableHtml.join(''));
-        }
-
-        html = newLines.join('\n');
-
-        // Headers
-        html = html.replace(/^### (.*$)/gim, '<h4 class="copilot-h4">$1</h4>');
-        html = html.replace(/^## (.*$)/gim, '<h3 class="copilot-h3">$1</h3>');
-        html = html.replace(/^# (.*$)/gim, '<h2 class="copilot-h2">$1</h2>');
+        // Headings
+        html = html.replace(/^### (.*$)/gim, '<h4>$1</h4>');
+        html = html.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
 
         // Bold & Italic
-        html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
         html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-        // Inline code
-        html = html.replace(/`([^`]+)`/g, '<code class="copilot-inline-code">$1</code>');
+        // Blockquotes
+        html = html.replace(/^&gt; (.*$)/gim, '<blockquote>$1</blockquote>');
 
-        // Emergency Callout Box
-        html = html.replace(/🚨 \*\*HIGH-PRIORITY CLINICAL EMERGENCY ALERT:\*\*([\s\S]*?)(?=\n\n|$)/g, function (match, p1) {
-            return `<div class="copilot-emergency-box">
-                <div class="emergency-title">🚨 CRITICAL EMERGENCY ALERT</div>
-                <div class="emergency-content">${p1.trim()}</div>
-            </div>`;
-        });
+        // Unordered lists
+        html = html.replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>');
+        html = html.replace(/(<li>.*<\/li>)/gims, '<ul>$1</ul>');
+        html = html.replace(/<\/ul>\s*<ul>/g, '');
 
-        // Lists
-        html = html.replace(/^\s*[-•*]\s+(.*$)/gim, '<li>$1</li>');
-        html = html.replace(/(<li>.*<\/li>(\s*<li>.*<\/li>)*)/gim, '<ul class="copilot-list">$1</ul>');
+        // Paragraph breaks
+        html = html.replace(/\n{2,}/g, '</p><p>');
+        html = html.replace(/\n/g, '<br/>');
 
-        // Line breaks
-        html = html.replace(/\n\n+/g, '</p><p>');
-        html = '<p>' + html + '</p>';
-        html = html.replace(/<p><\/p>/g, '');
-        html = html.replace(/<p><h([2-4])/g, '<h$1');
-        html = html.replace(/<\/h([2-4])><\/p>/g, '</h$1>');
-        html = html.replace(/<p><div/g, '<div');
-        html = html.replace(/<\/div><\/p>/g, '</div>');
-        html = html.replace(/<p><ul/g, '<ul');
-        html = html.replace(/<\/ul><\/p>/g, '</ul>');
-        html = html.replace(/\n/g, '<br>');
-
-        return html;
+        return `<p>${html}</p>`;
     }
 
-    // Render Message Bubble
-    function appendMessage(sender, content, options = {}) {
-        const container = document.getElementById('chat-messages-container');
-        if (!container) return;
+    // Build the chatbot DOM elements
+    let drawerEl = null;
+    let fabEl = null;
+    let messagesEl = null;
+    let typingEl = null;
+    let inputEl = null;
 
-        const isUser = sender === 'user';
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `chat-message ${isUser ? 'user-message' : 'assistant-message'}`;
+    const INITIAL_GREETING = "Hi! I'm your **MediNova Clinical AI Advisor**. Tell me how you're feeling or pick a situation below—I'll ask a couple of quick clinical questions and guide you step-by-step on how to handle it safely.";
+    const INITIAL_CHIPS = [
+        "🫀 Chest pain or high BP",
+        "🩸 High blood sugar / Diabetes advice",
+        "🌡️ Fever, chills, or persistent cough",
+        "🧪 Kidney or Liver symptom check",
+        "📊 Explain my latest test result"
+    ];
 
-        const avatar = isUser ? '👤' : '🤖';
-        const senderName = isUser ? 'You' : 'MediNova Clinical Copilot';
-        const badge = options.confidence_badge || (isUser ? '' : 'MediNova Clinical Intelligence');
+    function buildChatbotDOM() {
+        // Remove old duplicate roots or buttons if present
+        const oldRoot = document.getElementById('medinova-chat-root');
+        if (oldRoot) oldRoot.remove();
+        const oldFab = document.getElementById('medinova-chat-fab');
+        if (oldFab) oldFab.remove();
+        const oldWidget = document.getElementById('medinova-chat-widget');
+        if (oldWidget) oldWidget.remove();
 
-        let actionsHtml = '';
-        if (options.suggested_actions && options.suggested_actions.length > 0) {
-            actionsHtml = '<div class="copilot-action-buttons">';
-            options.suggested_actions.forEach(act => {
-                if (act.url) {
-                    actionsHtml += `<a href="${act.url}" class="btn-copilot-action" title="Navigate to ${act.label}">${act.label}</a>`;
-                } else if (act.action === 'print') {
-                    actionsHtml += `<button type="button" class="btn-copilot-action btn-print-action" onclick="window.print()">🖨️ Print Medical Report</button>`;
-                }
-            });
-            actionsHtml += '</div>';
-        }
+        // 1. Create working FAB
+        fabEl = document.createElement('button');
+        fabEl.className = 'mn-fab';
+        fabEl.setAttribute('type', 'button');
+        fabEl.setAttribute('aria-label', 'Open MediNova AI Doctor Advisor');
+        fabEl.innerHTML = `
+            <span class="mn-fab-dot"></span>
+            <span>🤖 MediNova AI</span>
+        `;
+        fabEl.addEventListener('click', function (e) {
+            e.stopPropagation();
+            toggleMediNovaChat();
+        });
 
-        // Form Auto-fill Button
-        let autoFillHtml = '';
-        if (options.form_fill_data) {
-            const dataStr = encodeURIComponent(JSON.stringify(options.form_fill_data));
-            autoFillHtml = `
-                <div class="copilot-autofill-prompt">
-                    <button type="button" class="btn-autofill-action" data-autofill="${dataStr}">
-                        ⚡ Auto-Fill Form with Extracted Biomarkers
-                    </button>
-                    <span class="autofill-hint">${Object.keys(options.form_fill_data).length} parameters identified</span>
+        // 2. Create Drawer
+        drawerEl = document.createElement('div');
+        drawerEl.className = 'mn-drawer';
+        drawerEl.setAttribute('role', 'dialog');
+        drawerEl.setAttribute('aria-label', 'MediNova Clinical AI Advisor');
+        drawerEl.innerHTML = `
+            <div class="mn-header">
+                <div class="mn-header-info">
+                    <div class="mn-header-title">🩺 MediNova AI Advisor</div>
+                    <div class="mn-header-subtitle">Interactive Symptom & Situation Guide</div>
                 </div>
-            `;
-        }
+                <div class="mn-header-actions">
+                    <button class="mn-btn-header mn-reset-btn" type="button" title="Reset consultation">↺ Reset</button>
+                    <button class="mn-btn-header mn-close-btn" type="button" title="Close window">✕</button>
+                </div>
+            </div>
 
-        msgDiv.innerHTML = `
-            <div class="message-avatar">${avatar}</div>
-            <div class="message-bubble">
-                <div class="message-sender">${senderName}</div>
-                <div class="message-body">${isUser ? escapeHtml(content) : formatMarkdown(content)}</div>
-                ${autoFillHtml}
-                ${actionsHtml}
-                ${badge ? `<div class="message-meta">${badge}</div>` : ''}
+            <div class="mn-messages" id="mn-messages"></div>
+
+            <div class="mn-typing" id="mn-typing">
+                <div class="mn-dots">
+                    <div class="mn-dot"></div>
+                    <div class="mn-dot"></div>
+                    <div class="mn-dot"></div>
+                </div>
+                <span>MediNova AI is analyzing...</span>
+            </div>
+
+            <div class="mn-footer">
+                <div class="mn-input-box">
+                    <input class="mn-input" id="mn-input-field" type="text" placeholder="Describe symptoms or reply..." autocomplete="off" />
+                    <button class="mn-send-btn" id="mn-send-button" type="button" title="Send Message">➤</button>
+                </div>
+                <div class="mn-disclaimer">
+                    MediNova provides preliminary clinical risk support. For medical emergencies, call 112 / 911 / 108.
+                </div>
             </div>
         `;
 
-        container.appendChild(msgDiv);
-        container.scrollTop = container.scrollHeight;
+        document.body.appendChild(fabEl);
+        document.body.appendChild(drawerEl);
 
-        // Auto-fill button listener
-        const fillBtn = msgDiv.querySelector('.btn-autofill-action');
-        if (fillBtn) {
-            fillBtn.addEventListener('click', function () {
-                try {
-                    const data = JSON.parse(decodeURIComponent(this.getAttribute('data-autofill')));
-                    triggerFormAutoFill(data);
-                    this.innerHTML = '✅ Form Populated Successfully!';
-                    this.classList.add('applied');
-                    this.disabled = true;
-                } catch (e) {
-                    console.error('Auto-fill error:', e);
-                }
-            });
-        }
+        messagesEl = drawerEl.querySelector('#mn-messages');
+        typingEl = drawerEl.querySelector('#mn-typing');
+        inputEl = drawerEl.querySelector('#mn-input-field');
 
-        // TTS Readout
-        if (!isUser && isSpeechEnabled && speechSynth) {
-            speakText(content);
-        }
-    }
+        // Header event listeners
+        drawerEl.querySelector('.mn-close-btn').addEventListener('click', closeMediNovaChat);
+        drawerEl.querySelector('.mn-reset-btn').addEventListener('click', resetMediNovaChat);
 
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.innerText = text;
-        return div.innerHTML;
-    }
-
-    // Text-to-Speech (Voice Readout)
-    function speakText(text) {
-        if (!speechSynth) return;
-        speechSynth.cancel();
-
-        let clean = text.replace(/[*#`_~[\]()|]/g, ' ')
-                        .replace(/[^\w\s.,?!'-]/g, ' ')
-                        .replace(/\s+/g, ' ')
-                        .trim();
-
-        if (!clean) return;
-
-        const utterance = new SpeechSynthesisUtterance(clean);
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-
-        const voices = speechSynth.getVoices();
-        const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Neural')));
-        if (preferredVoice) {
-            utterance.voice = preferredVoice;
-        }
-
-        speechSynth.speak(utterance);
-    }
-
-    // Step-by-Step Thinking Indicator Animation
-    let thinkingInterval = null;
-    function showThinking(show) {
-        const el = document.getElementById('chat-thinking-indicator');
-        const textEl = document.getElementById('thinking-step-text');
-        if (!el || !textEl) return;
-
-        if (show) {
-            el.style.display = 'flex';
-            const steps = [
-                'Analyzing clinical context & biomarkers...',
-                'Cross-referencing MediNova clinical protocols...',
-                'Synthesizing diagnostic recommendations & references...'
-            ];
-            let stepIdx = 0;
-            textEl.innerText = steps[stepIdx];
-            clearInterval(thinkingInterval);
-            thinkingInterval = setInterval(() => {
-                stepIdx = (stepIdx + 1) % steps.length;
-                textEl.innerText = steps[stepIdx];
-            }, 850);
-        } else {
-            clearInterval(thinkingInterval);
-            el.style.display = 'none';
-        }
-    }
-
-    // Update Follow-Up Chips
-    function updateFollowUpChips(chips) {
-        const container = document.getElementById('chat-followups-container');
-        if (!container) return;
-
-        if (!chips || chips.length === 0) {
-            chips = [
-                'Check my symptoms and recommend a MediNova screening test',
-                'Explain my latest diagnostic test result and biomarker analysis',
-                'What are normal clinical biomarker reference ranges?',
-                'What are acute red-flag emergency symptoms requiring immediate care?'
-            ];
-        }
-
-        container.innerHTML = '';
-        chips.forEach(query => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'chat-chip';
-            btn.innerText = query;
-            btn.setAttribute('data-query', query);
-            btn.addEventListener('click', function () {
-                const q = this.getAttribute('data-query') || this.innerText;
-                sendMessage(q);
-            });
-            container.appendChild(btn);
+        // Input send listeners
+        drawerEl.querySelector('#mn-send-button').addEventListener('click', handleUserSend);
+        inputEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleUserSend();
+            }
         });
-    }
 
-    // Conversational Form Auto-Fill Implementation
-    function triggerFormAutoFill(formData) {
-        if (!formData || typeof formData !== 'object') return;
-
-        let populatedCount = 0;
-        let firstInput = null;
-
-        for (const [key, val] of Object.entries(formData)) {
-            const el = document.querySelector(`[name="${key}"], #${key}, [name="${key.toLowerCase()}"], #${key.toLowerCase()}`);
-            if (el) {
-                el.value = val;
-                el.dispatchEvent(new Event('input', { bubbles: true }));
-                el.dispatchEvent(new Event('change', { bubbles: true }));
-
-                el.classList.add('copilot-autofill-highlight');
-                setTimeout(() => {
-                    el.classList.remove('copilot-autofill-highlight');
-                }, 2200);
-
-                if (!firstInput) firstInput = el;
-                populatedCount++;
-            }
-        }
-
-        if (firstInput) {
-            firstInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            firstInput.focus();
-        } else {
-            const submitBtn = document.querySelector('form button[type="submit"], button[type="submit"]');
-            if (submitBtn) {
-                submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-    }
-
-    // Send Message to /api/chat
-    async function sendMessage(messageText) {
-        const inputField = document.getElementById('chat-input-field');
-        const text = (messageText || (inputField ? inputField.value : '')).trim();
-        if (!text) return;
-
-        if (inputField) inputField.value = '';
-
-        appendMessage('user', text);
-        showThinking(true);
-
-        const ctx = detectPageContext();
-
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: text,
-                    current_page: window.location.pathname,
-                    page_context: {
-                        condition: ctx.condition,
-                        has_result: ctx.hasResult,
-                        result_snippet: ctx.resultSnippet
-                    }
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Server returned HTTP ${response.status}`);
-            }
-
-            const data = await response.json();
-            showThinking(false);
-
-            appendMessage('assistant', data.reply || 'No response generated.', {
-                confidence_badge: data.confidence_badge,
-                suggested_actions: data.suggested_actions,
-                form_fill_data: data.form_fill_data,
-                is_emergency: data.is_emergency
-            });
-
-            if (data.follow_up_chips) {
-                updateFollowUpChips(data.follow_up_chips);
-            }
-        } catch (err) {
-            showThinking(false);
-            console.error('MediNova Copilot API error:', err);
-            appendMessage('assistant', '⚠️ **MediNova Clinical Engine Notice:** Connection to diagnostic server was momentarily interrupted. Please verify your connection or try again.', {
-                confidence_badge: 'System Notice'
-            });
-        }
-    }
-
-    // Clear Chat History
-    async function clearChatHistory() {
-        try {
-            await fetch('/api/chat/clear', { method: 'POST' });
-        } catch (e) {
-            console.warn('Error calling clear endpoint:', e);
-        }
-
-        const container = document.getElementById('chat-messages-container');
-        if (container) {
-            container.innerHTML = `
-                <div class="chat-message assistant-message">
-                    <div class="message-avatar">🤖</div>
-                    <div class="message-bubble">
-                        <div class="message-sender">MediNova Clinical Copilot</div>
-                        <div class="message-body">
-                            <p>Diagnostic chat history cleared. Ready for new clinical analysis, biomarker reviews, or symptom routing.</p>
-                        </div>
-                        <div class="message-meta">Session Reset</div>
-                    </div>
-                </div>
-            `;
-        }
-        updateFollowUpChips([
-            'Check my symptoms and recommend a MediNova screening test',
-            'Explain my latest diagnostic test result and biomarker analysis',
-            'What are normal clinical biomarker reference ranges?',
-            'What are acute red-flag emergency symptoms requiring immediate care?'
-        ]);
-    }
-
-    // Voice Input Setup
-    function setupVoiceInput() {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            const micBtn = document.getElementById('btn-mic-input');
-            if (micBtn) {
-                micBtn.style.opacity = '0.4';
-                micBtn.title = 'Speech-to-text not supported in this browser';
-            }
-            return;
-        }
-
-        recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = 'en-US';
-
-        recognition.onstart = () => {
-            isListening = true;
-            const micBtn = document.getElementById('btn-mic-input');
-            if (micBtn) micBtn.classList.add('recording-pulse');
-        };
-
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            const inputField = document.getElementById('chat-input-field');
-            if (inputField) {
-                inputField.value = transcript;
-            }
-            sendMessage(transcript);
-        };
-
-        recognition.onerror = (event) => {
-            console.warn('Speech recognition error:', event.error);
-            isListening = false;
-            const micBtn = document.getElementById('btn-mic-input');
-            if (micBtn) micBtn.classList.remove('recording-pulse');
-        };
-
-        recognition.onend = () => {
-            isListening = false;
-            const micBtn = document.getElementById('btn-mic-input');
-            if (micBtn) micBtn.classList.remove('recording-pulse');
-        };
-    }
-
-    // =========================================================================
-    // GLOBAL WINDOW CONTROLS & EXPOSED HOOKS
-    // =========================================================================
-
-    function openMediNovaChat(initialPrompt) {
-        injectChatbotDOM();
-
-        isChatOpen = true;
-        const widget = document.getElementById('medinova-chat-widget');
-        const fab = document.getElementById('medinova-chat-fab');
-
-        if (widget) {
-            widget.classList.add('active', 'open');
-            widget.style.display = 'flex';
-            widget.style.opacity = '1';
-            widget.style.visibility = 'visible';
-            widget.style.pointerEvents = 'auto';
-            widget.style.zIndex = '99999';
-            widget.style.transform = 'translateY(0) scale(1)';
-
-            updateContextBanner();
-
-            const inputField = document.getElementById('chat-input-field');
-            if (inputField) {
-                setTimeout(() => inputField.focus(), 150);
-            }
-        }
-
-        if (fab) {
-            fab.classList.add('fab-active');
-        }
-
-        if (initialPrompt && typeof initialPrompt === 'string') {
-            sendMessage(initialPrompt);
-        }
-    }
-
-    function closeMediNovaChat() {
-        isChatOpen = false;
-        const widget = document.getElementById('medinova-chat-widget');
-        const fab = document.getElementById('medinova-chat-fab');
-
-        if (widget) {
-            widget.classList.remove('active', 'open');
-            widget.style.display = 'none';
-            widget.style.opacity = '0';
-            widget.style.visibility = 'hidden';
-            widget.style.pointerEvents = 'none';
-        }
-
-        if (fab) {
-            fab.classList.remove('fab-active');
-        }
+        // Insert initial message and quick replies
+        appendBotMessage(INITIAL_GREETING, INITIAL_CHIPS, []);
     }
 
     function toggleMediNovaChat() {
-        if (isChatOpen) {
+        if (!drawerEl) return;
+        const isOpen = drawerEl.classList.contains('mn-open');
+        if (isOpen) {
             closeMediNovaChat();
         } else {
             openMediNovaChat();
         }
     }
 
-    // Expose Global API on window immediately
-    window.toggleMediNovaChat = toggleMediNovaChat;
-    window.openMediNovaChat = openMediNovaChat;
-    window.closeMediNovaChat = closeMediNovaChat;
+    function openMediNovaChat(initialMessage) {
+        if (!drawerEl) return;
+        drawerEl.classList.add('mn-open');
+        if (inputEl) {
+            setTimeout(() => inputEl.focus(), 150);
+        }
+        if (initialMessage && typeof initialMessage === 'string' && initialMessage.trim()) {
+            sendMessageToAPI(initialMessage.trim());
+        }
+    }
 
-    window.askMediNovaExplain = function (promptText) {
-        openMediNovaChat(promptText || "Please explain my latest diagnostic test results and biomarker analysis.");
-    };
+    function closeMediNovaChat() {
+        if (!drawerEl) return;
+        drawerEl.classList.remove('mn-open');
+    }
 
-    window.askCopilotToExplainResult = function (conditionName, predictionText) {
-        let summaryText = '';
-        const rows = document.querySelectorAll('.table-biomarkers tbody tr, .report-summary-table tr, .patient-data-table tr, .table tr');
-        if (rows && rows.length > 0) {
-            const parts = [];
-            rows.forEach(r => {
-                const cols = r.querySelectorAll('td, th');
-                if (cols.length >= 2) {
-                    parts.push(`${cols[0].innerText.trim()}: ${cols[1].innerText.trim()}`);
+    function appendUserMessage(text) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'mn-msg mn-msg-user';
+        msgDiv.textContent = text;
+        messagesEl.appendChild(msgDiv);
+        scrollToBottom();
+    }
+
+    function appendBotMessage(replyMarkdown, quickReplies, actions) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'mn-msg mn-msg-bot';
+        msgDiv.innerHTML = renderMarkdown(replyMarkdown);
+
+        // Render Action buttons (e.g. Open Heart Screening)
+        if (actions && actions.length > 0) {
+            const actionsContainer = document.createElement('div');
+            actionsContainer.className = 'mn-actions-container';
+            actions.forEach(act => {
+                if (act.url) {
+                    const a = document.createElement('a');
+                    a.className = 'mn-action-btn';
+                    a.href = act.url;
+                    a.textContent = act.label || 'Open Diagnostic Suite';
+                    actionsContainer.appendChild(a);
                 }
             });
-            if (parts.length > 0) {
-                summaryText = ` Key parameters: ${parts.slice(0, 8).join(', ')}.`;
-            }
+            msgDiv.appendChild(actionsContainer);
         }
 
-        const prompt = `Please explain my ${conditionName || 'screening'} diagnostic result (${predictionText || 'Outcome Recorded'}). Analyze which submitted biomarkers were flagged, explain what clinical steps I should take next, and summarize recommended specialist consultations.${summaryText}`;
-        openMediNovaChat(prompt);
-    };
-
-    // Bind Event Listeners
-    function bindChatEvents() {
-        const fab = document.getElementById('medinova-chat-fab');
-        const closeBtn = document.getElementById('btn-close-chat');
-        const maxBtn = document.getElementById('btn-maximize-chat');
-        const maxIcon = document.getElementById('maximize-icon');
-        const clearBtn = document.getElementById('btn-clear-chat');
-        const ttsBtn = document.getElementById('btn-toggle-tts');
-        const ttsIcon = document.getElementById('tts-icon');
-        const sendBtn = document.getElementById('btn-send-message');
-        const inputField = document.getElementById('chat-input-field');
-        const micBtn = document.getElementById('btn-mic-input');
-        const widget = document.getElementById('medinova-chat-widget');
-
-        if (fab) {
-            fab.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleMediNovaChat();
+        // Render Quick Reply chips
+        if (quickReplies && quickReplies.length > 0) {
+            const chipsContainer = document.createElement('div');
+            chipsContainer.className = 'mn-chips-container';
+            quickReplies.forEach(chipText => {
+                const btn = document.createElement('button');
+                btn.className = 'mn-chip';
+                btn.type = 'button';
+                btn.textContent = chipText;
+                btn.addEventListener('click', function () {
+                    appendUserMessage(chipText);
+                    sendMessageToAPI(chipText);
+                });
+                chipsContainer.appendChild(btn);
             });
+            msgDiv.appendChild(chipsContainer);
         }
 
-        if (closeBtn) {
-            closeBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                closeMediNovaChat();
-            });
-        }
+        messagesEl.appendChild(msgDiv);
+        scrollToBottom();
+    }
 
-        // Maximize Toggle
-        if (maxBtn) {
-            maxBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                isMaximized = !isMaximized;
-                if (widget) {
-                    widget.classList.toggle('maximized', isMaximized);
-                }
-                if (maxIcon) {
-                    maxIcon.innerText = isMaximized ? '🗗' : '⤢';
-                }
-            });
-        }
+    function scrollToBottom() {
+        if (!messagesEl) return;
+        setTimeout(() => {
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }, 50);
+    }
 
-        // Clear Chat
-        if (clearBtn) {
-            clearBtn.addEventListener('click', clearChatHistory);
-        }
+    function showTyping() {
+        if (typingEl) typingEl.classList.add('active');
+        scrollToBottom();
+    }
 
-        // TTS Toggle
-        if (ttsBtn) {
-            ttsBtn.addEventListener('click', () => {
-                isSpeechEnabled = !isSpeechEnabled;
-                if (ttsIcon) ttsIcon.innerText = isSpeechEnabled ? '🔊' : '🔇';
-                ttsBtn.title = isSpeechEnabled ? 'Mute Voice Readout' : 'Enable Voice Readout (TTS)';
-                if (!isSpeechEnabled && speechSynth) speechSynth.cancel();
-            });
-        }
+    function hideTyping() {
+        if (typingEl) typingEl.classList.remove('active');
+    }
 
-        // Send on Button Click
-        if (sendBtn) {
-            sendBtn.addEventListener('click', () => sendMessage());
-        }
+    function handleUserSend() {
+        if (!inputEl) return;
+        const text = inputEl.value.trim();
+        if (!text) return;
+        inputEl.value = '';
+        appendUserMessage(text);
+        sendMessageToAPI(text);
+    }
 
-        // Send on Enter
-        if (inputField) {
-            inputField.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
-        }
-
-        // Mic Speech Input
-        setupVoiceInput();
-        if (micBtn) {
-            micBtn.addEventListener('click', () => {
-                if (!recognition) return;
-                if (isListening) {
-                    recognition.stop();
-                } else {
-                    try {
-                        recognition.start();
-                    } catch (e) {
-                        console.warn('Recognition start error:', e);
-                    }
-                }
-            });
-        }
-
-        // Follow-up Chips
-        document.querySelectorAll('.chat-chip').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const query = this.getAttribute('data-query') || this.innerText;
-                sendMessage(query);
-            });
+    function sendMessageToAPI(text) {
+        showTyping();
+        fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: text,
+                current_page: window.location.pathname
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            hideTyping();
+            const reply = data.reply || "I am analyzing your situation. How can I further assist you?";
+            const chips = data.quick_replies || data.follow_up_chips || [];
+            const actions = data.actions || data.suggested_actions || [];
+            appendBotMessage(reply, chips, actions);
+        })
+        .catch(err => {
+            hideTyping();
+            console.error('MediNova Chat Error:', err);
+            appendBotMessage(
+                "I encountered a temporary connection issue. Please check your network and try again, or consult local emergency services (**112 / 911 / 108**) if experiencing an acute medical emergency.",
+                INITIAL_CHIPS,
+                []
+            );
         });
     }
 
-    // Delegated Global Click Listener for bulletproof button responsiveness
-    document.addEventListener('click', function (e) {
-        // Any click on the floating button or its children
-        const launcher = e.target.closest('#medinova-chat-fab, .medinova-chat-fab, [data-action="open-chat"], .open-chat-btn');
-        if (launcher) {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleMediNovaChat();
-            return;
-        }
+    function resetMediNovaChat() {
+        showTyping();
+        fetch('/api/chat/reset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            hideTyping();
+            messagesEl.innerHTML = '';
+            const reply = data.reply || INITIAL_GREETING;
+            const chips = data.quick_replies || INITIAL_CHIPS;
+            const actions = data.actions || [];
+            appendBotMessage(reply, chips, actions);
+        })
+        .catch(() => {
+            hideTyping();
+            messagesEl.innerHTML = '';
+            appendBotMessage(INITIAL_GREETING, INITIAL_CHIPS, []);
+        });
+    }
 
-        // Any click on close button
-        const closeBtn = e.target.closest('#btn-close-chat, .chat-close-btn');
-        if (closeBtn) {
-            e.preventDefault();
-            e.stopPropagation();
-            closeMediNovaChat();
-            return;
-        }
-    });
+    // Expose global methods
+    window.toggleMediNovaChat = toggleMediNovaChat;
+    window.openMediNovaChat = openMediNovaChat;
+    window.closeMediNovaChat = closeMediNovaChat;
+    window.resetMediNovaChat = resetMediNovaChat;
+    window.askCopilotToExplainResult = function (condition, prediction) {
+        openMediNovaChat("Explain my latest test result");
+    };
 
-    // Initialize immediately if DOM is ready, or on DOMContentLoaded
+    // Bind any static page buttons (e.g. .btn-copilot-explain or hero buttons)
+    function bindStaticButtons() {
+        document.querySelectorAll('.btn-copilot-explain, [onclick*="askCopilotToExplainResult"], [onclick*="toggleMediNovaChat"]').forEach(btn => {
+            btn.onclick = function (e) {
+                e.preventDefault();
+                openMediNovaChat("Explain my latest test result");
+            };
+        });
+    }
+
+    // Initialize when DOM is ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', injectChatbotDOM);
+        document.addEventListener('DOMContentLoaded', function () {
+            injectStyles();
+            buildChatbotDOM();
+            bindStaticButtons();
+        });
     } else {
-        injectChatbotDOM();
+        injectStyles();
+        buildChatbotDOM();
+        bindStaticButtons();
     }
 })();
