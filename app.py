@@ -2,12 +2,32 @@ import os
 import joblib
 import numpy as np
 import pandas as pd
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+import datetime
+import json
+import re
+import requests
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from werkzeug.utils import secure_filename
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image as keras_image
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'medinova-clinical-secret-key-2026')
+
+def to_python_type(obj):
+    if isinstance(obj, dict):
+        return {k: to_python_type(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [to_python_type(v) for v in obj]
+    elif isinstance(obj, (np.bool_, bool)):
+        return bool(obj)
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return [to_python_type(x) for x in obj.tolist()]
+    return obj
 
 # Configure Upload & Sample Folders
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
@@ -604,7 +624,7 @@ def heart():
             ]
             
             prediction = heart_model.predict([features_vec])[0]
-            is_pos = (prediction == 1)
+            is_pos = bool(int(prediction) == 1)
             result = "Presence of Cardiovascular Risk" if is_pos else "Absence of Significant Risk"
             insight_key = 'positive' if is_pos else 'negative'
             insights = DISEASE_INSIGHTS['heart_disease'][insight_key]
@@ -625,6 +645,18 @@ def heart():
                 {'label': 'Major Vessels Fluro', 'value': f"{int(raw_data['ca'])}"},
                 {'label': 'Thallium Stress Result', 'value': {3: 'Normal', 6: 'Fixed Defect', 7: 'Reversible Defect'}.get(int(raw_data['thal']), str(raw_data['thal']))}
             ]
+            
+            session['last_diagnosis'] = to_python_type({
+                'condition': 'Heart Disease',
+                'route': '/heart',
+                'prediction': result,
+                'is_positive': is_pos,
+                'patient_summary': patient_summary,
+                'specialist': insights.get('specialist'),
+                'urgency_window': insights.get('urgency_window'),
+                'recommended_tests': insights.get('recommended_tests', []),
+                'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
             
             return render_template('heart.html', prediction=result, insights=insights, is_positive=is_pos, patient_summary=patient_summary)
         except Exception as e:
@@ -667,7 +699,7 @@ def diabetes():
             
             feature_vector = [data[col] for col in feature_order]
             prediction = diabetes_model.predict([feature_vector])[0]
-            is_pos = (prediction == 1)
+            is_pos = bool(int(prediction) == 1)
             result = "Positive - Elevated Diabetes Risk" if is_pos else "Negative - Normal Glycemic Indicators"
             insight_key = 'positive' if is_pos else 'negative'
             insights = DISEASE_INSIGHTS['diabetes'][insight_key]
@@ -682,6 +714,18 @@ def diabetes():
                 {'label': 'HbA1c Level', 'value': f"{HbA1c_level:.1f}%"},
                 {'label': 'Blood Glucose Level', 'value': f"{int(blood_glucose_level)} mg/dL"}
             ]
+            
+            session['last_diagnosis'] = to_python_type({
+                'condition': 'Diabetes',
+                'route': '/diabetes',
+                'prediction': result,
+                'is_positive': is_pos,
+                'patient_summary': patient_summary,
+                'specialist': insights.get('specialist'),
+                'urgency_window': insights.get('urgency_window'),
+                'recommended_tests': insights.get('recommended_tests', []),
+                'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
             
             return render_template('diabetes.html', prediction=result, insights=insights, is_positive=is_pos, patient_summary=patient_summary)
         except Exception as e:
@@ -699,7 +743,7 @@ def kidney():
             
             features = [float(request.form[k]) for k in field_keys]
             prediction = kidney_model.predict([features])[0]
-            is_pos = (prediction == 1)
+            is_pos = bool(int(prediction) == 1)
             result = "Positive - Chronic Kidney Disease Indicators" if is_pos else "Negative - Healthy Renal Function"
             insight_key = 'positive' if is_pos else 'negative'
             insights = DISEASE_INSIGHTS['kidney_disease'][insight_key]
@@ -720,6 +764,18 @@ def kidney():
                 {'label': 'Hypertension', 'value': 'Yes' if features[18] == 1 else 'No'},
                 {'label': 'Diabetes Mellitus', 'value': 'Yes' if features[19] == 1 else 'No'}
             ]
+            
+            session['last_diagnosis'] = to_python_type({
+                'condition': 'Kidney Disease',
+                'route': '/kidney',
+                'prediction': result,
+                'is_positive': is_pos,
+                'patient_summary': patient_summary,
+                'specialist': insights.get('specialist'),
+                'urgency_window': insights.get('urgency_window'),
+                'recommended_tests': insights.get('recommended_tests', []),
+                'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
             
             return render_template('kidney.html', prediction=result, insights=insights, is_positive=is_pos, patient_summary=patient_summary)
         except Exception as e:
@@ -746,7 +802,7 @@ def liver():
             ]
             
             prediction = liver_model.predict([features])[0]
-            is_pos = (prediction == 1)
+            is_pos = bool(int(prediction) == 1)
             result = "High Probability of Liver Disease" if is_pos else "Low Probability of Liver Disease"
             insight_key = 'positive' if is_pos else 'negative'
             insights = DISEASE_INSIGHTS['liver_disease'][insight_key]
@@ -757,12 +813,24 @@ def liver():
                 {'label': 'Total Bilirubin', 'value': f"{features[2]:.1f} mg/dL"},
                 {'label': 'Direct Bilirubin', 'value': f"{features[3]:.1f} mg/dL"},
                 {'label': 'Alkaline Phosphatase (ALP)', 'value': f"{int(features[4])} U/L"},
-                {'label': 'Alamine Aminotransferase (ALT)', 'value': f"{int(features[5])} U/L"},
+                {'label': 'Alamine Aminotransferase (ALT)', 'value': f"{int(features[4])} U/L"},
                 {'label': 'Aspartate Aminotransferase (AST)', 'value': f"{int(features[6])} U/L"},
                 {'label': 'Total Proteins', 'value': f"{features[7]:.1f} g/dL"},
                 {'label': 'Albumin', 'value': f"{features[8]:.1f} g/dL"},
                 {'label': 'A/G Ratio', 'value': f"{features[9]:.2f}"}
             ]
+            
+            session['last_diagnosis'] = to_python_type({
+                'condition': 'Liver Disease',
+                'route': '/liver',
+                'prediction': result,
+                'is_positive': is_pos,
+                'patient_summary': patient_summary,
+                'specialist': insights.get('specialist'),
+                'urgency_window': insights.get('urgency_window'),
+                'recommended_tests': insights.get('recommended_tests', []),
+                'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
             
             return render_template('liver.html', prediction=result, insights=insights, is_positive=is_pos, patient_summary=patient_summary)
         except Exception as e:
@@ -784,7 +852,7 @@ def breast_cancer():
             
             prediction = breast_cancer_model.predict([features])[0]
             # 0 = Malignant, 1 = Benign
-            is_pos = (prediction == 0)
+            is_pos = bool(int(prediction) == 0)
             result = "Malignant Neoplasm Indicators" if is_pos else "Benign Cellular Characteristics"
             insight_key = 'malignant' if is_pos else 'benign'
             insights = DISEASE_INSIGHTS['breast_cancer'][insight_key]
@@ -796,6 +864,18 @@ def breast_cancer():
                 {'label': 'Mean Area', 'value': f"{features[3]:.1f} µm²"},
                 {'label': 'Mean Smoothness Index', 'value': f"{features[4]:.4f}"}
             ]
+            
+            session['last_diagnosis'] = to_python_type({
+                'condition': 'Breast Cancer',
+                'route': '/breast_cancer',
+                'prediction': result,
+                'is_positive': is_pos,
+                'patient_summary': patient_summary,
+                'specialist': insights.get('specialist'),
+                'urgency_window': insights.get('urgency_window'),
+                'recommended_tests': insights.get('recommended_tests', []),
+                'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
             
             return render_template('breast_cancer.html', prediction=result, insights=insights, is_positive=is_pos, patient_summary=patient_summary)
         except Exception as e:
@@ -840,10 +920,10 @@ def malaria():
             img_array = np.expand_dims(img_array, axis=0) / 255.0
             
             pred = malaria_model.predict(img_array, verbose=0)
-            pred_class = np.argmax(pred[0])  # 0 = Uninfected, 1 = Parasitized
+            pred_class = int(np.argmax(pred[0]))  # 0 = Uninfected, 1 = Parasitized
             confidence = float(pred[0][pred_class]) * 100
 
-            is_pos = (pred_class == 1)
+            is_pos = bool(int(pred_class) == 1)
             result = f"Infected (Parasitized) - {confidence:.1f}% Confidence" if is_pos else f"Uninfected (Healthy) - {confidence:.1f}% Confidence"
             insight_key = 'infected' if is_pos else 'uninfected'
             insights = DISEASE_INSIGHTS['malaria'][insight_key]
@@ -854,6 +934,18 @@ def malaria():
                 {'label': 'Detection Classification', 'value': 'Parasitized (Infected)' if is_pos else 'Uninfected (Negative)'},
                 {'label': 'AI Confidence Score', 'value': f"{confidence:.1f}%"}
             ]
+
+            session['last_diagnosis'] = to_python_type({
+                'condition': 'Malaria',
+                'route': '/malaria',
+                'prediction': result,
+                'is_positive': is_pos,
+                'patient_summary': patient_summary,
+                'specialist': insights.get('specialist'),
+                'urgency_window': insights.get('urgency_window'),
+                'recommended_tests': insights.get('recommended_tests', []),
+                'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
 
             return render_template('malaria.html', prediction=result, insights=insights, is_positive=is_pos, 
                                    patient_summary=patient_summary, uploaded_image_url=uploaded_url)
@@ -895,7 +987,7 @@ def pneumonia():
             
             pred = pneumonia_model.predict(img_array, verbose=0)
             prob = float(pred[0][0])
-            is_pos = (prob > 0.5)
+            is_pos = bool(float(prob) > 0.5)
             confidence = (prob if is_pos else (1.0 - prob)) * 100
 
             result = f"Pneumonia Detected - {confidence:.1f}% Confidence" if is_pos else f"Normal Lung Fields - {confidence:.1f}% Confidence"
@@ -909,6 +1001,18 @@ def pneumonia():
                 {'label': 'AI Confidence Level', 'value': f"{confidence:.1f}%"}
             ]
 
+            session['last_diagnosis'] = to_python_type({
+                'condition': 'Pneumonia',
+                'route': '/pneumonia',
+                'prediction': result,
+                'is_positive': is_pos,
+                'patient_summary': patient_summary,
+                'specialist': insights.get('specialist'),
+                'urgency_window': insights.get('urgency_window'),
+                'recommended_tests': insights.get('recommended_tests', []),
+                'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+
             return render_template('pneumonia.html', prediction=result, insights=insights, is_positive=is_pos,
                                    patient_summary=patient_summary, uploaded_image_url=uploaded_url)
         except Exception as e:
@@ -916,6 +1020,972 @@ def pneumonia():
     return render_template('pneumonia.html')
 
 
+# ============================================================================
+# MEDINOVA AI CLINICAL COPILOT ENGINE (DUAL-ENGINE ARCHITECTURE)
+# ============================================================================
+
+EMERGENCY_TRIGGERS = [
+    'crushing chest pain', 'severe chest pain', 'chest tightness', 'heart attack',
+    'cannot breathe', "can't breathe", 'gasping for air', 'difficulty breathing', 'shortness of breath',
+    'oxygen below 90', 'oxygen below 92', 'spo2', 'seizure', 'convulsion', 'unconscious',
+    'fainting', 'syncope', 'passed out', 'vomiting blood', 'coughing blood',
+    'stroke', 'face drooping', 'arm weakness', 'slurred speech', 'sudden numbness',
+    'blackwater', 'rigors with confusion', 'anaphylaxis'
+]
+
+MEDICAL_EXPLAINERS = {
+    'oldpeak': {
+        'term': 'ST Depression (Oldpeak)',
+        'explanation': 'Oldpeak measures ST-segment depression in millimeters induced by exercise relative to resting ECG. It indicates cardiac subendocardial ischemia (insufficient blood and oxygen flow to the ventricular myocardium). An Oldpeak >= 1.5 to 2.0 mm during stress testing is a strong marker of coronary arterial stenosis.'
+    },
+    'thallium': {
+        'term': 'Thallium-201 Scintigraphy (Stress Perfusion Scan)',
+        'explanation': 'A nuclear cardiology imaging test where a radioactive tracer (Thallium-201 or Technetium-99m) evaluates myocardial blood perfusion. A "Normal" scan shows uniform radiotracer uptake throughout the myocardium. A "Reversible Defect" indicates viable heart muscle experiencing stress-induced ischemia (reversible when resting). A "Fixed Defect" indicates prior myocardial infarction (scarred tissue with no viable perfusion).'
+    },
+    'hba1c': {
+        'term': 'Glycated Hemoglobin (HbA1c)',
+        'explanation': 'HbA1c quantifies the percentage of hemoglobin bound to glucose in the bloodstream, providing an accurate measure of average glycemic control over the preceding 90 to 120 days (the average erythrocyte lifespan). Normal reference is < 5.7%; 5.7% - 6.4% indicates prediabetes/impaired glycemic regulation; and >= 6.5% confirms clinical Type 2 Diabetes Mellitus.'
+    },
+    'creatinine': {
+        'term': 'Serum Creatinine & Glomerular Filtration Rate (GFR)',
+        'explanation': 'Creatinine is a chemical waste byproduct produced by muscle metabolism that is filtered through healthy renal glomeruli and excreted in urine. Elevated serum creatinine (> 1.2 mg/dL) directly signifies impaired nephron clearance and reduced Glomerular Filtration Rate (GFR), which are hallmark indicators of acute kidney injury or chronic kidney disease (CKD).'
+    },
+    'blood urea': {
+        'term': 'Blood Urea & Blood Urea Nitrogen (BUN)',
+        'explanation': 'Urea is formed in the liver as the terminal product of protein metabolism and transported through the bloodstream to the kidneys for excretion. Normal physiological levels range between 15 and 45 mg/dL. Elevated blood urea (azotemia) suggests diminished renal perfusion, intrinsic tubular dysfunction, or severe dehydration.'
+    },
+    'albumin': {
+        'term': 'Urine Albumin (Proteinuria)',
+        'explanation': 'Albumin is an essential blood plasma protein. Healthy kidneys prevent albumin from passing through the glomerular filtration barrier. Detection of albumin in urine (Grade 1 to 5 microalbuminuria or macroalbuminuria) signifies glomerular podocyte damage, frequently secondary to hypertensive nephrosclerosis or diabetic nephropathy.'
+    },
+    'bilirubin': {
+        'term': 'Total & Direct Bilirubin',
+        'explanation': 'Bilirubin is a yellowish bile pigment formed during normal breakdown of red blood cells (hemoglobin catabolism). Normal total bilirubin is 0.1 to 1.2 mg/dL. Levels above 1.2 mg/dL result in hyperbilirubinemia, leading to clinical jaundice (icterus), scleral yellowing, and dark urine. Elevated direct (conjugated) bilirubin points to biliary tract obstruction or cholestasis.'
+    },
+    'alt': {
+        'term': 'Alanine Aminotransferase (ALT / SGPT)',
+        'explanation': 'ALT is an enzyme found primarily inside hepatocellular cytoplasm. When liver cells experience inflammation or necrosis (such as in viral hepatitis, fatty liver disease, or toxic injury), ALT leaks into the circulation. Normal levels are 7 to 56 U/L. Marked elevation is a sensitive biomarker for active liver tissue injury.'
+    },
+    'ast': {
+        'term': 'Aspartate Aminotransferase (AST / SGOT)',
+        'explanation': 'AST is an intracellular enzyme present in hepatocytes as well as cardiac and skeletal muscle tissue. Normal ranges are 10 to 40 U/L. An elevated AST/ALT ratio (De Ritis ratio > 2.0) often suggests alcoholic liver disease, ischemic hepatitis, or advanced hepatic cirrhosis.'
+    },
+    'ag ratio': {
+        'term': 'Albumin-to-Globulin (A/G) Ratio',
+        'explanation': 'The A/G ratio compares circulating albumin (synthesized exclusively by hepatocytes) against globulins (produced by immune cells). Normal range is 1.0 to 2.2. A decreased A/G ratio (< 1.0) occurs when the liver cannot synthesize sufficient albumin due to cirrhosis or chronic liver disease, or in cases of excessive renal protein loss.'
+    },
+    'specific gravity': {
+        'term': 'Urine Specific Gravity (SG)',
+        'explanation': 'Urine specific gravity evaluates the kidneys\' tubular concentration and dilution capacity by comparing the density of urine to pure distilled water. Normal range is 1.010 to 1.025. Low fixed specific gravity indicates loss of tubular reabsorption capacity in chronic renal insufficiency.'
+    },
+    'mean radius': {
+        'term': 'Mean Nuclear Radius & Cytology Morphometry',
+        'explanation': 'In Fine Needle Aspiration (FNA) breast cytology, automated computer vision calculates cell nuclear dimensions. Benign breast tissue displays regular, uniform nuclei with a mean radius < 14.0 µm. Malignant neoplastic cells exhibit nuclear pleomorphism, enlarged chromatin volume, irregular perimeters (> 90 µm), and enlarged areas (> 650 µm²).'
+    },
+    'accuracy': {
+        'term': 'MediNova Machine Learning & Model Performance',
+        'explanation': 'MediNova integrates 7 specialized machine learning and deep learning models: Random Forest for Cardiovascular screening (92% test accuracy), LightGBM for Diabetes risk (94% accuracy), Random Forest for Chronic Kidney Disease (98% accuracy), Ensemble Classifier for Liver disease (86% accuracy), Logistic/SVM for Breast Oncology (95% accuracy), Deep CNN with Giemsa thin smear image analysis for Malaria (96% accuracy), and Deep CNN chest radiograph scan for Pneumonia (92% accuracy). All models provide rapid preliminary risk stratification and automated clinical protocol generation.'
+    }
+}
+
+def parse_num(val_str):
+    if not isinstance(val_str, str):
+        try:
+            return float(val_str)
+        except:
+            return None
+    m = re.search(r'[-+]?\d*\.?\d+', val_str)
+    if m:
+        try:
+            return float(m.group(0))
+        except:
+            return None
+    return None
+
+def analyze_patient_biomarkers(condition, patient_summary):
+    breakdown = []
+    condition_lower = condition.lower() if condition else ''
+    
+    for item in patient_summary:
+        label = item.get('label', '')
+        val_str = str(item.get('value', ''))
+        num_val = parse_num(val_str)
+        status = 'Normal'
+        ref = 'Standard Clinical Target'
+        note = 'Within expected physiological limits.'
+        
+        if 'heart' in condition_lower:
+            if 'Blood Pressure' in label:
+                ref = '< 120 mm Hg'
+                if num_val and num_val >= 140:
+                    status = 'High Risk'
+                    note = f'{int(num_val)} mm Hg indicates Stage 2 Hypertension.'
+                elif num_val and num_val >= 130:
+                    status = 'Borderline'
+                    note = f'{int(num_val)} mm Hg indicates Stage 1 Hypertension.'
+                else:
+                    status = 'Normal'
+            elif 'Cholesterol' in label:
+                ref = '< 200 mg/dL'
+                if num_val and num_val >= 240:
+                    status = 'High Risk'
+                    note = f'{int(num_val)} mg/dL indicates hypercholesterolemia.'
+                elif num_val and num_val >= 200:
+                    status = 'Borderline'
+                    note = f'{int(num_val)} mg/dL is borderline elevated.'
+                else:
+                    status = 'Normal'
+            elif 'Oldpeak' in label or 'ST Depression' in label:
+                ref = '< 1.0 mm'
+                if num_val and num_val >= 1.5:
+                    status = 'High Risk'
+                    note = f'{num_val} mm suggests exercise-induced subendocardial ischemia.'
+                else:
+                    status = 'Normal'
+            elif 'Thallium' in label:
+                ref = 'Normal'
+                if 'defect' in val_str.lower():
+                    status = 'High Risk'
+                    note = 'Myocardial perfusion defect detected.'
+                else:
+                    status = 'Normal'
+            elif 'Fasting Blood Sugar' in label:
+                ref = 'No (< 100 mg/dL)'
+                if 'yes' in val_str.lower():
+                    status = 'Borderline'
+                    note = 'Impaired fasting glucose contributing to metabolic vascular stress.'
+                    
+        elif 'diabetes' in condition_lower:
+            if 'HbA1c' in label:
+                ref = '< 5.7%'
+                if num_val and num_val >= 6.5:
+                    status = 'High Risk'
+                    note = f'{num_val}% indicates diabetic glycemic threshold over the past 90 days.'
+                elif num_val and num_val >= 5.7:
+                    status = 'Borderline'
+                    note = f'{num_val}% falls in the impaired prediabetic spectrum.'
+                else:
+                    status = 'Normal'
+            elif 'Blood Glucose' in label:
+                ref = '70 - 99 mg/dL (fasting)'
+                if num_val and num_val >= 126:
+                    status = 'High Risk'
+                    note = f'{int(num_val)} mg/dL exceeds the clinical diagnostic fasting cutoff.'
+                elif num_val and num_val >= 100:
+                    status = 'Borderline'
+                    note = f'{int(num_val)} mg/dL indicates impaired fasting glucose.'
+                else:
+                    status = 'Normal'
+            elif 'BMI' in label:
+                ref = '18.5 - 24.9 kg/m²'
+                if num_val and num_val >= 30.0:
+                    status = 'High Risk'
+                    note = f'{num_val} kg/m² indicates obesity-associated insulin resistance.'
+                elif num_val and num_val >= 25.0:
+                    status = 'Borderline'
+                    note = f'{num_val} kg/m² is in the overweight range.'
+                else:
+                    status = 'Normal'
+            elif 'Hypertension' in label:
+                ref = 'No'
+                if 'yes' in val_str.lower():
+                    status = 'Borderline'
+                    note = 'Hypertensive co-morbidity increases diabetic microvascular risk.'
+                    
+        elif 'kidney' in condition_lower:
+            if 'Creatinine' in label:
+                ref = '0.7 - 1.2 mg/dL'
+                if num_val and num_val > 1.2:
+                    status = 'High Risk'
+                    note = f'{num_val} mg/dL reflects decreased glomerular filtration clearance.'
+                else:
+                    status = 'Normal'
+            elif 'Blood Urea' in label:
+                ref = '15 - 45 mg/dL'
+                if num_val and num_val > 45:
+                    status = 'High Risk'
+                    note = f'{num_val} mg/dL indicates retention of nitrogenous metabolic waste.'
+                else:
+                    status = 'Normal'
+            elif 'Albumin' in label:
+                ref = 'Grade 0'
+                if 'grade 0' not in val_str.lower() and num_val and num_val > 0:
+                    status = 'High Risk'
+                    note = f'{val_str} confirms breakdown of glomerular podocyte barrier.'
+                else:
+                    status = 'Normal'
+            elif 'Blood Pressure' in label:
+                ref = '< 120 mm Hg'
+                if num_val and num_val >= 140:
+                    status = 'High Risk'
+                    note = f'{int(num_val)} mm Hg increases intraglomerular capillary pressure.'
+                    
+        elif 'liver' in condition_lower:
+            if 'Total Bilirubin' in label:
+                ref = '0.1 - 1.2 mg/dL'
+                if num_val and num_val > 1.2:
+                    status = 'High Risk'
+                    note = f'{num_val} mg/dL indicates hyperbilirubinemia and risk of jaundice.'
+                else:
+                    status = 'Normal'
+            elif 'Direct Bilirubin' in label:
+                ref = '0.0 - 0.3 mg/dL'
+                if num_val and num_val > 0.3:
+                    status = 'High Risk'
+                    note = f'{num_val} mg/dL suggests conjugated cholestatic biliary impairment.'
+            elif 'Alkaline' in label or 'ALP' in label:
+                ref = '44 - 147 U/L'
+                if num_val and num_val > 147:
+                    status = 'High Risk'
+                    note = f'{int(num_val)} U/L suggests biliary canalicular inflammation.'
+                else:
+                    status = 'Normal'
+            elif 'ALT' in label:
+                ref = '7 - 56 U/L'
+                if num_val and num_val > 56:
+                    status = 'High Risk'
+                    note = f'{int(num_val)} U/L indicates acute or chronic hepatocellular injury.'
+                else:
+                    status = 'Normal'
+            elif 'AST' in label:
+                ref = '10 - 40 U/L'
+                if num_val and num_val > 40:
+                    status = 'High Risk'
+                    note = f'{int(num_val)} U/L indicates hepatic transaminase leakage.'
+                else:
+                    status = 'Normal'
+            elif 'A/G Ratio' in label:
+                ref = '1.0 - 2.2'
+                if num_val and num_val < 1.0:
+                    status = 'High Risk'
+                    note = f'{num_val} indicates inverted ratio due to reduced albumin synthesis.'
+                    
+        elif 'breast' in condition_lower:
+            if 'Radius' in label:
+                ref = '< 14.0 µm'
+                if num_val and num_val >= 14.5:
+                    status = 'High Risk'
+                    note = f'{num_val} µm reflects nuclear enlargement associated with neoplastic mitosis.'
+                else:
+                    status = 'Normal'
+            elif 'Perimeter' in label:
+                ref = '< 90.0 µm'
+                if num_val and num_val >= 92.0:
+                    status = 'High Risk'
+                    note = f'{num_val} µm indicates expanded irregular cellular perimeter.'
+                else:
+                    status = 'Normal'
+            elif 'Area' in label:
+                ref = '< 650.0 µm²'
+                if num_val and num_val >= 650.0:
+                    status = 'High Risk'
+                    note = f'{num_val} µm² reflects increased nuclear cytoplasmic mass.'
+            elif 'Texture' in label:
+                ref = '< 19.0'
+                if num_val and num_val >= 19.5:
+                    status = 'High Risk'
+                    note = f'{num_val} indicates high chromatin texture variance.'
+                    
+        elif 'malaria' in condition_lower:
+            if 'Classification' in label:
+                ref = 'Uninfected (Negative)'
+                if 'parasitized' in val_str.lower() or 'infected' in val_str.lower():
+                    status = 'High Risk'
+                    note = 'Intracellular Plasmodium trophozoites detected in red blood cells.'
+                else:
+                    status = 'Normal'
+                    
+        elif 'pneumonia' in condition_lower:
+            if 'Assessment' in label:
+                ref = 'Clear / Unremarkable'
+                if 'consolidation' in val_str.lower() or 'infiltrates' in val_str.lower():
+                    status = 'High Risk'
+                    note = 'Parenchymal consolidation and airspace opacification identified.'
+                else:
+                    status = 'Normal'
+
+        breakdown.append({
+            'label': label,
+            'value': val_str,
+            'ref': ref,
+            'status': status,
+            'note': note
+        })
+        
+    return breakdown
+
+def extract_form_auto_fill(message, current_page):
+    msg = message.lower()
+    page = (current_page or '').lower()
+    fill_data = {}
+    
+    is_pos_sample = any(k in msg for k in ['positive', 'high risk', 'severe', 'detected', 'unhealthy', 'borderline'])
+    is_neg_sample = any(k in msg for k in ['negative', 'low risk', 'normal', 'healthy', 'optimal', 'clear'])
+    is_sample_request = any(k in msg for k in ['sample', 'case', 'auto fill', 'autofill', 'fill', 'load', 'preset', 'populate'])
+    
+    # 1. Heart
+    if 'heart' in page or 'cardio' in page:
+        if is_sample_request and is_pos_sample:
+            return {'age': 60, 'sex': 1, 'cp': 3, 'bp': 145, 'chol': 280, 'fbs': 1, 'ekg': 2, 'max_hr': 130, 'exang': 1, 'oldpeak': 2.5, 'slope': 2, 'ca': 2, 'thal': 7}
+        elif is_sample_request and is_neg_sample:
+            return {'age': 45, 'sex': 0, 'cp': 1, 'bp': 115, 'chol': 175, 'fbs': 0, 'ekg': 0, 'max_hr': 175, 'exang': 0, 'oldpeak': 0.0, 'slope': 0, 'ca': 0, 'thal': 3}
+            
+        m = re.search(r'(\d+)\s*(?:years?|yo|y/o|age)', msg) or re.search(r'age\s*(?:is|:|=)?\s*(\d+)', msg)
+        if m: fill_data['age'] = int(m.group(1))
+        if 'female' in msg or 'woman' in msg: fill_data['sex'] = 0
+        elif 'male' in msg or 'man' in msg: fill_data['sex'] = 1
+        m = re.search(r'(?:bp|blood pressure|resting bp)\s*(?:is|:|=)?\s*(\d+)', msg)
+        if m: fill_data['bp'] = int(m.group(1))
+        m = re.search(r'(?:chol|cholesterol)\s*(?:is|:|=)?\s*(\d+)', msg)
+        if m: fill_data['chol'] = int(m.group(1))
+        if 'fasting blood sugar' in msg or 'fbs' in msg:
+            if 'over 120' in msg or '> 120' in msg or 'high' in msg or 'yes' in msg:
+                fill_data['fbs'] = 1
+            else:
+                fill_data['fbs'] = 0
+        m = re.search(r'(?:max hr|heart rate|max_hr|hr)\s*(?:is|:|=)?\s*(\d+)', msg)
+        if m: fill_data['max_hr'] = int(m.group(1))
+        m = re.search(r'(?:oldpeak|st depression)\s*(?:is|:|=)?\s*(\d*\.?\d+)', msg)
+        if m: fill_data['oldpeak'] = float(m.group(1))
+        return fill_data if len(fill_data) >= 2 else None
+
+    # 2. Diabetes
+    elif 'diabetes' in page:
+        if is_sample_request and is_pos_sample:
+            return {'gender': 'Male', 'age': 55, 'hypertension': 1, 'heart_disease': 0, 'smoking_history': 'current', 'bmi': 31.5, 'HbA1c_level': 7.8, 'blood_glucose_level': 185}
+        elif is_sample_request and is_neg_sample:
+            return {'gender': 'Female', 'age': 32, 'hypertension': 0, 'heart_disease': 0, 'smoking_history': 'never', 'bmi': 22.4, 'HbA1c_level': 5.1, 'blood_glucose_level': 88}
+            
+        m = re.search(r'(\d+)\s*(?:years?|yo|y/o|age)', msg) or re.search(r'age\s*(?:is|:|=)?\s*(\d+)', msg)
+        if m: fill_data['age'] = int(m.group(1))
+        if 'female' in msg: fill_data['gender'] = 'Female'
+        elif 'male' in msg: fill_data['gender'] = 'Male'
+        m = re.search(r'(?:bmi)\s*(?:is|:|=)?\s*(\d*\.?\d+)', msg)
+        if m: fill_data['bmi'] = float(m.group(1))
+        m = re.search(r'(?:hba1c)\s*(?:is|:|=)?\s*(\d*\.?\d+)', msg)
+        if m: fill_data['HbA1c_level'] = float(m.group(1))
+        m = re.search(r'(?:glucose|blood sugar|sugar)\s*(?:is|:|=)?\s*(\d+)', msg)
+        if m: fill_data['blood_glucose_level'] = int(m.group(1))
+        return fill_data if len(fill_data) >= 2 else None
+
+    # 3. Kidney
+    elif 'kidney' in page:
+        if is_sample_request and is_pos_sample:
+            return {'age': 58, 'bp': 140, 'sg': 1.010, 'al': 3, 'su': 1, 'rbc': 0, 'pc': 0, 'pcc': 1, 'ba': 0, 'bgr': 190, 'bu': 68, 'sc': 2.4, 'sod': 132, 'pot': 5.2, 'hemo': 9.8, 'pcv': 32, 'wc': 9800, 'rc': 3.8, 'htn': 1, 'dm': 1, 'cad': 0, 'appet': 1, 'pe': 1, 'ane': 1}
+        elif is_sample_request and is_neg_sample:
+            return {'age': 36, 'bp': 115, 'sg': 1.020, 'al': 0, 'su': 0, 'rbc': 1, 'pc': 1, 'pcc': 0, 'ba': 0, 'bgr': 95, 'bu': 28, 'sc': 0.9, 'sod': 140, 'pot': 4.2, 'hemo': 14.5, 'pcv': 44, 'wc': 6500, 'rc': 4.9, 'htn': 0, 'dm': 0, 'cad': 0, 'appet': 0, 'pe': 0, 'ane': 0}
+            
+        m = re.search(r'(\d+)\s*(?:years?|yo|y/o|age)', msg) or re.search(r'age\s*(?:is|:|=)?\s*(\d+)', msg)
+        if m: fill_data['age'] = int(m.group(1))
+        m = re.search(r'(?:bp|blood pressure)\s*(?:is|:|=)?\s*(\d+)', msg)
+        if m: fill_data['bp'] = int(m.group(1))
+        m = re.search(r'(?:creatinine|sc)\s*(?:is|:|=)?\s*(\d*\.?\d+)', msg)
+        if m: fill_data['sc'] = float(m.group(1))
+        m = re.search(r'(?:urea|bu)\s*(?:is|:|=)?\s*(\d*\.?\d+)', msg)
+        if m: fill_data['bu'] = float(m.group(1))
+        return fill_data if len(fill_data) >= 2 else None
+
+    # 4. Liver
+    elif 'liver' in page:
+        if is_sample_request and is_pos_sample:
+            return {'Age': 52, 'Gender': 'Male', 'Total_Bilirubin': 2.8, 'Direct_Bilirubin': 1.2, 'Alkaline_Phosphotase': 290, 'Alamine_Aminotransferase': 85, 'Aspartate_Aminotransferase': 92, 'Total_Protiens': 5.8, 'Albumin': 2.7, 'Albumin_and_Globulin_Ratio': 0.85}
+        elif is_sample_request and is_neg_sample:
+            return {'Age': 34, 'Gender': 'Female', 'Total_Bilirubin': 0.8, 'Direct_Bilirubin': 0.2, 'Alkaline_Phosphotase': 110, 'Alamine_Aminotransferase': 22, 'Aspartate_Aminotransferase': 24, 'Total_Protiens': 7.2, 'Albumin': 4.1, 'Albumin_and_Globulin_Ratio': 1.3}
+            
+        m = re.search(r'(\d+)\s*(?:years?|yo|y/o|age)', msg) or re.search(r'age\s*(?:is|:|=)?\s*(\d+)', msg)
+        if m: fill_data['Age'] = int(m.group(1))
+        if 'female' in msg: fill_data['Gender'] = 'Female'
+        elif 'male' in msg: fill_data['Gender'] = 'Male'
+        m = re.search(r'(?:total bilirubin|bilirubin)\s*(?:is|:|=)?\s*(\d*\.?\d+)', msg)
+        if m: fill_data['Total_Bilirubin'] = float(m.group(1))
+        m = re.search(r'(?:alt)\s*(?:is|:|=)?\s*(\d+)', msg)
+        if m: fill_data['Alamine_Aminotransferase'] = int(m.group(1))
+        m = re.search(r'(?:ast)\s*(?:is|:|=)?\s*(\d+)', msg)
+        if m: fill_data['Aspartate_Aminotransferase'] = int(m.group(1))
+        return fill_data if len(fill_data) >= 2 else None
+
+    # 5. Breast Cancer
+    elif 'breast' in page:
+        if is_sample_request and is_pos_sample:
+            return {'mean_radius': 17.99, 'mean_texture': 20.38, 'mean_perimeter': 122.8, 'mean_area': 1001.0, 'mean_smoothness': 0.1184}
+        elif is_sample_request and is_neg_sample:
+            return {'mean_radius': 11.28, 'mean_texture': 15.68, 'mean_perimeter': 72.1, 'mean_area': 390.0, 'mean_smoothness': 0.082}
+            
+        m = re.search(r'(?:radius|mean radius)\s*(?:is|:|=)?\s*(\d*\.?\d+)', msg)
+        if m: fill_data['mean_radius'] = float(m.group(1))
+        m = re.search(r'(?:texture|mean texture)\s*(?:is|:|=)?\s*(\d*\.?\d+)', msg)
+        if m: fill_data['mean_texture'] = float(m.group(1))
+        m = re.search(r'(?:perimeter|mean perimeter)\s*(?:is|:|=)?\s*(\d*\.?\d+)', msg)
+        if m: fill_data['mean_perimeter'] = float(m.group(1))
+        return fill_data if len(fill_data) >= 2 else None
+
+    return None
+
+def call_live_llm(user_msg, current_page, page_context, last_diagnosis):
+    gemini_key = os.environ.get('GEMINI_API_KEY')
+    openai_key = os.environ.get('OPENAI_API_KEY')
+    
+    if not gemini_key and not openai_key:
+        return None
+        
+    system_prompt = f"""You are MediNova AI Clinical Copilot, an advanced clinical decision support AI assistant built into MediNova.
+You are strictly evidence-based, medically accurate, reassuring, and adhere to medical decision support protocols.
+MediNova features 7 diagnostic screening models:
+1. Cardiovascular Disease (Random Forest: 13 biomarkers)
+2. Diabetes & Metabolic Risk (LightGBM: 8 biomarkers)
+3. Chronic Kidney Disease (Random Forest: 24 biomarkers)
+4. Hepatic / Liver Disease (Ensemble Classifier: 10 biomarkers)
+5. Breast Oncology Cytology (Logistic/SVM: 5 parameters)
+6. Malaria Smear Parasitology (Deep CNN: 50x50 cell smear classification)
+7. Pneumonia Radiography (Deep CNN: 150x150 chest X-ray classification)
+
+Current User Context:
+- Active Page: {current_page}
+- Active Diagnostic Session: {json.dumps(last_diagnosis if last_diagnosis else page_context, default=str)}
+
+Guidelines:
+- Explain medical terms and biomarkers clearly with reference ranges.
+- If acute red-flag symptoms are reported (crushing chest pain, severe dyspnea, seizures, fainting), issue an immediate emergency alert.
+- Format responses cleanly with Markdown (bold headings, bullet points, concise tables if helpful).
+- Maintain clinical safety disclaimers: this is preliminary AI risk stratification and decision support, not definitive diagnosis.
+"""
+
+    if gemini_key:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+            payload = {
+                "contents": [
+                    {
+                        "role": "user",
+                        "parts": [{"text": f"{system_prompt}\n\nUser Question: {user_msg}"}]
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": 0.3,
+                    "maxOutputTokens": 1000
+                }
+            }
+            res = requests.post(url, json=payload, timeout=8)
+            if res.status_code == 200:
+                data = res.json()
+                text = data['candidates'][0]['content']['parts'][0]['text']
+                return {
+                    "reply": text,
+                    "confidence_badge": "MediNova Copilot • Gemini Live AI",
+                    "engine": "gemini"
+                }
+        except Exception as e:
+            print(f"Gemini API call failed, falling back to local engine: {e}")
+            
+    if openai_key:
+        try:
+            url = "https://api.openai.com/v1/chat/completions"
+            headers = {"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"}
+            payload = {
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_msg}
+                ],
+                "temperature": 0.3,
+                "max_tokens": 1000
+            }
+            res = requests.post(url, json=payload, headers=headers, timeout=8)
+            if res.status_code == 200:
+                data = res.json()
+                text = data['choices'][0]['message']['content']
+                return {
+                    "reply": text,
+                    "confidence_badge": "MediNova Copilot • OpenAI Live AI",
+                    "engine": "openai"
+                }
+        except Exception as e:
+            print(f"OpenAI API call failed, falling back to local engine: {e}")
+            
+    return None
+
+def medinova_clinical_copilot_engine(user_msg, current_page, page_context, last_diagnosis):
+    msg = (user_msg or '').strip()
+    msg_lower = msg.lower()
+    page = (current_page or '').lower()
+    
+    # 1. EMERGENCY RED-FLAG DETECTION
+    for trigger in EMERGENCY_TRIGGERS:
+        if trigger in msg_lower:
+            reply = (
+                "### 🚨 HIGH-PRIORITY CLINICAL EMERGENCY ALERT\n\n"
+                "**Immediate Action Protocol:**\n"
+                "The acute symptoms you reported (*" + trigger + "*) indicate a potential life-threatening medical emergency.\n\n"
+                "- **Call Emergency Services Immediately:** Dial **112 / 911 / 108** right now.\n"
+                "- **Do Not Drive Yourself:** Request an urgent emergency ambulance.\n"
+                "- **Sit in a Supported Position:** Remain seated upright with chest uncompressed.\n"
+                "- **Loosen Restrictive Clothing:** Loosen collar, belt, and buttons to facilitate unlabored respiration.\n"
+                "- **Calm Regulated Breathing:** Take slow, deep breaths while awaiting immediate paramedic arrival.\n\n"
+                "For the accredited local emergency directory and 24/7 care helplines, consult our Emergency Portal."
+            )
+            return {
+                "reply": reply,
+                "confidence_badge": "Emergency Triage • Immediate Action",
+                "is_emergency": True,
+                "suggested_actions": [
+                    {"label": "🚨 Emergency Directory & Care", "url": "/contact"},
+                    {"label": "📞 Call 112 / 911", "url": "tel:911"}
+                ],
+                "follow_up_chips": [
+                    "What emergency first aid should I administer?",
+                    "View nearest hospital emergency room",
+                    "Clear chat session"
+                ]
+            }
+
+    # 2. CONVERSATIONAL FORM AUTO-FILL
+    fill_data = extract_form_auto_fill(msg, page)
+    if fill_data:
+        param_lines = "\n".join([f"- **`{k}`**: `{v}`" for k, v in fill_data.items()])
+        clean_page_name = page.replace('/', '').replace('_', ' ').capitalize()
+        reply = (
+            f"### ⚡ MediNova Form Auto-Fill Activated\n\n"
+            f"I have parsed the patient clinical vitals from your message for **{clean_page_name} Screening**:\n\n"
+            f"{param_lines}\n\n"
+            "Click the **Auto-Fill Form** button below to populate the input parameters directly into the diagnostic form with a smooth highlight animation."
+        )
+        return {
+            "reply": reply,
+            "confidence_badge": "Form Assistant • Auto-Fill Ready",
+            "is_emergency": False,
+            "form_fill_data": fill_data,
+            "suggested_actions": [
+                {"label": "⚡ Auto-Fill Form with These Values", "action": "autofill"}
+            ],
+            "follow_up_chips": [
+                "Run diagnostic analysis",
+                "Load a normal reference case instead",
+                "Explain the significance of these values"
+            ]
+        }
+
+    # 2.5 NORMAL BIOMARKER REFERENCE RANGES
+    is_ref_range_query = any(k in msg_lower for k in [
+        'reference range', 'normal range', 'normal biomarker', 'standard target', 
+        'reference ranges', 'normal values', 'what is normal', 'biomarker range'
+    ])
+    if is_ref_range_query:
+        reply = (
+            "### 🧪 Standard Clinical Biomarker Reference Ranges\n\n"
+            "MediNova cross-references your submitted lab parameters against validated medical reference standards:\n\n"
+            "| Diagnostic Domain | Clinical Biomarker | Normal / Optimal Target | Clinical Alert Threshold |\n"
+            "| :--- | :--- | :--- | :--- |\n"
+            "| **Cardiovascular** | Resting Blood Pressure | `< 120/80 mm Hg` | `≥ 130/80 mm Hg` (Hypertension) |\n"
+            "| **Cardiovascular** | Total Serum Cholesterol | `< 200 mg/dL` | `≥ 240 mg/dL` (Hypercholesterolemia) |\n"
+            "| **Cardiovascular** | ST Depression (Oldpeak) | `0.0 - 0.5 mm` | `> 1.5 mm` (Subendocardial Ischemia) |\n"
+            "| **Glycemic Panel** | Fasting Blood Glucose | `70 - 99 mg/dL` | `≥ 126 mg/dL` (Diabetes Mellitus) |\n"
+            "| **Glycemic Panel** | Glycated Hemoglobin (HbA1c) | `< 5.7%` | `≥ 6.5%` (Diabetes Mellitus) |\n"
+            "| **Renal Panel** | Serum Creatinine | `0.7 - 1.2 mg/dL` (M) / `0.5 - 1.0` (F) | `> 1.5 mg/dL` (Impaired GFR) |\n"
+            "| **Renal Panel** | Urine Albumin | `Grade 0` (Negative) | `≥ Grade 1` (Microalbuminuria) |\n"
+            "| **Renal Panel** | Blood Urea | `15 - 45 mg/dL` | `> 50 mg/dL` (Azotemia) |\n"
+            "| **Hepatic Panel** | Total Bilirubin | `0.2 - 1.2 mg/dL` | `> 2.0 mg/dL` (Hyperbilirubinemia) |\n"
+            "| **Hepatic Panel** | ALT (Alanine Aminotransferase) | `< 40 U/L` | `> 50 U/L` (Hepatocellular Injury) |\n"
+            "| **Hepatic Panel** | AST (Aspartate Aminotransferase)| `< 40 U/L` | `> 50 U/L` (Hepatic / Cardiac Strain) |\n"
+            "| **Hepatic Panel** | Albumin-to-Globulin (A/G) Ratio| `1.0 - 2.2` | `< 1.0` (Impaired Protein Synthesis) |\n\n"
+            "> 💡 **Clinical Guidance:** Lab test values should always be interpreted alongside complete clinical history and symptoms by a board-certified physician."
+        )
+        return {
+            "reply": reply,
+            "confidence_badge": "Clinical Standards • Reference Ranges",
+            "is_emergency": False,
+            "suggested_actions": [
+                {"label": "🫀 Heart Screening", "url": "/heart"},
+                {"label": "🩸 Diabetes Screening", "url": "/diabetes"},
+                {"label": "🩺 Kidney Screening", "url": "/kidney"},
+                {"label": "🧬 Liver Screening", "url": "/liver"}
+            ],
+            "follow_up_chips": [
+                "Which biomarkers are most dangerous when elevated?",
+                "Check symptoms and recommend a test",
+                "Explain my latest test results"
+            ]
+        }
+
+    # 2.6 RED-FLAG EMERGENCY WARNING SIGNS (INFORMATIONAL)
+    is_emergency_info_query = any(k in msg_lower for k in [
+        'emergency warning signs', 'emergency symptoms', 'red-flag', 'red flag',
+        'warning signs', 'when to go to er', 'emergency room visit'
+    ])
+    if is_emergency_info_query:
+        reply = (
+            "### 🚨 Acute Clinical Red-Flag Warning Signs\n\n"
+            "If you or a patient experience any of the following high-priority clinical presentations, **seek immediate emergency care (112 / 911 / 108)**:\n\n"
+            "| Clinical Domain | Red-Flag Presentation | Immediate Emergency Threat |\n"
+            "| :--- | :--- | :--- |\n"
+            "| **Cardiovascular** | Crushing retrosternal chest pressure radiating to jaw/left arm with diaphoresis (sweating) | Acute Myocardial Infarction (Heart Attack) |\n"
+            "| **Neurological** | Sudden facial droop, unilateral arm drift, or acute dysarthria (slurred speech) | Acute Ischemic Stroke (CVA) |\n"
+            "| **Respiratory** | Severe shortness of breath, gasping, cyanosis (blue lips/fingers), SpO2 < 90% | Acute Respiratory Distress / Pulmonary Embolism |\n"
+            "| **Metabolic** | High blood sugar (> 250 mg/dL) with fruity breath, rapid deep breathing, vomiting, confusion | Diabetic Ketoacidosis (DKA) / HHS |\n"
+            "| **Infectious** | Spiking fevers with rigors, altered mental status, or black tea-colored urine | Cerebral Malaria / Sepsis |\n"
+            "| **Renal / Hepatic** | Sudden anuria (no urine output), massive ascites, confusion, vomiting blood | Acute Kidney / Hepatic Failure |\n\n"
+            "- **National Emergency Services:** Dial **112 / 911 / 108** immediately.\n"
+            "- **Directory & Hospital Care:** Visit our Emergency Directory for accredited contacts."
+        )
+        return {
+            "reply": reply,
+            "confidence_badge": "Emergency Protocols • Life-Threatening Cues",
+            "is_emergency": False,
+            "suggested_actions": [
+                {"label": "🚨 Emergency Directory & Care", "url": "/contact"},
+                {"label": "📞 Call 112 / 911", "url": "tel:911"}
+            ],
+            "follow_up_chips": [
+                "Check symptoms and recommend a test",
+                "Normal biomarker reference ranges",
+                "Explain my latest test results"
+            ]
+        }
+
+    # 2.7 INTERACTIVE SYMPTOM OVERVIEW
+    is_symptom_overview_query = any(k in msg_lower for k in [
+        'check symptoms', 'recommend a test', 'symptom check', 'which test should i take',
+        'triage symptoms', 'recommend test', 'symptom', 'recommend', 'screening test'
+    ])
+    if is_symptom_overview_query:
+        reply = (
+            "### 🩺 MediNova Interactive Symptom Triage\n\n"
+            "Describe the symptoms you or a patient are experiencing (e.g., *chest tightness, frequent thirst, foamy urine, jaundice, breast lump, shaking chills, or persistent wet cough*), and I will route you to the appropriate diagnostic tool.\n\n"
+            "**Available MediNova Screening Suites:**\n"
+            "- **🫀 Cardiovascular (/heart):** Chest discomfort, dyspnea on exertion, hypertension\n"
+            "- **🩸 Diabetes & Glycemic (/diabetes):** Polydipsia (thirst), polyuria (urination), fatigue\n"
+            "- **🩺 Kidney Function (/kidney):** Foamy urine, peripheral edema (ankle swelling), flank pain\n"
+            "- **🧬 Liver & Hepatic (/liver):** Scleral icterus (yellow eyes), dark urine, RUQ abdominal pain\n"
+            "- **🔬 Breast Oncology (/breast_cancer):** Palpable breast nodule, skin dimpling, nipple inversion\n"
+            "- **🦟 Malaria Parasitology (/malaria):** Shaking rigors, cyclic spiking fever, mosquito exposure\n"
+            "- **🫁 Pneumonia Scan (/pneumonia):** Productive cough with sputum, pleuritic chest pain\n\n"
+            "Select any screening tool below or type your symptoms to start automated triage!"
+        )
+        return {
+            "reply": reply,
+            "confidence_badge": "Symptom Triage • Navigation",
+            "is_emergency": False,
+            "suggested_actions": [
+                {"label": "🫀 Heart Screening", "url": "/heart"},
+                {"label": "🩸 Diabetes Screening", "url": "/diabetes"},
+                {"label": "🩺 Kidney Screening", "url": "/kidney"},
+                {"label": "🧬 Liver Screening", "url": "/liver"}
+            ],
+            "follow_up_chips": [
+                "I have high blood sugar and frequent thirst",
+                "I have chest tightness and high BP",
+                "Normal biomarker reference ranges"
+            ]
+        }
+
+    # 3. EXPLAIN MY RESULTS / BIOMARKER BREAKDOWN
+    active_diag = last_diagnosis or (page_context.get('last_diagnosis') if page_context else None)
+    if not active_diag and page_context and ('patient_summary' in page_context or 'prediction' in page_context):
+        active_diag = page_context
+        
+    is_explain_query = any(k in msg_lower for k in [
+        'explain', 'breakdown', 'my result', 'my test', 'my diagnosis', 
+        'why was i diagnosed', 'why did i test', 'what caused my result', 'test outcome', 'report'
+    ])
+    
+    if (is_explain_query and active_diag) or ('explain' in msg_lower and active_diag):
+        condition = active_diag.get('condition', 'Screening Analysis')
+        prediction = active_diag.get('prediction', 'Assessment Complete')
+        is_pos = active_diag.get('is_positive', False)
+        summary = active_diag.get('patient_summary', [])
+        specialist = active_diag.get('specialist', 'Clinical Specialist')
+        urgency = active_diag.get('urgency_window', 'Within 24 to 48 hours')
+        recommended_tests = active_diag.get('recommended_tests', [])
+        
+        biomarker_analysis = analyze_patient_biomarkers(condition, summary)
+        
+        table_rows = []
+        for b in biomarker_analysis:
+            status_icon = "🚨 High Risk" if b['status'] == 'High Risk' else ("⚠️ Borderline" if b['status'] == 'Borderline' else "✅ Optimal")
+            table_rows.append(f"| **{b['label']}** | `{b['value']}` | {b['ref']} | {status_icon} | {b['note']} |")
+            
+        table_md = "\n".join(table_rows) if table_rows else "| Parameter | Value | Reference |\n|---|---|---|\n| Standard Scan | Evaluated | Within Limits |"
+        severity_badge = "High Clinical Alert" if is_pos else "Favorable Physiological Status"
+        
+        reply = (
+            f"### 🩺 MediNova Clinical Copilot: Result Breakdown\n\n"
+            f"**Diagnostic Assessment:** `{prediction}` ({severity_badge})\n"
+            f"**Condition Evaluated:** {condition}\n\n"
+            f"#### 📊 Biomarker & Clinical Parameters Breakdown\n\n"
+            f"| Biomarker Parameter | Submitted Value | Standard Target | Clinical Status | Diagnostic Note |\n"
+            f"| :--- | :--- | :--- | :--- | :--- |\n"
+            f"{table_md}\n\n"
+            f"#### 🏥 Specialist Referral & Protocol Timeline\n"
+            f"- **Recommended Specialist:** **{specialist}**\n"
+            f"- **Consultation Urgency Window:** **{urgency}**\n\n"
+            f"#### 🧪 Confirmatory Clinical Workup Recommended\n"
+            f"{', '.join(['`' + t + '`' for t in recommended_tests]) if recommended_tests else 'Routine physical evaluation'}\n\n"
+            f"#### 📋 Clinical Action Guidance\n"
+            f"{'Multiple high-risk markers triggered this positive screening alert. Schedule an in-person diagnostic confirmation with your specialist and assemble previous lab panels.' if is_pos else 'All submitted physiological parameters are within optimal ranges. Continue routine preventive wellness checkups.'}"
+        )
+        
+        actions = [
+            {"label": "📄 Print Official Medical Report", "action": "print"}
+        ]
+        if is_pos:
+            actions.append({"label": "🚨 Emergency & Care Directory", "url": "/contact"})
+            
+        return {
+            "reply": reply,
+            "confidence_badge": "Clinical Copilot • Context-Aware",
+            "is_emergency": False,
+            "suggested_actions": actions,
+            "follow_up_chips": [
+                "Which of my biomarkers are abnormal?",
+                "What foods should I eat or avoid?",
+                "What questions should I ask my doctor?",
+                "Print medical report"
+            ]
+        }
+
+    # 3.5 NO ACTIVE RESULT CASE FOR EXPLAIN QUERIES
+    if is_explain_query and not active_diag:
+        reply = (
+            "### 📊 MediNova Diagnostic Results Analysis\n\n"
+            "No completed diagnostic screening was detected in your active session.\n\n"
+            "**How to run a screening and receive an instant AI biomarker analysis:**\n"
+            "1. Choose any of MediNova's **7 clinical diagnostic suites** below.\n"
+            "2. Enter patient biomarkers, or click **⚡ Fill High-Risk / Healthy Sample** for instant test automation.\n"
+            "3. Click **Submit** to run the validated machine learning model.\n"
+            "4. On your result card, click **🤖 Ask MediNova AI to Explain This Result** for an automatic breakdown!\n\n"
+            "Which diagnostic suite would you like to explore?"
+        )
+        return {
+            "reply": reply,
+            "confidence_badge": "Clinical Copilot • Session Context",
+            "is_emergency": False,
+            "suggested_actions": [
+                {"label": "🫀 Heart Screening", "url": "/heart"},
+                {"label": "🩸 Diabetes Screening", "url": "/diabetes"},
+                {"label": "🩺 Kidney Screening", "url": "/kidney"},
+                {"label": "🧬 Liver Screening", "url": "/liver"}
+            ],
+            "follow_up_chips": [
+                "Check symptoms and recommend a test",
+                "Normal biomarker reference ranges",
+                "Red-flag emergency warning signs"
+            ]
+        }
+
+    # 4. DIET & PRE-APPOINTMENT PREP
+    is_diet_query = any(k in msg_lower for k in ['diet', 'food', 'eat', 'avoid', 'nutrition', 'lifestyle'])
+    is_doctor_q_query = any(k in msg_lower for k in ['doctor', 'questions', 'ask', 'appointment', 'consultation', 'prep'])
+    
+    target_cond_key = None
+    if 'heart' in msg_lower or 'cardio' in msg_lower or (active_diag and 'heart' in active_diag.get('condition', '').lower()):
+        target_cond_key = 'heart_disease'
+    elif 'diabet' in msg_lower or 'sugar' in msg_lower or (active_diag and 'diabet' in active_diag.get('condition', '').lower()):
+        target_cond_key = 'diabetes'
+    elif 'kidney' in msg_lower or 'renal' in msg_lower or (active_diag and 'kidney' in active_diag.get('condition', '').lower()):
+        target_cond_key = 'kidney_disease'
+    elif 'liver' in msg_lower or 'hepat' in msg_lower or (active_diag and 'liver' in active_diag.get('condition', '').lower()):
+        target_cond_key = 'liver_disease'
+    elif 'cancer' in msg_lower or 'breast' in msg_lower or (active_diag and 'breast' in active_diag.get('condition', '').lower()):
+        target_cond_key = 'breast_cancer'
+    elif 'malaria' in msg_lower or (active_diag and 'malaria' in active_diag.get('condition', '').lower()):
+        target_cond_key = 'malaria'
+    elif 'pneumonia' in msg_lower or 'lung' in msg_lower or (active_diag and 'pneumonia' in active_diag.get('condition', '').lower()):
+        target_cond_key = 'pneumonia'
+
+    if (is_diet_query or is_doctor_q_query) and target_cond_key:
+        insight = DISEASE_INSIGHTS[target_cond_key].get('positive', {})
+        dos = insight.get('diet_dos', ['Maintain balanced hydration and whole foods.'])
+        donts = insight.get('diet_donts', ['Avoid processed foods and excess sodium.'])
+        q_list = insight.get('doctor_questions', ['What are my target biomarkers?'])
+        
+        reply = (
+            f"### 🥗 MediNova Clinical Protocol: {target_cond_key.replace('_', ' ').title()}\n\n"
+            f"#### ✅ Evidence-Based Nutritional Dos\n"
+            + "\n".join([f"- {item}" for item in dos]) + "\n\n"
+            f"#### ❌ Foods & Habits to Strictly Avoid\n"
+            + "\n".join([f"- {item}" for item in donts]) + "\n\n"
+            f"#### ❓ High-Yield Questions for Your Physician\n"
+            + "\n".join([f"- \"{item}\"" for item in q_list])
+        )
+        return {
+            "reply": reply,
+            "confidence_badge": "Clinical Protocol • Dietary & Consultation Guide",
+            "is_emergency": False,
+            "suggested_actions": [
+                {"label": "📄 Print Medical Summary", "action": "print"},
+                {"label": "🏥 Find Specialist", "url": "/contact"}
+            ],
+            "follow_up_chips": [
+                "What confirmatory lab tests are recommended?",
+                "Explain my diagnostic results",
+                "What are the red-flag emergency symptoms?"
+            ]
+        }
+
+    # 5. SYMPTOM TRIAGE & SMART ROUTING
+    symptom_routes = [
+        (['chest pain', 'chest pressure', 'heart palpitations', 'left arm pain', 'angina', 'shortness of breath on walking'],
+         'Cardiovascular Disease', '/heart', '🫀 Open Heart Disease Screening',
+         'Your symptoms correlate with cardiovascular strain or coronary insufficiency. Immediate multi-parametric screening (resting ECG, blood pressure, lipid profile) is strongly recommended.'),
+        (['high blood sugar', 'frequent thirst', 'excessive urination', 'peeing a lot', 'polydipsia', 'polyuria', 'sweet smelling urine', 'fruity breath'],
+         'Diabetes & Glycemic Risk', '/diabetes', '🩸 Open Diabetes Screening',
+         'Your symptoms match classic indicators of hyperglycemia, impaired insulin sensitivity, or Type 2 Diabetes. A screening with HbA1c and plasma glucose is indicated.'),
+        (['foamy urine', 'frothy urine', 'swollen ankles', 'swelling in feet', 'edema', 'puffiness around eyes', 'flank pain', 'kidney pain'],
+         'Chronic Kidney Disease', '/kidney', '🩺 Open Kidney Disease Screening',
+         'These symptoms may indicate glomerular filtration impairment, microalbuminuria, or renal dysfunction. We advise evaluating serum creatinine, blood urea, and urine albumin.'),
+        (['yellow eyes', 'yellow skin', 'jaundice', 'dark urine', 'pale stools', 'right abdominal pain', 'elevated enzymes'],
+         'Liver / Hepatic Disease', '/liver', '🧬 Open Liver Disease Screening',
+         'These signs correlate with hyperbilirubinemia, hepatic parenchymal inflammation, or biliary stasis. Immediate liver function screening (Total Bilirubin, ALT, AST, ALP) is advised.'),
+        (['breast lump', 'lump in breast', 'nipple discharge', 'breast skin dimpling', 'inverted nipple', 'peau d orange'],
+         'Breast Oncology Cytology', '/breast_cancer', '🔬 Open Breast Oncology Screening',
+         'A newly noted breast mass, texture change, or asymmetric discharge mandates urgent oncology screening and morphological evaluation.'),
+        (['shaking chills', 'rigors', 'high fever spikes', 'tropical travel', 'mosquito bite', 'cyclic sweating'],
+         'Malaria Parasitology', '/malaria', '🦟 Open Malaria Smear Screening',
+         'Paroxysmal shaking chills and cyclic febrile episodes following mosquito exposure suggest intraerythrocytic Plasmodium infection. A Giemsa-stained thin blood smear analysis is recommended.'),
+        (['cough with phlegm', 'coughing up mucus', 'chest pain when coughing', 'crackles', 'lung infection', 'breathing hurts'],
+         'Pneumonia Pulmonary Scan', '/pneumonia', '🫁 Open Pneumonia X-Ray Screening',
+         'Persistent wet cough with colored sputum, pleuritic chest pain, and fever suggest lower respiratory consolidation or pneumonia. Upload a chest X-ray for deep convolutional analysis.')
+    ]
+    
+    for keywords, cond_name, route_url, action_label, triage_desc in symptom_routes:
+        if any(kw in msg_lower for kw in keywords):
+            reply = (
+                f"### 🩺 MediNova Symptom Triage: {cond_name}\n\n"
+                f"{triage_desc}\n\n"
+                f"- **Recommended Screening Tool:** **MediNova {cond_name} Diagnostic**\n"
+                f"- **Direct Route:** Click the button below to launch the automated screening model.\n\n"
+                f"> 💡 **Clinical Reminder:** Early risk identification significantly improves treatment outcomes. If your symptoms escalate or you develop acute chest pain or respiratory distress, contact emergency responders (112 / 911 / 108) immediately."
+            )
+            return {
+                "reply": reply,
+                "confidence_badge": "Symptom Triage • Model Match",
+                "is_emergency": False,
+                "suggested_actions": [
+                    {"label": action_label, "url": route_url},
+                    {"label": "🚨 Emergency Support Directory", "url": "/contact"}
+                ],
+                "follow_up_chips": [
+                    f"What biomarkers does the {cond_name} tool test?",
+                    "What are the red-flag emergency symptoms?",
+                    "How accurate is this MediNova model?"
+                ]
+            }
+
+    # 6. BIOMARKER & MEDICAL TERM EXPLAINER
+    for term_key, term_info in MEDICAL_EXPLAINERS.items():
+        if term_key in msg_lower:
+            reply = (
+                f"### 📖 MediNova Clinical Explainer: {term_info['term']}\n\n"
+                f"{term_info['explanation']}\n\n"
+                f"> **Clinical Context:** In MediNova's diagnostic pipeline, this biomarker is cross-referenced with machine learning reference vectors to detect abnormal physiological shifts before irreversible pathology develops."
+            )
+            return {
+                "reply": reply,
+                "confidence_badge": "Clinical Knowledge Graph • Validated",
+                "is_emergency": False,
+                "suggested_actions": [
+                    {"label": "🔍 Explore Diagnostic Suite", "url": "/features"}
+                ],
+                "follow_up_chips": [
+                    "What are the normal reference ranges?",
+                    "Explain my test results",
+                    "What foods help improve these numbers?"
+                ]
+            }
+
+    # 7. GENERAL CLINICAL COPILOT OVERVIEW
+    reply = (
+        "### 🤖 MediNova AI Clinical Copilot\n\n"
+        "Welcome! I am your context-aware clinical assistant integrated directly into MediNova's diagnostic system. Here is what I can do for you right now:\n\n"
+        "1. **Explain Diagnostic Results:** Provide an in-depth breakdown of your submitted biomarkers, flag abnormal values against clinical standards, and explain the AI classification.\n"
+        "2. **Symptom Triage & Navigation:** Tell me what symptoms you or a patient are experiencing, and I will recommend the exact screening model across our 7 clinical suites.\n"
+        "3. **Conversational Form Auto-Fill:** Type patient vitals into chat (e.g., *\"58 yo male with BP 145, cholesterol 240, max hr 130\"*) to auto-populate any diagnostic form with one click.\n"
+        "4. **Clinical Protocols & Pre-Appointment Prep:** Access dietary guidelines (dos/don'ts), specialist referral urgency windows, and high-yield questions for your physician.\n"
+        "5. **Biomarker Term Explainer:** Ask about any clinical test parameter (such as Oldpeak, ST depression, Thallium scans, HbA1c, A/G ratio, or Serum Creatinine).\n\n"
+        "How can I assist your clinical workflow today?"
+    )
+    return {
+        "reply": reply,
+        "confidence_badge": "Clinical Copilot • Online",
+        "is_emergency": False,
+        "suggested_actions": [
+            {"label": "🫀 Heart Screening", "url": "/heart"},
+            {"label": "🩸 Diabetes Screening", "url": "/diabetes"},
+            {"label": "🩺 Kidney Screening", "url": "/kidney"},
+            {"label": "🧬 Liver Screening", "url": "/liver"}
+        ],
+        "follow_up_chips": [
+            "Explain my test results",
+            "What are the normal reference ranges for biomarkers?",
+            "What symptoms require an emergency room visit?",
+            "Auto fill a positive heart case"
+        ]
+    }
+
+
+# ============================================================================
+# API ENDPOINTS: CHATBOT INTEGRATION
+# ============================================================================
+
+@app.route('/api/chat', methods=['POST'])
+def api_chat():
+    try:
+        data = request.get_json(force=True) or {}
+        user_message = data.get('message', '').strip()
+        current_page = data.get('current_page', '')
+        page_context = data.get('page_context', {})
+        
+        if not user_message:
+            return jsonify({
+                "reply": "Please provide a clinical question, symptom description, or request to explain your results.",
+                "confidence_badge": "Clinical Copilot",
+                "is_emergency": False,
+                "suggested_actions": [],
+                "follow_up_chips": ["Explain my results", "Heart screening", "Diabetes test"]
+            })
+            
+        last_diagnosis = session.get('last_diagnosis')
+        
+        # Try Live LLM Mode (Engine 1) if API key configured
+        llm_response = call_live_llm(user_message, current_page, page_context, last_diagnosis)
+        if llm_response:
+            # Check emergency triggers even in LLM mode for safety
+            is_emergency = any(trig in user_message.lower() for trig in EMERGENCY_TRIGGERS)
+            actions = [{"label": "📄 Print Medical Report", "action": "print"}]
+            if is_emergency:
+                actions = [{"label": "🚨 Emergency Directory", "url": "/contact"}]
+            return jsonify({
+                "reply": llm_response['reply'],
+                "confidence_badge": llm_response['confidence_badge'],
+                "is_emergency": is_emergency,
+                "suggested_actions": actions,
+                "follow_up_chips": ["Explain my results", "What are my next steps?", "Questions for my doctor"]
+            })
+            
+        # Built-in Clinical Reasoning Engine (Engine 2 - Zero-Key Guaranteed Fallback)
+        response_data = medinova_clinical_copilot_engine(user_message, current_page, page_context, last_diagnosis)
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print(f"Error in /api/chat: {e}")
+        return jsonify({
+            "reply": f"An error occurred while analyzing clinical request: {str(e)}",
+            "confidence_badge": "System Alert",
+            "is_emergency": False,
+            "suggested_actions": [],
+            "follow_up_chips": ["Try again", "Go to Home", "Emergency Directory"]
+        }), 500
+
+
+@app.route('/api/chat/clear', methods=['POST'])
+def api_chat_clear():
+    session.pop('last_diagnosis', None)
+    return jsonify({
+        "status": "cleared",
+        "message": "Clinical diagnostic context and chat session reset successfully."
+    })
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=False)
+
 

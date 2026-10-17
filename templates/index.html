@@ -3,9 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="refresh" content="0; url=/">
-    <title>Redirecting to CureSight...</title>
+    <title>Redirecting to MediNova...</title>
 </head>
 <body>
     <script>window.location.href = "/";</script>
+    <!-- Floating MediNova AI Launcher & Chat Drawer -->
+    <div id="medinova-chat-root">
+        <button id="medinova-chat-fab" class="medinova-chat-fab" type="button" aria-label="Open MediNova AI Copilot" title="Open MediNova AI Copilot" onclick="toggleMediNovaChat()">
+            <span class="pulse-ring"></span>
+            <span class="fab-icon">🤖</span>
+            <span class="fab-badge">MediNova AI</span>
+        </button>
+
+        <div id="medinova-chat-widget" class="medinova-chat-widget" style="display: none; opacity: 0; visibility: hidden; pointer-events: none;" role="dialog" aria-modal="true" aria-labelledby="chat-title">
+            <div class="chat-header">
+                <div class="chat-title-group">
+                    <div class="chat-avatar">
+                        <span class="avatar-icon">⚕️</span>
+                        <span class="status-indicator-dot online" title="Copilot Online"></span>
+                    </div>
+                    <div>
+                        <div id="chat-title" class="chat-brand-name">MediNova Clinical AI Copilot</div>
+                        <div class="chat-status-sub">Online • Context-Aware Clinical Engine</div>
+                    </div>
+                </div>
+                <div class="chat-header-actions">
+                    <button id="btn-toggle-tts" class="chat-tool-btn" type="button" title="Toggle Voice Readout (TTS)">
+                        <span id="tts-icon">🔇</span>
+                    </button>
+                    <button id="btn-maximize-chat" class="chat-tool-btn" type="button" title="Maximize / Dock View">
+                        <span id="maximize-icon">⤢</span>
+                    </button>
+                    <button id="btn-clear-chat" class="chat-tool-btn" type="button" title="Clear Chat History">
+                        <span>🗑️</span>
+                    </button>
+                    <button id="btn-close-chat" class="chat-tool-btn close-btn" type="button" title="Minimize Copilot" onclick="closeMediNovaChat()">
+                        <span>✕</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="chat-context-banner" class="chat-context-banner">
+                <span id="chat-context-text">📍 Context: Detecting Active Session...</span>
+            </div>
+
+            <div id="chat-messages-container" class="chat-messages-container">
+                <div class="chat-message assistant-message">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-bubble">
+                        <div class="message-sender">MediNova Clinical Copilot</div>
+                        <div class="message-body">
+                            <p>Hello, I am your <strong>MediNova AI Clinical Copilot</strong>. I am integrated directly with MediNova's 7 diagnostic screening modalities, validated biomarker ranges, and clinical emergency protocols.</p>
+                            <p>How can I assist your clinical evaluation today?</p>
+                            <ul>
+                                <li>Ask to <strong>explain your test results</strong> and compare biomarkers.</li>
+                                <li>Describe patient symptoms for <strong>smart triage & tool routing</strong>.</li>
+                                <li>Provide vitals for <strong>conversational form auto-filling</strong>.</li>
+                                <li>Inquire about clinical targets (e.g. <em>"Normal Biomarker Reference Ranges"</em>).</li>
+                            </ul>
+                        </div>
+                        <div class="message-meta">Zero-Key Clinical Knowledge Graph Ready</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chat-thinking-indicator" class="chat-thinking-indicator" style="display: none;">
+                <div class="thinking-spinner"></div>
+                <span id="thinking-step-text">Analyzing clinical context & biomarkers...</span>
+            </div>
+
+            <div id="chat-followups-container" class="chat-followups-container">
+                <button type="button" class="chat-chip" data-query="Check my symptoms and recommend a MediNova screening test">🩺 Check Symptoms & Recommend a Test</button>
+                <button type="button" class="chat-chip" data-query="Explain my latest diagnostic test result and biomarker analysis">📊 Explain My Latest Test Result</button>
+                <button type="button" class="chat-chip" data-query="What are normal clinical biomarker reference ranges?">🧪 Normal Biomarker Reference Ranges</button>
+                <button type="button" class="chat-chip" data-query="What are acute red-flag emergency symptoms requiring immediate care?">🚨 Red-Flag Emergency Warning Signs</button>
+            </div>
+
+            <div class="chat-footer">
+                <div class="chat-input-wrapper">
+                    <textarea id="chat-input-field" placeholder="Ask MediNova Copilot or speak symptoms..." rows="1"></textarea>
+                    <button id="btn-mic-input" class="chat-mic-btn" type="button" title="Voice Input (Speech to Text)">
+                        <span id="mic-icon">🎙️</span>
+                    </button>
+                    <button id="btn-send-message" class="chat-send-btn" type="button" title="Send Message">
+                        <span>➤</span>
+                    </button>
+                </div>
+                <div class="chat-disclaimer">
+                    <span>MediNova Copilot provides clinical decision support. Always consult a licensed physician for medical diagnosis.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='chatbot.js') }}?v=2"></script>
 </body>
 </html>
