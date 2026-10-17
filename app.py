@@ -1,15 +1,24 @@
 import os
+import sys
+
+# Configure legacy Keras and optimize TensorFlow CPU performance before import
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+
 import joblib
 import numpy as np
 import pandas as pd
 import datetime
 import json
 import re
+import uuid
 import requests
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from werkzeug.utils import secure_filename
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image as keras_image
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'medinova-clinical-secret-key-2026')
@@ -30,9 +39,10 @@ def to_python_type(obj):
     return obj
 
 
-# Configure Upload & Sample Folders
-UPLOAD_FOLDER = os.path.join('static', 'uploads')
-SAMPLES_FOLDER = os.path.join('static', 'samples')
+# Configure Upload & Sample Folders (Anchored to BASE_DIR for Cloud WSGI/Gunicorn)
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
+SAMPLES_FOLDER = os.path.join(BASE_DIR, 'static', 'samples')
+MODELS_DIR = os.path.join(BASE_DIR, 'models')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(SAMPLES_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -41,7 +51,6 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max
 
 # Load Pre-trained Models
 print("Loading medical diagnostic models...")
-MODELS_DIR = 'models'
 
 def load_pkl_model(filename):
     path = os.path.join(MODELS_DIR, filename)
@@ -624,6 +633,9 @@ def heart():
                 raw_data['thal']
             ]
             
+            if heart_model is None:
+                return render_template('heart.html', error="Heart disease diagnostic model is not loaded or missing from server.")
+            
             prediction = heart_model.predict([features_vec])[0]
             is_pos = bool(int(prediction) == 1)
             result = "Presence of Cardiovascular Risk" if is_pos else "Absence of Significant Risk"
@@ -699,6 +711,9 @@ def diabetes():
                              'smoking_history_former', 'smoking_history_never', 'smoking_history_not current']
             
             feature_vector = [data[col] for col in feature_order]
+            if diabetes_model is None:
+                return render_template('diabetes.html', error="Diabetes diagnostic model is not loaded or missing from server.")
+            
             prediction = diabetes_model.predict([feature_vector])[0]
             is_pos = bool(int(prediction) == 1)
             result = "Positive - Elevated Diabetes Risk" if is_pos else "Negative - Normal Glycemic Indicators"
@@ -743,6 +758,9 @@ def kidney():
                           'cad', 'appet', 'pe', 'ane']
             
             features = [float(request.form[k]) for k in field_keys]
+            if kidney_model is None:
+                return render_template('kidney.html', error="Kidney disease diagnostic model is not loaded or missing from server.")
+            
             prediction = kidney_model.predict([features])[0]
             is_pos = bool(int(prediction) == 1)
             result = "Positive - Chronic Kidney Disease Indicators" if is_pos else "Negative - Healthy Renal Function"
@@ -802,6 +820,9 @@ def liver():
                 float(request.form['Albumin_and_Globulin_Ratio'])
             ]
             
+            if liver_model is None:
+                return render_template('liver.html', error="Liver disease diagnostic model is not loaded or missing from server.")
+            
             prediction = liver_model.predict([features])[0]
             is_pos = bool(int(prediction) == 1)
             result = "High Probability of Liver Disease" if is_pos else "Low Probability of Liver Disease"
@@ -850,6 +871,9 @@ def breast_cancer():
                 float(request.form['mean_area']),
                 float(request.form['mean_smoothness'])
             ]
+            
+            if breast_cancer_model is None:
+                return render_template('breast_cancer.html', error="Breast cancer diagnostic model is not loaded or missing from server.")
             
             prediction = breast_cancer_model.predict([features])[0]
             # 0 = Malignant, 1 = Benign
@@ -908,10 +932,12 @@ def malaria():
                 if file.filename == '':
                     return render_template('malaria.html', error="No selected file")
                 
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                clean_name = secure_filename(file.filename)
+                unique_filename = f"{uuid.uuid4().hex[:8]}_{clean_name}"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
                 file.save(filepath)
-                uploaded_url = url_for('static', filename='uploads/' + filename)
+                uploaded_url = url_for('static', filename='uploads/' + unique_filename)
+                filename = unique_filename
 
             if malaria_model is None:
                 return render_template('malaria.html', error="Malaria model is not loaded")
@@ -974,10 +1000,12 @@ def pneumonia():
                 if file.filename == '':
                     return render_template('pneumonia.html', error="No selected file")
                 
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                clean_name = secure_filename(file.filename)
+                unique_filename = f"{uuid.uuid4().hex[:8]}_{clean_name}"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
                 file.save(filepath)
-                uploaded_url = url_for('static', filename='uploads/' + filename)
+                uploaded_url = url_for('static', filename='uploads/' + unique_filename)
+                filename = unique_filename
 
             if pneumonia_model is None:
                 return render_template('pneumonia.html', error="Pneumonia model is not loaded")
@@ -2528,8 +2556,28 @@ def api_chat_reset():
     })
 
 
+@app.route('/healthz', methods=['GET'])
+def healthz():
+    models_status = {
+        "heart": heart_model is not None,
+        "diabetes": diabetes_model is not None,
+        "kidney": kidney_model is not None,
+        "liver": liver_model is not None,
+        "breast_cancer": breast_cancer_model is not None,
+        "malaria": malaria_model is not None,
+        "pneumonia": pneumonia_model is not None
+    }
+    all_loaded = all(models_status.values())
+    return jsonify({
+        "status": "ok" if all_loaded else "degraded",
+        "models_loaded": models_status
+    }), 200
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    port = int(os.environ.get("PORT", 7860))
+    debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=port, debug=debug)
 
 
 
