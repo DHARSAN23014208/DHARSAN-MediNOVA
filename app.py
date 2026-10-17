@@ -1,9 +1,14 @@
 import os
 import sys
+import gc
 
-# Configure legacy Keras and optimize TensorFlow CPU performance before import
-os.environ["TF_USE_LEGACY_KERAS"] = "1"
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+# Configure environment variables to restrict TensorFlow CPU thread overhead and reduce RAM usage
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("TF_NUM_INTRAOP_THREADS", "1")
+os.environ.setdefault("TF_NUM_INTEROP_THREADS", "1")
+os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
+os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
 
 import joblib
 import numpy as np
@@ -67,22 +72,33 @@ breast_cancer_model = load_pkl_model('breast_cancer_model.pkl')
 pneumonia_model_path = os.path.join(MODELS_DIR, 'pneumonia_model_new.h5')
 malaria_model_path = os.path.join(MODELS_DIR, 'malaria_cnn_model_fast.h5')
 
+# Heavy Keras deep learning models are lazy-loaded on demand to stay under Render's 512 MB RAM limit
 pneumonia_model = None
 malaria_model = None
 
-if os.path.exists(pneumonia_model_path):
-    try:
-        pneumonia_model = load_model(pneumonia_model_path)
-        print("Pneumonia model loaded successfully.")
-    except Exception as e:
-        print(f"Error loading Pneumonia model: {e}")
+def get_pneumonia_model():
+    """Lazy-load Pneumonia Keras model on demand and cache globally."""
+    global pneumonia_model
+    if pneumonia_model is None and os.path.exists(pneumonia_model_path):
+        try:
+            print("Lazy-loading Pneumonia Keras model on demand...")
+            pneumonia_model = load_model(pneumonia_model_path)
+            print("Pneumonia model loaded successfully.")
+        except Exception as e:
+            print(f"Error lazy-loading Pneumonia model: {e}")
+    return pneumonia_model
 
-if os.path.exists(malaria_model_path):
-    try:
-        malaria_model = load_model(malaria_model_path)
-        print("Malaria model loaded successfully.")
-    except Exception as e:
-        print(f"Error loading Malaria model: {e}")
+def get_malaria_model():
+    """Lazy-load Malaria Keras model on demand and cache globally."""
+    global malaria_model
+    if malaria_model is None and os.path.exists(malaria_model_path):
+        try:
+            print("Lazy-loading Malaria Keras model on demand...")
+            malaria_model = load_model(malaria_model_path)
+            print("Malaria model loaded successfully.")
+        except Exception as e:
+            print(f"Error lazy-loading Malaria model: {e}")
+    return malaria_model
 
 # ============================================================================
 # COMPREHENSIVE CLINICAL INSIGHTS & EMERGENCY PROTOCOLS
@@ -939,16 +955,20 @@ def malaria():
                 uploaded_url = url_for('static', filename='uploads/' + unique_filename)
                 filename = unique_filename
 
-            if malaria_model is None:
+            model = get_malaria_model()
+            if model is None:
                 return render_template('malaria.html', error="Malaria model is not loaded")
 
             img = keras_image.load_img(filepath, target_size=(50, 50))
             img_array = keras_image.img_to_array(img)
             img_array = np.expand_dims(img_array, axis=0) / 255.0
             
-            pred = malaria_model.predict(img_array, verbose=0)
+            pred = model.predict(img_array, verbose=0)
             pred_class = int(np.argmax(pred[0]))  # 0 = Uninfected, 1 = Parasitized
             confidence = float(pred[0][pred_class]) * 100
+
+            # Free inference memory immediately to stay under 512 MB RAM limit
+            gc.collect()
 
             is_pos = bool(int(pred_class) == 1)
             result = f"Infected (Parasitized) - {confidence:.1f}% Confidence" if is_pos else f"Uninfected (Healthy) - {confidence:.1f}% Confidence"
@@ -1007,17 +1027,21 @@ def pneumonia():
                 uploaded_url = url_for('static', filename='uploads/' + unique_filename)
                 filename = unique_filename
 
-            if pneumonia_model is None:
+            model = get_pneumonia_model()
+            if model is None:
                 return render_template('pneumonia.html', error="Pneumonia model is not loaded")
 
             img = keras_image.load_img(filepath, target_size=(150, 150))
             img_array = keras_image.img_to_array(img)
             img_array = np.expand_dims(img_array, axis=0) / 255.0
             
-            pred = pneumonia_model.predict(img_array, verbose=0)
+            pred = model.predict(img_array, verbose=0)
             prob = float(pred[0][0])
             is_pos = bool(float(prob) > 0.5)
             confidence = (prob if is_pos else (1.0 - prob)) * 100
+
+            # Free inference memory immediately to stay under 512 MB RAM limit
+            gc.collect()
 
             result = f"Pneumonia Detected - {confidence:.1f}% Confidence" if is_pos else f"Normal Lung Fields - {confidence:.1f}% Confidence"
             insight_key = 'positive' if is_pos else 'negative'
@@ -2558,26 +2582,12 @@ def api_chat_reset():
 
 @app.route('/healthz', methods=['GET'])
 def healthz():
-    models_status = {
-        "heart": heart_model is not None,
-        "diabetes": diabetes_model is not None,
-        "kidney": kidney_model is not None,
-        "liver": liver_model is not None,
-        "breast_cancer": breast_cancer_model is not None,
-        "malaria": malaria_model is not None,
-        "pneumonia": pneumonia_model is not None
-    }
-    all_loaded = all(models_status.values())
-    return jsonify({
-        "status": "ok" if all_loaded else "degraded",
-        "models_loaded": models_status
-    }), 200
+    return jsonify({"status": "ok"}), 200
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 7860))
-    debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
-    app.run(host="0.0.0.0", port=port, debug=debug)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
 
 
 

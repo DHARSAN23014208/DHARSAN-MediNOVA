@@ -1,20 +1,22 @@
-FROM python:3.11-slim
+FROM python:3.10-slim
 
-# Prevent Python from writing .pyc files and enable unbuffered output
+# Set environment variables to optimize RAM, suppress TF logs, and configure single-thread execution
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    TF_USE_LEGACY_KERAS=1 \
-    TF_ENABLE_ONEDNN_OPTS=0 \
-    PORT=7860
+    TF_CPP_MIN_LOG_LEVEL=2 \
+    OMP_NUM_THREADS=1 \
+    MALLOC_TRIM_THRESHOLD_=65536 \
+    PORT=10000
 
-# Install essential system dependencies (libgomp1 for OpenMP/LightGBM/XGBoost, curl for healthchecks)
+# Install minimal system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
     libgomp1 \
-    curl \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
 # Install Python dependencies first for caching
@@ -24,12 +26,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application source code
 COPY . .
 
-# Ensure upload and sample directories exist with full write permissions
+# Ensure upload and sample directories exist with write permissions
 RUN mkdir -p static/uploads static/samples && \
     chmod -R 777 static/uploads static/samples
 
-# Expose default port (7860 for Hugging Face Spaces, overridable by $PORT)
-EXPOSE 7860
+EXPOSE 10000
 
-# Run production WSGI server with Gunicorn (1 worker + 4 threads to prevent OOM on shared cloud tiers)
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-7860} --workers 1 --threads 4 --timeout 120 app:app"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-10000} app:app --workers 1 --threads 2 --timeout 120"]

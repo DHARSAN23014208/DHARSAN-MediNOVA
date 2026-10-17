@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: medinova-clinical-ai
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: TF_CPP_MIN_LOG_LEVEL
+        value: "2"
