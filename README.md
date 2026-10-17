@@ -200,5 +200,5 @@ MediNova-Medical-diagnosis-app/
 ---
 
 <p align="center">
-  Crafted with care by <strong>DHARSAN</strong>
+  Crafted with care by <strong>DHARSAN KUMAR R</strong>
 </p>
