@@ -1,282 +1,163 @@
-<!-- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contact - CureSight</title>
+    <title>Emergency Care & Clinical Support - CureSight AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
-    <style>
-        .contact-section {
-            padding: 8rem 2rem 4rem;
-            min-height: 100vh;
-        }
-
-        .contact-header {
-            text-align: center;
-            margin-bottom: 4rem;
-        }
-
-        .contact-header h1 {
-            font-size: 3rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-        }
-
-        .contact-header p {
-            color: var(--text-muted);
-            font-size: 1.2rem;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .contact-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
-            max-width: 1100px;
-            margin: 0 auto 3rem;
-        }
-
-        .contact-card {
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 2.5rem;
-            text-align: center;
-            transition: all 0.4s ease;
-            backdrop-filter: blur(10px);
-        }
-
-        .contact-card:hover {
-            transform: translateY(-8px);
-            border-color: var(--primary);
-            box-shadow: 0 20px 60px -15px rgba(99, 102, 241, 0.3);
-        }
-
-        .contact-icon {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-            margin: 0 auto 1.5rem;
-        }
-
-        .contact-card h3 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 0.75rem;
-        }
-
-        .contact-card p {
-            color: var(--text-muted);
-            margin-bottom: 1.5rem;
-            font-size: 0.95rem;
-        }
-
-        .contact-link {
-            display: inline-block;
-            color: var(--cyan);
-            font-weight: 600;
-            font-size: 0.9rem;
-            word-break: break-all;
-            margin-bottom: 1.5rem;
-        }
-
-        .contact-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 0.875rem 2rem;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            text-decoration: none;
-            border-radius: 12px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            width: 100%;
-        }
-
-        .contact-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px -10px var(--primary);
-        }
-
-        .developer-section {
-            max-width: 800px;
-            margin: 0 auto;
-            text-align: center;
-        }
-
-        .developer-card {
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 3rem;
-            backdrop-filter: blur(10px);
-        }
-
-        .developer-avatar {
-            width: 120px;
-            height: 120px;
-            background: linear-gradient(135deg, var(--primary), var(--cyan));
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3.5rem;
-            margin: 0 auto 1.5rem;
-            border: 4px solid var(--glass-border);
-        }
-
-        .developer-card h2 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .developer-title {
-            color: var(--cyan);
-            font-weight: 600;
-            margin-bottom: 1.5rem;
-        }
-
-        .developer-bio {
-            color: var(--text-muted);
-            line-height: 1.8;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .social-links {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        .social-link {
-            width: 50px;
-            height: 50px;
-            background: var(--surface-light);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-
-        .social-link:hover {
-            background: var(--primary);
-            border-color: var(--primary);
-            transform: translateY(-3px);
-        }
-
-        .footer-simple {
-            text-align: center;
-            padding: 3rem 2rem;
-            color: var(--text-muted);
-            border-top: 1px solid var(--glass-border);
-            margin-top: 4rem;
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
 <body>
+    <!-- Ambient Background -->
     <div class="animated-bg">
-        <div class="gradient-orb"
-            style="width: 600px; height: 600px; background: var(--primary); top: -200px; left: -200px;"></div>
-        <div class="gradient-orb"
-            style="width: 500px; height: 500px; background: var(--secondary); bottom: -150px; right: -150px;"></div>
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
     </div>
+    <div class="bg-grid"></div>
 
+    <!-- Navigation -->
     <nav class="navbar">
-        <div class="nav-brand">
-            <span class="brand-icon">🩺</span>
-            CureSight
-        </div>
+        <a href="/" class="nav-brand">
+            <div class="brand-icon-wrapper">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </div>
+            <span class="brand-gradient">CureSight</span>
+            <span class="brand-tag">Emergency Care</span>
+        </a>
+
         <div class="nav-links">
             <a href="/" class="nav-link">Home</a>
-            <a href="/features" class="nav-link">Features</a>
-            <a href="/contact" class="nav-link active">Contact</a>
+            <a href="/features" class="nav-link">Diagnostic Suite</a>
+            <a href="/contact" class="nav-link active">Emergency & Care</a>
+            <a href="/contact" class="nav-emergency-btn">
+                <span class="pulse-dot"></span>
+                <span>24/7 Helpline: 112 / 911</span>
+            </a>
         </div>
     </nav>
 
-    <section class="contact-section">
-        <div class="contact-header">
-            <div class="hero-badge" style="margin-bottom: 1.5rem;">📬 Get In Touch</div>
-            <h1>Let's <span class="gradient-text">Connect</span></h1>
-            <p>Have questions about CureSight? Interested in collaboration or discussing healthcare AI? I'd love to hear
-                from you!</p>
+    <div class="content-wrapper container">
+        <div class="section-header">
+            <h1 class="section-title">Emergency Care & Clinical Directory</h1>
+            <p class="section-subtitle">If you or someone around you is experiencing acute symptoms, connect immediately with accredited medical responders or schedule an urgent specialist consultation.</p>
         </div>
 
-        <div class="contact-grid">
-            <div class="contact-card">
-                <div class="contact-icon">📧</div>
-                <h3>Email</h3>
-                <p>Reach out for inquiries, feedback, or collaboration opportunities</p>
-                <div class="contact-link">sanjaysridhar987@gmail.com</div>
-                <a href="mailto:sanjaysridhar987@gmail.com" class="contact-btn">
-                    Send Email →
-                </a>
-            </div>
-
-            <div class="contact-card">
-                <div class="contact-icon">💼</div>
-                <h3>LinkedIn</h3>
-                <p>Let's connect professionally and expand our network</p>
-                <div class="contact-link">Sanjay Sivaramakrishnan M</div>
-                <a href="https://www.linkedin.com/in/sanjay-sivaramakrishnan-m-b4509a291/" target="_blank"
-                    class="contact-btn">
-                    View Profile →
-                </a>
-            </div>
-
-            <div class="contact-card">
-                <div class="contact-icon">🐙</div>
-                <h3>GitHub</h3>
-                <p>Explore my projects, contributions, and open source work</p>
-                <div class="contact-link">github.com/sanjaysivaramakrishnan</div>
-                <a href="https://github.com/sanjaysivaramakrishnan" target="_blank" class="contact-btn">
-                    View GitHub →
-                </a>
-            </div>
-        </div>
-
-        <div class="developer-section">
-            <div class="developer-card">
-                <div class="developer-avatar">👨‍💻</div>
-                <h2>Sanjay Sivaramakrishnan M</h2>
-                <p class="developer-title">Developer & AI/ML Enthusiast</p>
-                <p class="developer-bio">
-                    Hi! I'm passionate about leveraging artificial intelligence and machine learning
-                    to solve real-world problems. CureSight represents my exploration into how
-                    technology can assist in healthcare diagnostics, making preliminary health
-                    screening more accessible to everyone.
+        <!-- High-Priority Emergency Callout Grid -->
+        <div class="protocol-grid" style="margin-bottom: 3.5rem;">
+            <div class="critical-alert-card" style="margin-bottom: 0;">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                    <span style="font-size: 2.2rem;">🚑</span>
+                    <div>
+                        <h3 style="color: #ffffff; font-size: 1.3rem;">National Emergency Services</h3>
+                        <span style="color: #fda4af; font-size: 0.85rem; font-weight: 600;">Immediate 24/7 Dispatch</span>
+                    </div>
+                </div>
+                <p style="color: #cbd5e1; font-size: 0.95rem; margin-bottom: 1.25rem;">
+                    For crushing chest pain, acute respiratory collapse, severe blood loss, sudden stroke symptoms (FAST), or loss of consciousness.
                 </p>
-                <div class="social-links">
-                    <a href="mailto:sanjaysridhar987@gmail.com" class="social-link" title="Email">📧</a>
-                    <a href="https://www.linkedin.com/in/sanjay-sivaramakrishnan-m-b4509a291/" target="_blank"
-                        class="social-link" title="LinkedIn">💼</a>
-                    <a href="https://github.com/sanjaysivaramakrishnan" target="_blank" class="social-link"
-                        title="GitHub">🐙</a>
+                <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                    <a href="tel:112" class="btn btn-danger btn-sm">Dial 112 (Universal / India / EU)</a>
+                    <a href="tel:911" class="btn btn-danger btn-sm">Dial 911 (US / Canada)</a>
+                    <a href="tel:108" class="btn btn-danger btn-sm">Dial 108 (Ambulance Service)</a>
+                </div>
+            </div>
+
+            <div class="glass-card" style="padding: 2.2rem; border-color: rgba(6, 182, 212, 0.4);">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                    <span style="font-size: 2.2rem;">🩺</span>
+                    <div>
+                        <h3 style="color: #ffffff; font-size: 1.3rem;">Tele-Triage & Clinical Nurse Line</h3>
+                        <span style="color: var(--primary-light); font-size: 0.85rem; font-weight: 600;">24-Hour Non-Emergency Health Advice</span>
+                    </div>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.25rem;">
+                    Speak with a triage registered nurse to evaluate whether your lab markers or symptoms require urgent care, emergency room, or primary clinic visit.
+                </p>
+                <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                    <a href="tel:104" class="btn btn-primary btn-sm">Call 104 (Medical Advice Helpline)</a>
+                    <a href="tel:1800112443" class="btn btn-outline btn-sm">1800-HEALTH-LINE</a>
                 </div>
             </div>
         </div>
-    </section>
 
-    <footer class="footer-simple">
-        <p>Made with ❤️ by Sanjay Sivaramakrishnan M and Team</p>
+        <!-- Specialist Consultation Appointment Request Form -->
+        <div class="form-card" style="max-width: 850px; margin: 0 auto;">
+            <h2 style="font-size: 1.5rem; color: #ffffff; margin-bottom: 0.5rem; text-align: center;">Book Priority Specialist Consultation</h2>
+            <p style="text-align: center; color: var(--text-muted); font-size: 0.95rem; margin-bottom: 2rem;">
+                Submit your preliminary diagnostic result ID to be matched with an affiliated specialist hospital or accredited telemedicine physician.
+            </p>
+
+            <form id="contactForm" onsubmit="event.preventDefault(); alert('Appointment Request Received! Our clinical care coordinator will contact you within 2 hours with doctor availability.'); this.reset();">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Full Patient Name</label>
+                        <input type="text" required placeholder="e.g. John Doe">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" required placeholder="+1 (555) 000-0000 / +91 ...">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" required placeholder="patient@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Diagnostic Condition Tested</label>
+                        <select required>
+                            <option value="">Select Tested Condition...</option>
+                            <option value="heart">Cardiovascular / Heart Disease</option>
+                            <option value="diabetes">Diabetes & Glycemic Profile</option>
+                            <option value="kidney">Chronic Kidney Disease</option>
+                            <option value="liver">Liver Disease & Hepatic Panel</option>
+                            <option value="cancer">Breast Oncology Morphology</option>
+                            <option value="malaria">Malaria Blood Smear</option>
+                            <option value="pneumonia">Pneumonia Chest Radiograph</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Preferred Hospital / Clinic Location or City</label>
+                        <input type="text" required placeholder="e.g. City Hospital, Metro Medical Center">
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Brief Clinical Notes / Current Symptoms</label>
+                        <textarea style="width: 100%; padding: 0.8rem 1rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); color: var(--text); font-family: inherit; font-size: 0.95rem; min-height: 100px;" placeholder="Describe symptom duration, medications you take, or any questions for the specialist..."></textarea>
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem; text-align: center;">
+                    <button type="submit" class="btn btn-primary btn-large" style="min-width: 280px;">
+                        <span>Request Priority Appointment</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="brand-icon-wrapper" style="width: 32px; height: 32px;">
+                        <svg viewBox="0 0 24 24" style="width: 18px; height: 18px;">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                    </div>
+                    <span>CureSight Medical AI</span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Developed by Dharsan and Engineering Team</p>
+            </div>
+        </div>
     </footer>
 </body>
 
-</html> -->
+</html>

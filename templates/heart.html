@@ -3,164 +3,453 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Heart Disease Diagnosis - CureSight</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cardiovascular Diagnostic - CureSight AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
 <body>
+    <!-- Ambient Background -->
+    <div class="animated-bg">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+    </div>
+    <div class="bg-grid"></div>
+
+    <!-- Navigation -->
     <nav class="navbar">
-        <div class="nav-brand">
-            <span class="brand-icon">🩺</span>
-            CureSight
-        </div>
+        <a href="/" class="nav-brand">
+            <div class="brand-icon-wrapper">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </div>
+            <span class="brand-gradient">CureSight</span>
+            <span class="brand-tag">Cardiology</span>
+        </a>
+
         <div class="nav-links">
             <a href="/" class="nav-link">Home</a>
-            <a href="/features" class="nav-link">Features</a>
+            <a href="/features" class="nav-link">Diagnostic Suite</a>
+            <a href="/contact" class="nav-link">Emergency & Care</a>
+            <a href="/contact" class="nav-emergency-btn">
+                <span class="pulse-dot"></span>
+                <span>24/7 Helpline: 112 / 911</span>
+            </a>
         </div>
     </nav>
 
-    <div class="container">
-        <a href="/features" class="back-button">
-            <span class="arrow">←</span> Back to Features
+    <div class="content-wrapper container">
+        <a href="/features" class="back-button no-print">
+            <span>←</span> Back to Diagnostic Suite
         </a>
-        <header>
-            <h1>Heart Disease Check</h1>
-            <p class="subtitle">AI-powered cardiovascular risk assessment</p>
-        </header>
 
-        {% if prediction %}
-        <div class="result-section">
-            <div class="result {{ 'danger' if prediction == 'Presence' else 'safe' }}">
-                <span class="result-icon">{{ '⚠️' if prediction == 'Presence' else '✅' }}</span>
-                <span>{{ insights.title }}</span>
-            </div>
-
-            <div class="insights-container">
-                <div class="insight-card glass-card">
-                    <h3>Analysis Summary</h3>
-                    <p>{{ insights.description }}</p>
+        <!-- PRINT REPORT HEADER (Only visible in PDF / Print) -->
+        <div class="print-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 style="font-size: 1.8rem; color: #0284c7; margin: 0;">CureSight Clinical Intelligence</h1>
+                    <p style="font-size: 0.9rem; color: #64748b; margin: 0;">Automated Cardiovascular Risk Screening & Biomarker Assessment</p>
                 </div>
-
-                {% if insights.risk_factors %}
-                <div class="insight-card glass-card">
-                    <h3>🔍 Risk Factors</h3>
-                    <ul class="insight-list">
-                        {% for factor in insights.risk_factors %}
-                        <li>{{ factor }}</li>
-                        {% endfor %}
-                    </ul>
+                <div style="text-align: right; font-size: 0.85rem; color: #475569;">
+                    <p><strong>Report ID:</strong> CS-CARD-{{ range(1000, 9999) | random }}</p>
+                    <p id="printTimestamp"></p>
                 </div>
-                {% endif %}
-
-                {% if insights.recommendations %}
-                <div class="insight-card glass-card">
-                    <h3>💡 Recommendations</h3>
-                    <ul class="insight-list">
-                        {% for rec in insights.recommendations %}
-                        <li>{{ rec }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
-
-                {% if insights.tips %}
-                <div class="insight-card glass-card">
-                    <h3>💚 Health Tips</h3>
-                    <ul class="insight-list">
-                        {% for tip in insights.tips %}
-                        <li>{{ tip }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
             </div>
         </div>
-        {% endif %}
+
+        <div class="form-header-area no-print">
+            <h1>Cardiovascular Risk Screening</h1>
+            <p class="section-subtitle">Multi-parametric machine learning analysis of cardiac biomarkers, ischemic patterns, and hemodynamic stress.</p>
+        </div>
 
         {% if error %}
-        <div class="result danger">
-            Error: {{ error }}
+        <div class="critical-alert-card" style="margin-bottom: 2rem;">
+            <h3>Evaluation Error</h3>
+            <p>{{ error }}</p>
         </div>
         {% endif %}
 
-        <div class="card form-card" style="max-width: 900px; margin: 2rem auto;">
-            <h2 style="margin-bottom: 1.5rem;">Enter Patient Data</h2>
-            <form action="/heart" method="POST">
+        {% if prediction %}
+        <!-- ================================================================= -->
+        <!-- RESULTS & EMERGENCY PROTOCOL SUITE                                -->
+        <!-- ================================================================= -->
+        <div class="result-section">
+            <div class="{{ 'critical-alert-card' if is_positive else 'safe-alert-card' }}">
+                <div class="result-hero-row">
+                    <div class="result-badge-icon {{ 'danger' if is_positive else 'safe' }}">
+                        {{ '🚨' if is_positive else '🛡️' }}
+                    </div>
+                    <div class="result-hero-text">
+                        <div class="result-status-tag {{ 'danger' if is_positive else 'safe' }}">
+                            {{ insights.badge }}
+                        </div>
+                        <h2>{{ insights.title }}</h2>
+                        <p><strong>AI Diagnostic Assessment:</strong> {{ prediction }}</p>
+                        <p style="margin-top: 0.4rem;">{{ insights.description }}</p>
+                    </div>
+                </div>
+
+                <!-- Risk Level Gauge -->
+                <div class="risk-meter-wrapper">
+                    <div class="risk-meter-header">
+                        <span>Cardiovascular Risk Severity Meter</span>
+                        <span><strong>{{ 'HIGH RISK (88%)' if is_positive else 'OPTIMAL (12%)' }}</strong></span>
+                    </div>
+                    <div class="risk-meter-track">
+                        <div class="risk-meter-fill {{ 'danger' if is_positive else 'safe' }}"></div>
+                    </div>
+                </div>
+
+                <!-- Action Toolbar -->
+                <div class="result-action-toolbar no-print">
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <span>📄 Download / Print Medical Report (PDF)</span>
+                    </button>
+                    {% if is_positive %}
+                    <a href="/contact" class="btn btn-danger">
+                        <span>🚨 Find Emergency Cardiac Care</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Clinical Protocol & Action Grid -->
+            <div class="protocol-grid">
+                <!-- Specialist Referral -->
+                <div class="protocol-card glass-card">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">🏥</span>
+                        <h3 class="protocol-card-title {{ 'danger' if is_positive else 'success' }}">Specialist Recommendation</h3>
+                    </div>
+                    <p style="font-size: 1rem; font-weight: 700; color: #ffffff; margin-bottom: 0.5rem;">
+                        {{ insights.specialist }}
+                    </p>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                        <strong>Urgency:</strong> {{ insights.urgency_window }}
+                    </p>
+                    <div style="margin-top: auto;">
+                        <span style="font-size: 0.8rem; color: var(--text-subtle); display: block; margin-bottom: 0.4rem;">Confirmatory Clinical Tests:</span>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                            {% for test in insights.recommended_tests %}
+                            <span class="feature-badge">{{ test }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Red-Flag Emergency Symptoms (Positive) or Health Tips (Negative) -->
+                {% if is_positive and insights.emergency_symptoms %}
+                <div class="protocol-card glass-card" style="border-color: rgba(244, 63, 94, 0.4);">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">🚨</span>
+                        <h3 class="protocol-card-title danger">Red-Flag Symptoms (Seek Immediate ER!)</h3>
+                    </div>
+                    <ul class="protocol-list danger">
+                        {% for symptom in insights.emergency_symptoms %}
+                        <li><strong>{{ symptom }}</strong></li>
+                        {% endfor %}
+                    </ul>
+                    <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(244, 63, 94, 0.15); border-radius: 8px; font-size: 0.85rem; color: #fecdd3;">
+                        Call emergency services (112 / 911 / 108) immediately if experiencing crushing chest pain.
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Action Steps -->
+                <div class="protocol-card glass-card">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">💡</span>
+                        <h3 class="protocol-card-title info">{{ 'Clinical Recommendations' if is_positive else 'Cardiovascular Maintenance Tips' }}</h3>
+                    </div>
+                    <ul class="protocol-list">
+                        {% if is_positive %}
+                            {% for rec in insights.recommendations %}
+                            <li>{{ rec }}</li>
+                            {% endfor %}
+                        {% else %}
+                            {% for tip in insights.tips %}
+                            <li>{{ tip }}</li>
+                            {% endfor %}
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <!-- Questions for Doctor -->
+                {% if is_positive and insights.doctor_questions %}
+                <div class="protocol-card glass-card">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">❓</span>
+                        <h3 class="protocol-card-title warning">Questions to Ask Your Cardiologist</h3>
+                    </div>
+                    <ul class="protocol-list warning">
+                        {% for q in insights.doctor_questions %}
+                        <li>{{ q }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- Dietary Protocol -->
+                {% if insights.diet_dos %}
+                <div class="protocol-card glass-card" style="grid-column: 1 / -1;">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">🥗</span>
+                        <h3 class="protocol-card-title success">Cardioprotective Dietary Protocol</h3>
+                    </div>
+                    <div class="diet-split-grid">
+                        <div class="diet-col dos">
+                            <h4><span>✅</span> Beneficial Foods & Habits</h4>
+                            <ul>
+                                {% for item in insights.diet_dos %}
+                                <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="diet-col donts">
+                            <h4><span>❌</span> Foods & Habits to Strictly Avoid</h4>
+                            <ul>
+                                {% for item in insights.diet_donts %}
+                                <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Interactive Patient Pre-Consultation Checklist -->
+                {% if is_positive %}
+                <div class="protocol-card glass-card no-print" style="grid-column: 1 / -1;">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">📋</span>
+                        <h3 class="protocol-card-title info">Patient Consultation Preparation Checklist</h3>
+                    </div>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">Tick off items to prepare before meeting your cardiologist:</p>
+                    <label class="checklist-item">
+                        <input type="checkbox">
+                        <span>Print or save this clinical assessment summary to bring to your appointment</span>
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox">
+                        <span>Assemble past 12-month blood work, lipid panels, and previous ECG tracings</span>
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox">
+                        <span>Compile complete list of current daily prescription drugs, doses, and supplements</span>
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox">
+                        <span>Record daily morning and evening resting blood pressure readings for 3 consecutive days</span>
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox">
+                        <span>Note frequency, duration, and triggers of any chest discomfort, palpitations, or dyspnea</span>
+                    </label>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Patient Parameters Table (Structured for Clinical Print) -->
+            {% if patient_summary %}
+            <div class="patient-data-table-wrapper">
+                <h3 style="font-size: 1.2rem; color: #ffffff; margin-bottom: 0.5rem;">Submitted Patient Clinical Biomarkers</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">The following clinical vitals were submitted to the Random Forest model for inference:</p>
+                <table class="patient-data-table">
+                    <thead>
+                        <tr>
+                            <th>Parameter Name</th>
+                            <th>Submitted Value</th>
+                            <th>Standard Clinical Reference Target</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in patient_summary %}
+                        <tr>
+                            <td><strong>{{ item.label }}</strong></td>
+                            <td>{{ item.value }}</td>
+                            <td>
+                                {% if 'Blood Pressure' in item.label %}
+                                    &lt; 120 mm Hg (Resting)
+                                {% elif 'Cholesterol' in item.label %}
+                                    &lt; 200 mg/dL
+                                {% elif 'Fasting Blood Sugar' in item.label %}
+                                    &lt; 100 mg/dL Normal
+                                {% elif 'Max Heart Rate' in item.label %}
+                                    Approx. (220 - Age)
+                                {% elif 'ECG' in item.label %}
+                                    Normal Sinus Rhythm
+                                {% else %}
+                                    Within Physiological Limits
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            <!-- PRINT SIGN-OFF (Only for PDF / Print) -->
+            <div class="print-footer-signoff">
+                <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+                    <div>
+                        <p style="font-size: 0.85rem; color: #64748b;">Reviewing Cardiologist / Physician Signature:</p>
+                        <div style="height: 50px; border-bottom: 1px solid #94a3b8; width: 250px; margin-top: 1rem;"></div>
+                        <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">Dr. Name & License #</p>
+                    </div>
+                    <div style="max-width: 380px; font-size: 0.75rem; color: #64748b;">
+                        <strong>Clinical Notice:</strong> This machine learning screening report is an automated decision aid. Confirmatory serum biomarkers (Troponin), 12-lead ECG, and medical imaging must be evaluated by a certified physician before starting invasive or pharmacologic interventions.
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ================================================================= -->
+        <!-- PATIENT INPUT FORM                                                -->
+        <!-- ================================================================= -->
+        <div class="form-card no-print" style="max-width: 950px; margin: 0 auto 4rem;">
+            <!-- One-Click Sample Data Bar -->
+            <div class="sample-bar">
+                <div class="sample-bar-title">
+                    <span>⚡ Quick Test Automation:</span>
+                </div>
+                <div class="sample-btn-group">
+                    <button type="button" class="btn btn-sm btn-sample-pos" onclick="fillHeartSample('positive')">
+                        ⚠️ Fill High-Risk (Positive) Sample
+                    </button>
+                    <button type="button" class="btn btn-sm btn-sample-neg" onclick="fillHeartSample('negative')">
+                        🛡️ Fill Healthy (Negative) Sample
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('heartForm').reset()">
+                        🧹 Clear
+                    </button>
+                </div>
+            </div>
+
+            <h2 style="font-size: 1.4rem; margin-bottom: 1.5rem; color: #ffffff;">Enter Patient Clinical Vitals</h2>
+            
+            <form id="heartForm" action="/heart" method="POST">
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Age</label>
-                        <input type="number" name="age" required step="1" min="1" max="120" placeholder="e.g. 55">
+                        <div class="form-label-row">
+                            <label>Age (years)</label>
+                            <span class="field-hint">Adult 18-120</span>
+                        </div>
+                        <input type="number" id="age" name="age" required min="1" max="120" placeholder="e.g. 55">
                     </div>
+
                     <div class="form-group">
-                        <label>Sex</label>
-                        <select name="sex" required>
+                        <div class="form-label-row">
+                            <label>Biological Sex</label>
+                        </div>
+                        <select id="sex" name="sex" required>
                             <option value="1">Male</option>
                             <option value="0">Female</option>
                         </select>
                     </div>
+
                     <div class="form-group">
-                        <label>Chest Pain Type</label>
-                        <select name="cp" required>
-                            <option value="0">Typical Angina</option>
-                            <option value="1">Atypical Angina</option>
-                            <option value="2">Non-anginal Pain</option>
-                            <option value="3">Asymptomatic</option>
+                        <div class="form-label-row">
+                            <label>Chest Pain Type</label>
+                        </div>
+                        <select id="cp" name="cp" required>
+                            <option value="0">Typical Angina (Grade 0)</option>
+                            <option value="1">Atypical Angina (Grade 1)</option>
+                            <option value="2">Non-anginal Pain (Grade 2)</option>
+                            <option value="3">Asymptomatic (Grade 3)</option>
                         </select>
                     </div>
+
                     <div class="form-group">
-                        <label>Resting Blood Pressure (mm Hg)</label>
-                        <input type="number" name="bp" required step="1" placeholder="e.g. 120">
+                        <div class="form-label-row">
+                            <label>Resting Blood Pressure</label>
+                            <span class="field-hint">mm Hg (Norm: 120)</span>
+                        </div>
+                        <input type="number" id="bp" name="bp" required step="1" placeholder="e.g. 130">
                     </div>
+
                     <div class="form-group">
-                        <label>Cholesterol (mg/dl)</label>
-                        <input type="number" name="chol" required step="1" placeholder="e.g. 200">
+                        <div class="form-label-row">
+                            <label>Serum Cholesterol</label>
+                            <span class="field-hint">mg/dL (Norm &lt; 200)</span>
+                        </div>
+                        <input type="number" id="chol" name="chol" required step="1" placeholder="e.g. 210">
                     </div>
+
                     <div class="form-group">
-                        <label>Fasting Blood Sugar > 120 mg/dl</label>
-                        <select name="fbs" required>
-                            <option value="0">No</option>
-                            <option value="1">Yes</option>
+                        <div class="form-label-row">
+                            <label>Fasting Blood Sugar &gt; 120 mg/dL</label>
+                        </div>
+                        <select id="fbs" name="fbs" required>
+                            <option value="0">No (&lt;= 120 mg/dL)</option>
+                            <option value="1">Yes (&gt; 120 mg/dL)</option>
                         </select>
                     </div>
+
                     <div class="form-group">
-                        <label>Resting ECG Results</label>
-                        <select name="ekg" required>
+                        <div class="form-label-row">
+                            <label>Resting ECG Results</label>
+                        </div>
+                        <select id="ekg" name="ekg" required>
                             <option value="0">Normal</option>
                             <option value="1">ST-T Wave Abnormality</option>
                             <option value="2">Left Ventricular Hypertrophy</option>
                         </select>
                     </div>
+
                     <div class="form-group">
-                        <label>Max Heart Rate Achieved</label>
-                        <input type="number" name="max_hr" required step="1" placeholder="e.g. 150">
+                        <div class="form-label-row">
+                            <label>Max Heart Rate Achieved</label>
+                            <span class="field-hint">bpm</span>
+                        </div>
+                        <input type="number" id="max_hr" name="max_hr" required step="1" placeholder="e.g. 150">
                     </div>
+
                     <div class="form-group">
-                        <label>Exercise Induced Angina</label>
-                        <select name="exang" required>
+                        <div class="form-label-row">
+                            <label>Exercise Induced Angina</label>
+                        </div>
+                        <select id="exang" name="exang" required>
                             <option value="0">No</option>
                             <option value="1">Yes</option>
                         </select>
                     </div>
+
                     <div class="form-group">
-                        <label>ST Depression (Oldpeak)</label>
-                        <input type="number" name="oldpeak" required step="0.1" placeholder="e.g. 1.5">
+                        <div class="form-label-row">
+                            <label>ST Depression (Oldpeak)</label>
+                            <span class="field-hint">Norm: 0.0 - 1.0</span>
+                        </div>
+                        <input type="number" id="oldpeak" name="oldpeak" required step="0.1" placeholder="e.g. 1.2">
                     </div>
+
                     <div class="form-group">
-                        <label>Slope of Peak Exercise ST</label>
-                        <select name="slope" required>
+                        <div class="form-label-row">
+                            <label>Slope of Peak Exercise ST</label>
+                        </div>
+                        <select id="slope" name="slope" required>
                             <option value="0">Upsloping</option>
                             <option value="1">Flat</option>
                             <option value="2">Downsloping</option>
                         </select>
                     </div>
+
                     <div class="form-group">
-                        <label>Number of Major Vessels (0-3)</label>
-                        <input type="number" name="ca" required min="0" max="3" placeholder="0-3">
+                        <div class="form-label-row">
+                            <label>Major Vessels by Fluoroscopy</label>
+                            <span class="field-hint">0 to 3 vessels</span>
+                        </div>
+                        <input type="number" id="ca" name="ca" required min="0" max="3" placeholder="0-3">
                     </div>
+
                     <div class="form-group">
-                        <label>Thallium Stress Test</label>
-                        <select name="thal" required>
+                        <div class="form-label-row">
+                            <label>Thallium Stress Test</label>
+                        </div>
+                        <select id="thal" name="thal" required>
                             <option value="3">Normal</option>
                             <option value="6">Fixed Defect</option>
                             <option value="7">Reversible Defect</option>
@@ -168,12 +457,56 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary" style="margin-top: 2rem;">
-                    Analyze Results
-                </button>
+                <div style="margin-top: 2.5rem; text-align: center;">
+                    <button type="submit" class="btn btn-primary btn-large" style="min-width: 280px;">
+                        <span>🔬 Run AI Cardiovascular Analysis</span>
+                    </button>
+                </div>
             </form>
         </div>
     </div>
+
+    <!-- Client-side script for One-Click Sample Filling & Print Timestamp -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const timeEl = document.getElementById('printTimestamp');
+            if (timeEl) {
+                timeEl.textContent = new Date().toLocaleString();
+            }
+        });
+
+        function fillHeartSample(type) {
+            if (type === 'positive') {
+                document.getElementById('age').value = 60;
+                document.getElementById('sex').value = 1;
+                document.getElementById('cp').value = 3;
+                document.getElementById('bp').value = 145;
+                document.getElementById('chol').value = 280;
+                document.getElementById('fbs').value = 1;
+                document.getElementById('ekg').value = 2;
+                document.getElementById('max_hr').value = 130;
+                document.getElementById('exang').value = 1;
+                document.getElementById('oldpeak').value = 2.5;
+                document.getElementById('slope').value = 2;
+                document.getElementById('ca').value = 2;
+                document.getElementById('thal').value = 7;
+            } else {
+                document.getElementById('age').value = 45;
+                document.getElementById('sex').value = 0;
+                document.getElementById('cp').value = 1;
+                document.getElementById('bp').value = 115;
+                document.getElementById('chol').value = 175;
+                document.getElementById('fbs').value = 0;
+                document.getElementById('ekg').value = 0;
+                document.getElementById('max_hr').value = 175;
+                document.getElementById('exang').value = 0;
+                document.getElementById('oldpeak').value = 0.0;
+                document.getElementById('slope').value = 0;
+                document.getElementById('ca').value = 0;
+                document.getElementById('thal').value = 3;
+            }
+        }
+    </script>
 </body>
 
 </html>

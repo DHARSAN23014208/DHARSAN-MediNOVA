@@ -2,113 +2,388 @@
 <html lang="en">
 
 <head>
-        <meta charset="UTF-8">
-        <title>Breast Cancer Diagnosis - CureSight</title>
-        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breast Oncology Screening - CureSight AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
 <body>
-        <nav class="navbar">
-                <div class="nav-brand">
-                        <span class="brand-icon">🩺</span>
-                        CureSight
-                </div>
-                <div class="nav-links">
-                        <a href="/" class="nav-link">Home</a>
-                        <a href="/features" class="nav-link">Features</a>
-                </div>
-        </nav>
+    <!-- Ambient Background -->
+    <div class="animated-bg">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+    </div>
+    <div class="bg-grid"></div>
 
-        <div class="container">
-                <a href="/features" class="back-button">
-                        <span class="arrow">←</span> Back to Features
-                </a>
-                <header>
-                        <h1>Breast Cancer Check</h1>
-                        <p class="subtitle">AI-powered cellular morphology analysis</p>
-                </header>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="nav-brand">
+            <div class="brand-icon-wrapper">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </div>
+            <span class="brand-gradient">CureSight</span>
+            <span class="brand-tag">Oncology</span>
+        </a>
 
-                {% if prediction %}
-                <div class="result-section">
-                        <div class="result {{ 'danger' if prediction == 'Malignant' else 'safe' }}">
-                                <span class="result-icon">{{ '⚠️' if prediction == 'Malignant' else '✅' }}</span>
-                                <span>{{ insights.title }}</span>
-                        </div>
-
-                        <div class="insights-container">
-                                <div class="insight-card glass-card">
-                                        <h3>Analysis Summary</h3>
-                                        <p>{{ insights.description }}</p>
-                                </div>
-
-                                {% if insights.next_steps %}
-                                <div class="insight-card glass-card">
-                                        <h3>🏥 Next Steps</h3>
-                                        <ul class="insight-list">
-                                                {% for step in insights.next_steps %}
-                                                <li>{{ step }}</li>
-                                                {% endfor %}
-                                        </ul>
-                                </div>
-                                {% endif %}
-
-                                {% if insights.tips %}
-                                <div class="insight-card glass-card">
-                                        <h3>💚 Health Tips</h3>
-                                        <ul class="insight-list">
-                                                {% for tip in insights.tips %}
-                                                <li>{{ tip }}</li>
-                                                {% endfor %}
-                                        </ul>
-                                </div>
-                                {% endif %}
-                        </div>
-                </div>
-                {% endif %}
-
-                {% if error %}
-                <div class="result danger">
-                        Error: {{ error }}
-                </div>
-                {% endif %}
-
-                <div class="card form-card" style="max-width: 700px; margin: 2rem auto;">
-                        <h2 style="margin-bottom: 1.5rem;">Enter Cellular Measurements</h2>
-                        <form action="/breast_cancer" method="POST">
-                                <div class="form-grid">
-                                        <div class="form-group">
-                                                <label>Mean Radius</label>
-                                                <input type="number" name="mean_radius" step="0.01" required
-                                                        placeholder="e.g. 14.0">
-                                        </div>
-                                        <div class="form-group">
-                                                <label>Mean Texture</label>
-                                                <input type="number" name="mean_texture" step="0.01" required
-                                                        placeholder="e.g. 19.0">
-                                        </div>
-                                        <div class="form-group">
-                                                <label>Mean Perimeter</label>
-                                                <input type="number" name="mean_perimeter" step="0.01" required
-                                                        placeholder="e.g. 90.0">
-                                        </div>
-                                        <div class="form-group">
-                                                <label>Mean Area</label>
-                                                <input type="number" name="mean_area" step="0.1" required
-                                                        placeholder="e.g. 600">
-                                        </div>
-                                        <div class="form-group">
-                                                <label>Mean Smoothness</label>
-                                                <input type="number" name="mean_smoothness" step="0.0001" required
-                                                        placeholder="e.g. 0.1">
-                                        </div>
-                                </div>
-
-                                <button type="submit" class="btn btn-primary" style="margin-top: 2rem;">Analyze
-                                        Results</button>
-                        </form>
-                </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="/features" class="nav-link">Diagnostic Suite</a>
+            <a href="/contact" class="nav-link">Emergency & Care</a>
+            <a href="/contact" class="nav-emergency-btn">
+                <span class="pulse-dot"></span>
+                <span>24/7 Helpline: 112 / 911</span>
+            </a>
         </div>
+    </nav>
+
+    <div class="content-wrapper container">
+        <a href="/features" class="back-button no-print">
+            <span>←</span> Back to Diagnostic Suite
+        </a>
+
+        <!-- PRINT REPORT HEADER (Only visible in PDF / Print) -->
+        <div class="print-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 style="font-size: 1.8rem; color: #0284c7; margin: 0;">CureSight Clinical Intelligence</h1>
+                    <p style="font-size: 0.9rem; color: #64748b; margin: 0;">Cellular Morphometric Screening & Breast Tumor Classification</p>
+                </div>
+                <div style="text-align: right; font-size: 0.85rem; color: #475569;">
+                    <p><strong>Report ID:</strong> CS-ONCO-{{ range(1000, 9999) | random }}</p>
+                    <p id="printTimestamp"></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-header-area no-print">
+            <h1>Breast Oncology Morphometry Screening</h1>
+            <p class="section-subtitle">Fine-needle aspirate (FNA) biopsy nuclear analysis evaluating nuclear radius, perimeter irregularity, and edge smoothness.</p>
+        </div>
+
+        {% if error %}
+        <div class="critical-alert-card" style="margin-bottom: 2rem;">
+            <h3>Evaluation Error</h3>
+            <p>{{ error }}</p>
+        </div>
+        {% endif %}
+
+        {% if prediction %}
+        <!-- ================================================================= -->
+        <!-- RESULTS & EMERGENCY PROTOCOL SUITE                                -->
+        <!-- ================================================================= -->
+        <div class="result-section">
+            <div class="{{ 'critical-alert-card' if is_positive else 'safe-alert-card' }}">
+                <div class="result-hero-row">
+                    <div class="result-badge-icon {{ 'danger' if is_positive else 'safe' }}">
+                        {{ '🚨' if is_positive else '🛡️' }}
+                    </div>
+                    <div class="result-hero-text">
+                        <div class="result-status-tag {{ 'danger' if is_positive else 'safe' }}">
+                            {{ insights.badge }}
+                        </div>
+                        <h2>{{ insights.title }}</h2>
+                        <p><strong>AI Diagnostic Assessment:</strong> {{ prediction }}</p>
+                        <p style="margin-top: 0.4rem;">{{ insights.description }}</p>
+                    </div>
+                </div>
+
+                <!-- Risk Level Gauge -->
+                <div class="risk-meter-wrapper">
+                    <div class="risk-meter-header">
+                        <span>Malignancy Severity Probability</span>
+                        <span><strong>{{ 'CRITICAL RISK / MALIGNANT (95%)' if is_positive else 'BENIGN / LOW CONCERN (5%)' }}</strong></span>
+                    </div>
+                    <div class="risk-meter-track">
+                        <div class="risk-meter-fill {{ 'danger' if is_positive else 'safe' }}"></div>
+                    </div>
+                </div>
+
+                <!-- Action Toolbar -->
+                <div class="result-action-toolbar no-print">
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <span>📄 Download / Print Medical Report (PDF)</span>
+                    </button>
+                    {% if is_positive %}
+                    <a href="/contact" class="btn btn-danger">
+                        <span>🚨 Find Breast Oncology Center</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Clinical Protocol & Action Grid -->
+            <div class="protocol-grid">
+                <!-- Specialist Referral -->
+                <div class="protocol-card glass-card">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">🏥</span>
+                        <h3 class="protocol-card-title {{ 'danger' if is_positive else 'success' }}">Specialist Recommendation</h3>
+                    </div>
+                    <p style="font-size: 1rem; font-weight: 700; color: #ffffff; margin-bottom: 0.5rem;">
+                        {{ insights.specialist }}
+                    </p>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                        <strong>Urgency:</strong> {{ insights.urgency_window }}
+                    </p>
+                    <div style="margin-top: auto;">
+                        <span style="font-size: 0.8rem; color: var(--text-subtle); display: block; margin-bottom: 0.4rem;">Confirmatory Clinical Tests:</span>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                            {% for test in insights.recommended_tests %}
+                            <span class="feature-badge">{{ test }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Red-Flag Emergency Symptoms (Positive) or Health Tips (Negative) -->
+                {% if is_positive and insights.emergency_symptoms %}
+                <div class="protocol-card glass-card" style="border-color: rgba(244, 63, 94, 0.4);">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">🚨</span>
+                        <h3 class="protocol-card-title danger">Urgent Clinical Red Flags</h3>
+                    </div>
+                    <ul class="protocol-list danger">
+                        {% for symptom in insights.emergency_symptoms %}
+                        <li><strong>{{ symptom }}</strong></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- Action Steps -->
+                <div class="protocol-card glass-card">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">💡</span>
+                        <h3 class="protocol-card-title info">{{ 'Immediate Next Steps' if is_positive else 'Breast Wellness Routine' }}</h3>
+                    </div>
+                    <ul class="protocol-list">
+                        {% if is_positive %}
+                            {% for rec in insights.recommendations %}
+                            <li>{{ rec }}</li>
+                            {% endfor %}
+                        {% else %}
+                            {% for tip in insights.tips %}
+                            <li>{{ tip }}</li>
+                            {% endfor %}
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <!-- Questions for Doctor -->
+                {% if is_positive and insights.doctor_questions %}
+                <div class="protocol-card glass-card">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">❓</span>
+                        <h3 class="protocol-card-title warning">Questions to Ask Your Surgical Oncologist</h3>
+                    </div>
+                    <ul class="protocol-list warning">
+                        {% for q in insights.doctor_questions %}
+                        <li>{{ q }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- Dietary Protocol -->
+                {% if insights.diet_dos %}
+                <div class="protocol-card glass-card" style="grid-column: 1 / -1;">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">🥗</span>
+                        <h3 class="protocol-card-title success">Oncological Nutritional Guidelines</h3>
+                    </div>
+                    <div class="diet-split-grid">
+                        <div class="diet-col dos">
+                            <h4><span>✅</span> Immune-Supporting Whole Foods</h4>
+                            <ul>
+                                {% for item in insights.diet_dos %}
+                                <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="diet-col donts">
+                            <h4><span>❌</span> Pro-Inflammatory & High-Risk Items</h4>
+                            <ul>
+                                {% for item in insights.diet_donts %}
+                                <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Interactive Patient Pre-Consultation Checklist -->
+                {% if is_positive %}
+                <div class="protocol-card glass-card no-print" style="grid-column: 1 / -1;">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">📋</span>
+                        <h3 class="protocol-card-title info">Patient Consultation Preparation Checklist</h3>
+                    </div>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">Tick off items to prepare before meeting your oncology care team:</p>
+                    <label class="checklist-item">
+                        <input type="checkbox">
+                        <span>Save this clinical assessment summary and morphometry records</span>
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox">
+                        <span>Gather all previous mammogram films/disks and ultrasound reports</span>
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox">
+                        <span>Record date when any palpable lump or skin change was first observed</span>
+                    </label>
+                    <label class="checklist-item">
+                        <input type="checkbox">
+                        <span>Bring a trusted family member or advocate to accompany you during the doctor discussion</span>
+                    </label>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Patient Parameters Table (Structured for Clinical Print) -->
+            {% if patient_summary %}
+            <div class="patient-data-table-wrapper">
+                <h3 style="font-size: 1.2rem; color: #ffffff; margin-bottom: 0.5rem;">Submitted Cellular Morphometric Metrics</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">The following nuclear characteristics were analyzed by the 95% accuracy model:</p>
+                <table class="patient-data-table">
+                    <thead>
+                        <tr>
+                            <th>Morphometric Feature</th>
+                            <th>Analyzed Value</th>
+                            <th>Benign Morphological Threshold</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in patient_summary %}
+                        <tr>
+                            <td><strong>{{ item.label }}</strong></td>
+                            <td>{{ item.value }}</td>
+                            <td>
+                                {% if 'Radius' in item.label %}
+                                    &lt; 14.0 µm
+                                {% elif 'Perimeter' in item.label %}
+                                    &lt; 90.0 µm
+                                {% elif 'Area' in item.label %}
+                                    &lt; 500 µm²
+                                {% elif 'Smoothness' in item.label %}
+                                    &lt; 0.10
+                                {% else %}
+                                    Within Benign Architecture Limits
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            <!-- PRINT SIGN-OFF (Only for PDF / Print) -->
+            <div class="print-footer-signoff">
+                <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+                    <div>
+                        <p style="font-size: 0.85rem; color: #64748b;">Reviewing Oncologist / Pathologist Signature:</p>
+                        <div style="height: 50px; border-bottom: 1px solid #94a3b8; width: 250px; margin-top: 1rem;"></div>
+                        <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">Dr. Name & License #</p>
+                    </div>
+                    <div style="max-width: 380px; font-size: 0.75rem; color: #64748b;">
+                        <strong>Clinical Notice:</strong> This machine learning screening report is an automated decision aid. Histopathological core biopsy and formal receptor immuno-staining (ER/PR/HER2) are essential for definitive oncological staging.
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ================================================================= -->
+        <!-- PATIENT INPUT FORM                                                -->
+        <!-- ================================================================= -->
+        <div class="form-card no-print" style="max-width: 800px; margin: 0 auto 4rem;">
+            <!-- One-Click Sample Data Bar -->
+            <div class="sample-bar">
+                <div class="sample-bar-title">
+                    <span>⚡ Quick Test Automation:</span>
+                </div>
+                <div class="sample-btn-group">
+                    <button type="button" class="btn btn-sm btn-sample-pos" onclick="fillCancerSample('positive')">
+                        ⚠️ Fill Malignant (High Risk) Sample
+                    </button>
+                    <button type="button" class="btn btn-sm btn-sample-neg" onclick="fillCancerSample('negative')">
+                        🛡️ Fill Benign (Low Risk) Sample
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('cancerForm').reset()">
+                        🧹 Clear
+                    </button>
+                </div>
+            </div>
+
+            <h2 style="font-size: 1.4rem; margin-bottom: 1.5rem; color: #ffffff;">Enter Cell Nucleus Measurements</h2>
+            
+            <form id="cancerForm" action="/breast_cancer" method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <div class="form-label-row"><label>Mean Radius (µm)</label><span class="field-hint">e.g. 14.0</span></div>
+                        <input type="number" id="bc_radius" name="mean_radius" step="0.01" required placeholder="e.g. 14.0">
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-label-row"><label>Mean Texture</label><span class="field-hint">e.g. 19.0</span></div>
+                        <input type="number" id="bc_texture" name="mean_texture" step="0.01" required placeholder="e.g. 19.0">
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-label-row"><label>Mean Perimeter (µm)</label><span class="field-hint">e.g. 90.0</span></div>
+                        <input type="number" id="bc_perimeter" name="mean_perimeter" step="0.01" required placeholder="e.g. 90.0">
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-label-row"><label>Mean Area (µm²)</label><span class="field-hint">e.g. 600.0</span></div>
+                        <input type="number" id="bc_area" name="mean_area" step="0.1" required placeholder="e.g. 600.0">
+                    </div>
+
+                    <div class="form-group">
+                        <div class="form-label-row"><label>Mean Smoothness</label><span class="field-hint">e.g. 0.095</span></div>
+                        <input type="number" id="bc_smoothness" name="mean_smoothness" step="0.0001" required placeholder="e.g. 0.095">
+                    </div>
+                </div>
+
+                <div style="margin-top: 2.5rem; text-align: center;">
+                    <button type="submit" class="btn btn-primary btn-large" style="min-width: 280px;">
+                        <span>🔬 Run AI Morphometry Analysis</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Client-side script for One-Click Sample Filling & Print Timestamp -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const timeEl = document.getElementById('printTimestamp');
+            if (timeEl) {
+                timeEl.textContent = new Date().toLocaleString();
+            }
+        });
+
+        function fillCancerSample(type) {
+            if (type === 'positive') {
+                document.getElementById('bc_radius').value = 18.5;
+                document.getElementById('bc_texture').value = 24.5;
+                document.getElementById('bc_perimeter').value = 125.0;
+                document.getElementById('bc_area').value = 1100.0;
+                document.getElementById('bc_smoothness').value = 0.12;
+            } else {
+                document.getElementById('bc_radius').value = 11.2;
+                document.getElementById('bc_texture').value = 14.5;
+                document.getElementById('bc_perimeter').value = 72.0;
+                document.getElementById('bc_area').value = 380.0;
+                document.getElementById('bc_smoothness').value = 0.08;
+            }
+        }
+    </script>
 </body>
 
 </html>

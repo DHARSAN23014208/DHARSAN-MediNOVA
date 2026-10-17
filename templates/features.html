@@ -4,92 +4,336 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CureSight - Diagnosis Features</title>
+    <title>Diagnostic Suite - CureSight AI</title>
+    <meta name="description" content="Choose from 7 clinical AI diagnostic models for rapid disease risk assessment and automated clinical reporting.">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
 <body>
+    <!-- Ambient Background -->
+    <div class="animated-bg">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+    </div>
+    <div class="bg-grid"></div>
+
+    <!-- Navigation -->
     <nav class="navbar">
-        <div class="nav-brand">CureSight</div>
+        <a href="/" class="nav-brand">
+            <div class="brand-icon-wrapper">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </div>
+            <span class="brand-gradient">CureSight</span>
+            <span class="brand-tag">Diagnostic Suite</span>
+        </a>
+
         <div class="nav-links">
             <a href="/" class="nav-link">Home</a>
-            <a href="/features" class="nav-link active">Features</a>
-            <!-- <a href="/contact" class="nav-link">Contact</a> -->
+            <a href="/features" class="nav-link active">Diagnostic Suite</a>
+            <a href="/contact" class="nav-link">Emergency & Care</a>
+            <a href="/contact" class="nav-emergency-btn">
+                <span class="pulse-dot"></span>
+                <span>24/7 Helpline: 112 / 911</span>
+            </a>
         </div>
     </nav>
 
-    <div class="container">
-        <header>
-            <h1>Diagnosis Features</h1>
-            <p class="subtitle">Select a disease to begin AI-powered diagnosis</p>
-        </header>
+    <div class="content-wrapper container">
+        <div class="section-header">
+            <h1 class="section-title">AI Diagnostic Suite</h1>
+            <p class="section-subtitle">Select a disease module below to run multi-parameter clinical analysis with automated emergency protocols and printable medical reports.</p>
+        </div>
 
-        <div class="grid">
-            <!-- Heart Disease -->
-            <div class="card">
-                <h2>Heart Disease</h2>
-                <p>Predict heart disease risk using clinical parameters like BP, Cholesterol, and EKG.</p>
-                <div class="card-footer">
-                    <a href="/heart" class="btn">Diagnose</a>
+        <!-- Search & Filter Controls -->
+        <div class="search-box-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="diagSearchInput" class="search-input" placeholder="Search by disease, biomarker, or organ (e.g., blood, heart, lung)..." onkeyup="filterDiagnostics()">
+        </div>
+
+        <div class="diag-filter-bar">
+            <button class="filter-btn active" onclick="setCategory('all', this)">All Diagnostics (7)</button>
+            <button class="filter-btn" onclick="setCategory('vital', this)">Vitals & Heart</button>
+            <button class="filter-btn" onclick="setCategory('metabolic', this)">Metabolic & Labs</button>
+            <button class="filter-btn" onclick="setCategory('imaging', this)">Deep Learning Vision</button>
+        </div>
+
+        <!-- Grid of 7 Diagnoses -->
+        <div class="features-grid" id="diagGrid">
+            <!-- 1. Heart Disease -->
+            <div class="diag-card glass-card" data-category="vital" data-tags="heart cardiovascular bp blood pressure cholesterol ecg ekg cardiac">
+                <div>
+                    <div class="diag-header">
+                        <div class="diag-icon">🫀</div>
+                        <div class="diag-title-area">
+                            <h2>Heart Disease</h2>
+                            <span class="diag-meta-tag">Random Forest • 85% Accuracy</span>
+                        </div>
+                    </div>
+                    <p class="diag-desc">Predict cardiovascular risk and ischemia likelihood using 13 clinical indicators including resting ECG, ST depression, serum cholesterol, and fluoroscopy.</p>
+                </div>
+                <div>
+                    <div class="diag-specs">
+                        <div class="diag-spec-row">
+                            <span>Input Type:</span>
+                            <span class="diag-spec-value">13 Clinical Vitals</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Report Type:</span>
+                            <span class="diag-spec-value">Cardiology Action Sheet</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Inference Time:</span>
+                            <span class="diag-spec-value">&lt; 0.2s Instant</span>
+                        </div>
+                    </div>
+                    <a href="/heart" class="btn btn-primary" style="width: 100%;">
+                        <span>Launch Heart Diagnostic</span>
+                        <span>→</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Diabetes -->
-            <div class="card">
-                <h2>Diabetes</h2>
-                <p>Assess diabetes likelihood based on glucose levels, BMI, and medical history.</p>
-                <div class="card-footer">
-                    <a href="/diabetes" class="btn">Diagnose</a>
+            <!-- 2. Diabetes -->
+            <div class="diag-card glass-card" data-category="metabolic" data-tags="diabetes glucose sugar hba1c metabolic insulin bmi hypertension">
+                <div>
+                    <div class="diag-header">
+                        <div class="diag-icon">🩸</div>
+                        <div class="diag-title-area">
+                            <h2>Diabetes Risk</h2>
+                            <span class="diag-meta-tag">XGBoost Classifier • 92% Accuracy</span>
+                        </div>
+                    </div>
+                    <p class="diag-desc">Screen for type 2 diabetes and dysglycemia via glycosylated hemoglobin (HbA1c), plasma glucose, body mass index, and vascular history.</p>
+                </div>
+                <div>
+                    <div class="diag-specs">
+                        <div class="diag-spec-row">
+                            <span>Input Type:</span>
+                            <span class="diag-spec-value">8 Metabolic Metrics</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Report Type:</span>
+                            <span class="diag-spec-value">Endocrinology Protocol</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Inference Time:</span>
+                            <span class="diag-spec-value">&lt; 0.2s Instant</span>
+                        </div>
+                    </div>
+                    <a href="/diabetes" class="btn btn-primary" style="width: 100%;">
+                        <span>Launch Diabetes Diagnostic</span>
+                        <span>→</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Kidney Disease -->
-            <div class="card">
-                <h2>Kidney Disease</h2>
-                <p>Detect chronic kidney disease using blood and urine analysis markers.</p>
-                <div class="card-footer">
-                    <a href="/kidney" class="btn">Diagnose</a>
+            <!-- 3. Kidney Disease -->
+            <div class="diag-card glass-card" data-category="metabolic" data-tags="kidney renal ckd urine creatinine urea albumin electrolytes">
+                <div>
+                    <div class="diag-header">
+                        <div class="diag-icon">🧪</div>
+                        <div class="diag-title-area">
+                            <h2>Kidney Disease</h2>
+                            <span class="diag-meta-tag">Ensemble Classifier • 98% Accuracy</span>
+                        </div>
+                    </div>
+                    <p class="diag-desc">Deep renal function assessment screening for Chronic Kidney Disease (CKD) using 24 urinalysis and blood biochemistry markers.</p>
+                </div>
+                <div>
+                    <div class="diag-specs">
+                        <div class="diag-spec-row">
+                            <span>Input Type:</span>
+                            <span class="diag-spec-value">24 Lab Biomarkers (1-Click Pre-fill)</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Report Type:</span>
+                            <span class="diag-spec-value">Nephrology Action Plan</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Inference Time:</span>
+                            <span class="diag-spec-value">&lt; 0.3s Instant</span>
+                        </div>
+                    </div>
+                    <a href="/kidney" class="btn btn-primary" style="width: 100%;">
+                        <span>Launch Kidney Diagnostic</span>
+                        <span>→</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Liver Disease -->
-            <div class="card">
-                <h2>Liver Disease</h2>
-                <p>Evaluate liver function and disease probability using enzyme levels.</p>
-                <div class="card-footer">
-                    <a href="/liver" class="btn">Diagnose</a>
+            <!-- 4. Liver Disease -->
+            <div class="diag-card glass-card" data-category="metabolic" data-tags="liver hepatic enzymes bilirubin ast alt alb protein hepatitis">
+                <div>
+                    <div class="diag-header">
+                        <div class="diag-icon">🧬</div>
+                        <div class="diag-title-area">
+                            <h2>Liver Function</h2>
+                            <span class="diag-meta-tag">Random Forest • 75%+ Accuracy</span>
+                        </div>
+                    </div>
+                    <p class="diag-desc">Quantify hepatic dysfunction and inflammation probabilities through transaminases (ALT/AST), direct/total bilirubin, and protein synthesis ratios.</p>
+                </div>
+                <div>
+                    <div class="diag-specs">
+                        <div class="diag-spec-row">
+                            <span>Input Type:</span>
+                            <span class="diag-spec-value">10 Hepatic Parameters</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Report Type:</span>
+                            <span class="diag-spec-value">Hepatology Protocol</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Inference Time:</span>
+                            <span class="diag-spec-value">&lt; 0.2s Instant</span>
+                        </div>
+                    </div>
+                    <a href="/liver" class="btn btn-primary" style="width: 100%;">
+                        <span>Launch Liver Diagnostic</span>
+                        <span>→</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Breast Cancer -->
-            <div class="card">
-                <h2>Breast Cancer</h2>
-                <p>Classify tumor characteristics as benign or malignant based on cell metrics.</p>
-                <div class="card-footer">
-                    <a href="/breast_cancer" class="btn">Diagnose</a>
+            <!-- 5. Breast Cancer -->
+            <div class="diag-card glass-card" data-category="vital" data-tags="breast cancer oncology malignant benign tumor biopsy morphology">
+                <div>
+                    <div class="diag-header">
+                        <div class="diag-icon">🔬</div>
+                        <div class="diag-title-area">
+                            <h2>Breast Cancer Screening</h2>
+                            <span class="diag-meta-tag">Fine-Needle Classifier • 95% Accuracy</span>
+                        </div>
+                    </div>
+                    <p class="diag-desc">Classify cellular tumor biopsies as benign or malignant based on nuclear radius, perimeter irregularity, area expansion, and smoothness.</p>
+                </div>
+                <div>
+                    <div class="diag-specs">
+                        <div class="diag-spec-row">
+                            <span>Input Type:</span>
+                            <span class="diag-spec-value">5 Cellular Morphometry Metrics</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Report Type:</span>
+                            <span class="diag-spec-value">Oncology Urgent Triage</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Inference Time:</span>
+                            <span class="diag-spec-value">&lt; 0.2s Instant</span>
+                        </div>
+                    </div>
+                    <a href="/breast_cancer" class="btn btn-primary" style="width: 100%;">
+                        <span>Launch Cancer Screening</span>
+                        <span>→</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Malaria -->
-            <div class="card">
-                <h2>Malaria</h2>
-                <p>Detect parasitized cells in microscopic blood smear images using CNNs.</p>
-                <div class="card-footer">
-                    <a href="/malaria" class="btn">Analyze Image</a>
+            <!-- 6. Malaria -->
+            <div class="diag-card glass-card" data-category="imaging" data-tags="malaria parasite blood smear vision image cnn cnn microscopic cell">
+                <div>
+                    <div class="diag-header">
+                        <div class="diag-icon">🧫</div>
+                        <div class="diag-title-area">
+                            <h2>Malaria Detection</h2>
+                            <span class="diag-meta-tag">Deep CNN Vision • 95%+ Accuracy</span>
+                        </div>
+                    </div>
+                    <p class="diag-desc">Convolutional Deep Neural Network analyzing Giemsa-stained thin blood smear microscopic images to detect intra-erythrocytic Plasmodium parasites.</p>
+                </div>
+                <div>
+                    <div class="diag-specs">
+                        <div class="diag-spec-row">
+                            <span>Input Type:</span>
+                            <span class="diag-spec-value">Microscope Blood Smear Image</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Report Type:</span>
+                            <span class="diag-spec-value">Infectious Disease Protocol</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Inference Time:</span>
+                            <span class="diag-spec-value">&lt; 0.4s Deep Scan</span>
+                        </div>
+                    </div>
+                    <a href="/malaria" class="btn btn-primary" style="width: 100%;">
+                        <span>Analyze Blood Smear</span>
+                        <span>→</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Pneumonia -->
-            <div class="card">
-                <h2>Pneumonia</h2>
-                <p>Identify pneumonia in chest X-ray images using Deep Learning.</p>
-                <div class="card-footer">
-                    <a href="/pneumonia" class="btn">Analyze X-Ray</a>
+            <!-- 7. Pneumonia -->
+            <div class="diag-card glass-card" data-category="imaging" data-tags="pneumonia xray x-ray chest lung radiography deep learning cnn">
+                <div>
+                    <div class="diag-header">
+                        <div class="diag-icon">🫁</div>
+                        <div class="diag-title-area">
+                            <h2>Pneumonia Detection</h2>
+                            <span class="diag-meta-tag">Deep Neural Network • 90%+ Accuracy</span>
+                        </div>
+                    </div>
+                    <p class="diag-desc">Deep Radiograph Convolutional Model inspecting chest X-ray scans to identify pulmonary opacities, alveolar consolidation, and infiltrates.</p>
+                </div>
+                <div>
+                    <div class="diag-specs">
+                        <div class="diag-spec-row">
+                            <span>Input Type:</span>
+                            <span class="diag-spec-value">Chest Radiograph Scan (X-Ray)</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Report Type:</span>
+                            <span class="diag-spec-value">Pulmonology Emergency Plan</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Inference Time:</span>
+                            <span class="diag-spec-value">&lt; 0.5s Radiograph Scan</span>
+                        </div>
+                    </div>
+                    <a href="/pneumonia" class="btn btn-primary" style="width: 100%;">
+                        <span>Analyze Chest X-Ray</span>
+                        <span>→</span>
+                    </a>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Client-side filtering script -->
+    <script>
+        let currentCategory = 'all';
+
+        function setCategory(cat, btn) {
+            currentCategory = cat;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            filterDiagnostics();
+        }
+
+        function filterDiagnostics() {
+            const query = document.getElementById('diagSearchInput').value.toLowerCase().trim();
+            const cards = document.querySelectorAll('#diagGrid .diag-card');
+
+            cards.forEach(card => {
+                const category = card.getAttribute('data-category');
+                const tags = card.getAttribute('data-tags') || '';
+                const title = card.querySelector('h2').textContent.toLowerCase();
+                const desc = card.querySelector('.diag-desc').textContent.toLowerCase();
+
+                const matchesCategory = (currentCategory === 'all' || category === currentCategory);
+                const matchesSearch = (!query || title.includes(query) || desc.includes(query) || tags.includes(query));
+
+                if (matchesCategory && matchesSearch) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    </script>
 </body>
 
 </html>

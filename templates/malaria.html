@@ -3,130 +3,324 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Malaria Detection - CureSight</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Malaria Detection - CureSight AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
 <body>
+    <!-- Ambient Background -->
+    <div class="animated-bg">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+    </div>
+    <div class="bg-grid"></div>
+
+    <!-- Navigation -->
     <nav class="navbar">
-        <div class="nav-brand">
-            <span class="brand-icon">🩺</span>
-            CureSight
-        </div>
+        <a href="/" class="nav-brand">
+            <div class="brand-icon-wrapper">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </div>
+            <span class="brand-gradient">CureSight</span>
+            <span class="brand-tag">Infectious Disease</span>
+        </a>
+
         <div class="nav-links">
             <a href="/" class="nav-link">Home</a>
-            <a href="/features" class="nav-link">Features</a>
+            <a href="/features" class="nav-link">Diagnostic Suite</a>
+            <a href="/contact" class="nav-link">Emergency & Care</a>
+            <a href="/contact" class="nav-emergency-btn">
+                <span class="pulse-dot"></span>
+                <span>24/7 Helpline: 112 / 911</span>
+            </a>
         </div>
     </nav>
 
-    <div class="container">
-        <a href="/features" class="back-button">
-            <span class="arrow">←</span> Back to Features
+    <div class="content-wrapper container">
+        <a href="/features" class="back-button no-print">
+            <span>←</span> Back to Diagnostic Suite
         </a>
-        <header>
-            <h1>Malaria Detection</h1>
-            <p class="subtitle">AI-powered blood smear analysis</p>
-        </header>
 
-        {% if prediction %}
-        <div class="result-section">
-            <div class="result {{ 'danger' if prediction == 'Infected' else 'safe' }}">
-                <span class="result-icon">{{ '🦟' if prediction == 'Infected' else '✅' }}</span>
-                <span>{{ insights.title }}</span>
-            </div>
-
-            <div class="insights-container">
-                <div class="insight-card glass-card">
-                    <h3>Analysis Summary</h3>
-                    <p>{{ insights.description }}</p>
-                    {% if insights.about %}
-                    <p style="margin-top: 1rem; font-style: italic;">{{ insights.about }}</p>
-                    {% endif %}
+        <!-- PRINT REPORT HEADER (Only visible in PDF / Print) -->
+        <div class="print-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 style="font-size: 1.8rem; color: #0284c7; margin: 0;">CureSight Clinical Intelligence</h1>
+                    <p style="font-size: 0.9rem; color: #64748b; margin: 0;">Microscopic Blood Smear Analysis & Malaria Parasite Detection</p>
                 </div>
-
-                {% if insights.symptoms %}
-                <div class="insight-card glass-card">
-                    <h3>🤒 Common Symptoms</h3>
-                    <ul class="insight-list">
-                        {% for symptom in insights.symptoms %}
-                        <li>{{ symptom }}</li>
-                        {% endfor %}
-                    </ul>
+                <div style="text-align: right; font-size: 0.85rem; color: #475569;">
+                    <p><strong>Report ID:</strong> CS-MAL-{{ range(1000, 9999) | random }}</p>
+                    <p id="printTimestamp"></p>
                 </div>
-                {% endif %}
-
-                {% if insights.recommendations %}
-                <div class="insight-card glass-card">
-                    <h3>💡 Recommendations</h3>
-                    <ul class="insight-list">
-                        {% for rec in insights.recommendations %}
-                        <li>{{ rec }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
-
-                {% if insights.tips %}
-                <div class="insight-card glass-card">
-                    <h3>🛡️ Prevention Tips</h3>
-                    <ul class="insight-list">
-                        {% for tip in insights.tips %}
-                        <li>{{ tip }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
             </div>
         </div>
-        {% endif %}
+
+        <div class="form-header-area no-print">
+            <h1>Malaria Parasite Vision Detection</h1>
+            <p class="section-subtitle">Deep Convolutional Neural Network (CNN) scanning Giemsa-stained thin blood smear microscopic images for Plasmodium parasites.</p>
+        </div>
 
         {% if error %}
-        <div class="result danger">
-            Error: {{ error }}
+        <div class="critical-alert-card" style="margin-bottom: 2rem;">
+            <h3>Analysis Error</h3>
+            <p>{{ error }}</p>
         </div>
         {% endif %}
 
-        <div class="card form-card" style="max-width: 600px; margin: 2rem auto; text-align: center;">
-            <h2 style="margin-bottom: 1.5rem;">Upload Blood Smear Image</h2>
-            <form action="/malaria" method="POST" enctype="multipart/form-data">
-                <div class="form-group">
-                    <div class="file-upload-area" id="upload-area">
-                        <input type="file" name="file" accept="image/*" required id="malaria-file"
-                            onchange="showFileInfo(this)">
-                        <label for="malaria-file" class="file-upload-label" id="upload-label">
-                            <span class="upload-icon" id="upload-icon">📷</span>
-                            <span id="upload-text">Click to select or drag image here</span>
-                        </label>
+        {% if prediction %}
+        <!-- ================================================================= -->
+        <!-- RESULTS & EMERGENCY PROTOCOL SUITE                                -->
+        <!-- ================================================================= -->
+        <div class="result-section">
+            <div class="{{ 'critical-alert-card' if is_positive else 'safe-alert-card' }}">
+                <div class="result-hero-row">
+                    <div class="result-badge-icon {{ 'danger' if is_positive else 'safe' }}">
+                        {{ '🦟' if is_positive else '🛡️' }}
                     </div>
-                    <div id="file-info" class="file-info" style="display: none;">
-                        <span class="file-success-icon">✅</span>
-                        <span id="file-name">filename.jpg</span>
-                        <span class="file-ready">Ready to analyze</span>
+                    <div class="result-hero-text">
+                        <div class="result-status-tag {{ 'danger' if is_positive else 'safe' }}">
+                            {{ insights.badge }}
+                        </div>
+                        <h2>{{ insights.title }}</h2>
+                        <p><strong>AI Diagnostic Assessment:</strong> {{ prediction }}</p>
+                        <p style="margin-top: 0.4rem;">{{ insights.description }}</p>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary" style="margin-top: 1.5rem;">
-                    Analyze Image
-                </button>
+
+                <!-- Analyzed Microscopic Image Preview -->
+                {% if uploaded_image_url %}
+                <div class="uploaded-image-preview-card">
+                    <img src="{{ uploaded_image_url }}" alt="Analyzed Blood Smear" class="analyzed-img">
+                    <div>
+                        <h4 style="color: #ffffff; margin-bottom: 0.3rem;">Microscopic Smear Analyzed</h4>
+                        <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.5;">
+                            {{ 'Parasitized intracellular erythrocyte patterns identified by deep convolutional layers.' if is_positive else 'Uninfected normal red blood cell morphology confirmed.' }}
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Action Toolbar -->
+                <div class="result-action-toolbar no-print">
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <span>📄 Download / Print Medical Report (PDF)</span>
+                    </button>
+                    {% if is_positive %}
+                    <a href="/contact" class="btn btn-danger">
+                        <span>🚨 Find Emergency Tropical Disease Care</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Clinical Protocol & Action Grid -->
+            <div class="protocol-grid">
+                <!-- Specialist Referral -->
+                <div class="protocol-card glass-card">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">🏥</span>
+                        <h3 class="protocol-card-title {{ 'danger' if is_positive else 'success' }}">Specialist Recommendation</h3>
+                    </div>
+                    <p style="font-size: 1rem; font-weight: 700; color: #ffffff; margin-bottom: 0.5rem;">
+                        {{ insights.specialist }}
+                    </p>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                        <strong>Urgency:</strong> {{ insights.urgency_window }}
+                    </p>
+                    <div style="margin-top: auto;">
+                        <span style="font-size: 0.8rem; color: var(--text-subtle); display: block; margin-bottom: 0.4rem;">Confirmatory Clinical Tests:</span>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                            {% for test in insights.recommended_tests %}
+                            <span class="feature-badge">{{ test }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Red-Flag Emergency Symptoms (Positive) or Health Tips (Negative) -->
+                {% if is_positive and insights.emergency_symptoms %}
+                <div class="protocol-card glass-card" style="border-color: rgba(244, 63, 94, 0.4);">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">🚨</span>
+                        <h3 class="protocol-card-title danger">Severe Malaria Red Flags</h3>
+                    </div>
+                    <ul class="protocol-list danger">
+                        {% for symptom in insights.emergency_symptoms %}
+                        <li><strong>{{ symptom }}</strong></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- Action Steps -->
+                <div class="protocol-card glass-card">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">💡</span>
+                        <h3 class="protocol-card-title info">{{ 'Clinical Treatment Actions' if is_positive else 'Mosquito Prevention Guidelines' }}</h3>
+                    </div>
+                    <ul class="protocol-list">
+                        {% if is_positive %}
+                            {% for rec in insights.recommendations %}
+                            <li>{{ rec }}</li>
+                            {% endfor %}
+                        {% else %}
+                            {% for tip in insights.tips %}
+                            <li>{{ tip }}</li>
+                            {% endfor %}
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <!-- Questions for Doctor -->
+                {% if is_positive and insights.doctor_questions %}
+                <div class="protocol-card glass-card">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">❓</span>
+                        <h3 class="protocol-card-title warning">Questions to Ask Your Doctor</h3>
+                    </div>
+                    <ul class="protocol-list warning">
+                        {% for q in insights.doctor_questions %}
+                        <li>{{ q }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- Dietary Protocol -->
+                {% if insights.diet_dos %}
+                <div class="protocol-card glass-card" style="grid-column: 1 / -1;">
+                    <div class="protocol-card-header">
+                        <span class="protocol-card-icon">🥗</span>
+                        <h3 class="protocol-card-title success">Recovery & Hydration Protocol</h3>
+                    </div>
+                    <div class="diet-split-grid">
+                        <div class="diet-col dos">
+                            <h4><span>✅</span> Hydrating & Restorative Foods</h4>
+                            <ul>
+                                {% for item in insights.diet_dos %}
+                                <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="diet-col donts">
+                            <h4><span>❌</span> Foods to Avoid During Acute Infection</h4>
+                            <ul>
+                                {% for item in insights.diet_donts %}
+                                <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Patient Parameters Table (Structured for Clinical Print) -->
+            {% if patient_summary %}
+            <div class="patient-data-table-wrapper">
+                <h3 style="font-size: 1.2rem; color: #ffffff; margin-bottom: 0.5rem;">Diagnostic Image Analysis Record</h3>
+                <table class="patient-data-table">
+                    <thead>
+                        <tr>
+                            <th>Image Metric</th>
+                            <th>Analysis Finding</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in patient_summary %}
+                        <tr>
+                            <td><strong>{{ item.label }}</strong></td>
+                            <td>{{ item.value }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            <!-- PRINT SIGN-OFF (Only for PDF / Print) -->
+            <div class="print-footer-signoff">
+                <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+                    <div>
+                        <p style="font-size: 0.85rem; color: #64748b;">Reviewing Hematologist / Physician Signature:</p>
+                        <div style="height: 50px; border-bottom: 1px solid #94a3b8; width: 250px; margin-top: 1rem;"></div>
+                        <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">Dr. Name & License #</p>
+                    </div>
+                    <div style="max-width: 380px; font-size: 0.75rem; color: #64748b;">
+                        <strong>Clinical Notice:</strong> Machine learning blood smear screening is a rapid triage tool. Thick and thin manual microscopy and rapid antigen diagnostic tests (RDT) are required for legal diagnostic confirmation and parasite density counting.
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ================================================================= -->
+        <!-- IMAGE UPLOAD FORM & DEMO SAMPLES                                  -->
+        <!-- ================================================================= -->
+        <div class="form-card no-print" style="max-width: 750px; margin: 0 auto 4rem;">
+            <!-- One-Click Sample Data Bar -->
+            <div class="sample-bar">
+                <div class="sample-bar-title">
+                    <span>⚡ Test With Verified Sample Images:</span>
+                </div>
+                <div class="sample-btn-group">
+                    <form action="/malaria" method="POST" style="display: inline;">
+                        <input type="hidden" name="sample_type" value="infected">
+                        <button type="submit" class="btn btn-sm btn-sample-pos">
+                            ⚠️ Test Parasitized (Infected) Cell
+                        </button>
+                    </form>
+                    <form action="/malaria" method="POST" style="display: inline;">
+                        <input type="hidden" name="sample_type" value="uninfected">
+                        <button type="submit" class="btn btn-sm btn-sample-neg">
+                            🛡️ Test Uninfected (Healthy) Cell
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <h2 style="font-size: 1.4rem; margin-bottom: 1.5rem; text-align: center; color: #ffffff;">Upload Blood Smear Image</h2>
+            
+            <form id="malariaUploadForm" action="/malaria" method="POST" enctype="multipart/form-data">
+                <div class="file-upload-area" id="dropArea">
+                    <input type="file" name="file" id="malariaFile" accept="image/*" required onchange="previewImage(this)">
+                    <span class="upload-icon">📷</span>
+                    <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; color: #ffffff;">Drag & Drop Microscopic Blood Smear Image Here</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">or click to browse your computer (JPG, PNG, JPEG supported)</p>
+                    <img id="imagePreview" class="file-preview-thumbnail" style="display: none;" alt="Preview">
+                </div>
+
+                <div style="margin-top: 2rem; text-align: center;">
+                    <button type="submit" class="btn btn-primary btn-large" style="min-width: 280px;">
+                        <span>🔬 Run Deep CNN Malaria Scan</span>
+                    </button>
+                </div>
             </form>
         </div>
     </div>
 
+    <!-- Client-side script for Image Preview & Print Timestamp -->
     <script>
-        function showFileInfo(input) {
-            const fileInfo = document.getElementById('file-info');
-            const fileName = document.getElementById('file-name');
-            const uploadLabel = document.getElementById('upload-label');
-            const uploadIcon = document.getElementById('upload-icon');
-            const uploadText = document.getElementById('upload-text');
+        document.addEventListener('DOMContentLoaded', function() {
+            const timeEl = document.getElementById('printTimestamp');
+            if (timeEl) {
+                timeEl.textContent = new Date().toLocaleString();
+            }
+        });
 
+        function previewImage(input) {
+            const preview = document.getElementById('imagePreview');
             if (input.files && input.files[0]) {
-                const file = input.files[0];
-                fileName.textContent = file.name;
-                fileInfo.style.display = 'flex';
-                uploadLabel.classList.add('file-selected');
-                uploadIcon.textContent = '✅';
-                uploadText.textContent = 'Image selected - Click to change';
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+                reader.readAsDataURL(input.files[0]);
             }
         }
     </script>

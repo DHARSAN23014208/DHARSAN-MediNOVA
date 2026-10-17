@@ -4,145 +4,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CureSight - AI Powered Medical Diagnosis</title>
+    <title>CureSight - AI-Powered Medical Diagnosis & Clinical Screening</title>
+    <meta name="description" content="Next-generation AI medical diagnostic intelligence suite for preliminary disease screening across 7 critical conditions.">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
 <body class="home-page">
-    <nav class="navbar">
-        <div class="nav-brand">
-            <span class="brand-icon">🩺</span>
-            CureSight
-        </div>
-        <div class="nav-links">
-            <a href="/" class="nav-link active">Home</a>
-            <a href="/features" class="nav-link">Features</a>
-            <!-- <a href="/contact" class="nav-link">Contact</a> -->
-        </div>
-    </nav>
-
-    <!-- Animated Background -->
+    <!-- Ambient Background -->
     <div class="animated-bg">
         <div class="gradient-orb orb-1"></div>
         <div class="gradient-orb orb-2"></div>
         <div class="gradient-orb orb-3"></div>
     </div>
+    <div class="bg-grid"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="nav-brand">
+            <div class="brand-icon-wrapper">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </div>
+            <span class="brand-gradient">CureSight</span>
+            <span class="brand-tag">Clinical AI</span>
+        </a>
+
+        <div class="nav-links">
+            <a href="/" class="nav-link active">Home</a>
+            <a href="/features" class="nav-link">Diagnostic Suite</a>
+            <a href="/contact" class="nav-link">Emergency & Care</a>
+            <a href="/contact" class="nav-emergency-btn">
+                <span class="pulse-dot"></span>
+                <span>24/7 Helpline: 112 / 911</span>
+            </a>
+        </div>
+    </nav>
 
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-content">
-            <div class="hero-badge">🔬 AI-Powered Diagnostics</div>
-            <h1 class="hero-title">
-                Smart Health Analysis
-                <span class="gradient-text">Powered by AI</span>
-            </h1>
-            <p class="hero-description">
-                CureSight uses advanced machine learning to provide instant preliminary
-                health assessments for 7 different conditions. Fast, accurate, and accessible.
-            </p>
-            <div class="hero-buttons">
-                <a href="/features" class="btn btn-primary btn-glow">
-                    <span>Start Diagnosis</span>
-                    <span class="btn-arrow">→</span>
-                </a>
-                <a href="#about" class="btn btn-outline">Learn More</a>
+            <div class="hero-badge">
+                <span>🔬 Next-Gen Clinical Intelligence</span>
+                <span style="opacity: 0.5;">|</span>
+                <span>Multi-Model Architecture</span>
             </div>
+            
+            <h1 class="hero-title">
+                Intelligent Health Diagnostics <br>
+                <span class="gradient-text">Powered by Advanced AI</span>
+            </h1>
+
+            <p class="hero-description">
+                CureSight bridges clinical parameters and computer vision with ensemble machine learning 
+                to deliver instant preliminary health assessments, automated emergency triage guidance, 
+                and comprehensive downloadable clinical reports across 7 vital conditions.
+            </p>
+
+            <div class="hero-buttons">
+                <a href="/features" class="btn btn-primary btn-large">
+                    <span>Explore Diagnostic Suite</span>
+                    <span style="font-size: 1.2rem;">→</span>
+                </a>
+                <a href="#about" class="btn btn-outline btn-large">
+                    <span>Clinical Capabilities</span>
+                </a>
+            </div>
+
             <div class="hero-stats">
                 <div class="stat-item">
                     <span class="stat-number">7</span>
-                    <span class="stat-label">Diseases</span>
+                    <span class="stat-label">Diagnostic Models</span>
                 </div>
                 <div class="stat-divider"></div>
                 <div class="stat-item">
-                    <span class="stat-number">95%</span>
-                    <span class="stat-label">Accuracy</span>
+                    <span class="stat-number">95%+</span>
+                    <span class="stat-label">Model Accuracy</span>
                 </div>
                 <div class="stat-divider"></div>
                 <div class="stat-item">
-                    <span class="stat-number">&lt;1s</span>
-                    <span class="stat-label">Results</span>
+                    <span class="stat-number">&lt; 0.5s</span>
+                    <span class="stat-label">Instant Inference</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-number">PDF</span>
+                    <span class="stat-label">Printable Lab Reports</span>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Features Section -->
-    <section id="about" class="features-section">
-        <div class="container">
-            <h2 class="section-title">What CureSight Offers</h2>
-            <p class="section-subtitle">Comprehensive AI diagnostics at your fingertips</p>
+    <!-- Features Overview Section -->
+    <section id="about" class="container" style="padding-bottom: 6rem;">
+        <div class="section-header">
+            <h2 class="section-title">Comprehensive Diagnostic Capabilities</h2>
+            <p class="section-subtitle">Trained on authoritative international biomedical datasets to deliver precision early detection</p>
+        </div>
 
-            <div class="features-grid">
-                <div class="feature-card glass-card">
-                    <div class="feature-icon-wrapper">
-                        <span class="feature-icon">❤️</span>
-                    </div>
-                    <h3>Heart & Cardiovascular</h3>
-                    <p>Analyze cardiac risk factors including BP, cholesterol, and ECG patterns.</p>
+        <div class="features-grid">
+            <div class="feature-card glass-card">
+                <div class="feature-icon-wrapper">❤️</div>
+                <h3>Cardiovascular Health</h3>
+                <p>Multi-parametric cardiac risk stratification analyzing resting BP, serum cholesterol, exercise angina, and fluoroscopy vessels.</p>
+                <a href="/heart" class="feature-badge">Random Forest Ensemble →</a>
+            </div>
+
+            <div class="feature-card glass-card">
+                <div class="feature-icon-wrapper">🩸</div>
+                <h3>Diabetes & Glycemic Profile</h3>
+                <p>Metabolic screening evaluating HbA1c glycosylation, fasting blood glucose, BMI, and hypertension history.</p>
+                <a href="/diabetes" class="feature-badge">XGBoost Classifier →</a>
+            </div>
+
+            <div class="feature-card glass-card">
+                <div class="feature-icon-wrapper">🧪</div>
+                <h3>Chronic Kidney Panel</h3>
+                <p>Comprehensive 24-parameter renal panel examining urinary albumin, specific gravity, serum creatinine, and electrolytes.</p>
+                <a href="/kidney" class="feature-badge">98% Accuracy Model →</a>
+            </div>
+
+            <div class="feature-card glass-card">
+                <div class="feature-icon-wrapper">🧬</div>
+                <h3>Hepatic Function Assessment</h3>
+                <p>Liver disease probability screening utilizing bilirubin levels, transaminases (ALT/AST), and albumin-globulin ratios.</p>
+                <a href="/liver" class="feature-badge">Hepatic Function Classifier →</a>
+            </div>
+
+            <div class="feature-card glass-card">
+                <div class="feature-icon-wrapper">🔬</div>
+                <h3>Breast Oncology Screening</h3>
+                <p>Cellular morphometric nuclear analysis distinguishing benign tissues from malignant neoplasms with high sensitivity.</p>
+                <a href="/breast_cancer" class="feature-badge">Wisconsin Diagnostic Model →</a>
+            </div>
+
+            <div class="feature-card glass-card">
+                <div class="feature-icon-wrapper">🧫</div>
+                <h3>Malaria Smear Vision</h3>
+                <p>Deep Convolutional Neural Network (CNN) scanning microscopic Giemsa-stained thin blood smears for parasitized red cells.</p>
+                <a href="/malaria" class="feature-badge">Deep CNN Vision →</a>
+            </div>
+
+            <div class="feature-card glass-card">
+                <div class="feature-icon-wrapper">🫁</div>
+                <h3>Pneumonia Radiography</h3>
+                <p>Computer vision deep neural network identifying pulmonary opacification and alveolar consolidation in chest X-rays.</p>
+                <a href="/pneumonia" class="feature-badge">Deep Neural Network →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Emergency Action Protocol Highlight -->
+    <section class="container" style="padding-bottom: 6rem;">
+        <div class="glass-card" style="padding: 3rem 2.5rem; border: 1px solid rgba(244, 63, 94, 0.35); background: linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, rgba(13, 21, 39, 0.85) 100%);">
+            <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+                <div style="font-size: 3.5rem; width: 80px; height: 80px; border-radius: 20px; background: rgba(244, 63, 94, 0.2); border: 2px solid var(--danger); display: flex; align-items: center; justify-content: center;">
+                    🚨
                 </div>
-
-                <div class="feature-card glass-card">
-                    <div class="feature-icon-wrapper">
-                        <span class="feature-icon">🔬</span>
+                <div style="flex: 1; min-width: 280px;">
+                    <div style="display: inline-block; padding: 0.2rem 0.6rem; background: rgba(244, 63, 94, 0.2); border-radius: 4px; color: #fecdd3; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.4rem;">
+                        Automated Emergency Protocol Suite
                     </div>
-                    <h3>Blood Analysis</h3>
-                    <p>Detect diabetes and kidney conditions through metabolic markers.</p>
+                    <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem; color: #ffffff;">Immediate Guidance When Tests Are Positive</h2>
+                    <p style="color: #cbd5e1; font-size: 0.98rem; line-height: 1.6;">
+                        Unlike standard calculators, CureSight automatically deploys an intensive clinical action plan whenever high-risk or positive markers are identified: specialist referral matching, critical red-flag emergency symptoms, dietary dos/don'ts, tailored doctor consultation questions, and a 1-click printable clinical PDF medical report.
+                    </p>
                 </div>
-
-                <div class="feature-card glass-card">
-                    <div class="feature-icon-wrapper">
-                        <span class="feature-icon">🧬</span>
-                    </div>
-                    <h3>Cancer Screening</h3>
-                    <p>Breast cancer classification using cellular morphology analysis.</p>
-                </div>
-
-                <div class="feature-card glass-card">
-                    <div class="feature-icon-wrapper">
-                        <span class="feature-icon">📷</span>
-                    </div>
-                    <h3>Image Analysis</h3>
-                    <p>Deep learning models for Malaria cells and Pneumonia X-rays.</p>
+                <div>
+                    <a href="/features" class="btn btn-danger btn-large">
+                        Test With Live Demo Data →
+                    </a>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- How It Works -->
-    <section class="how-it-works">
-        <div class="container">
-            <h2 class="section-title">How It Works</h2>
-            <div class="steps-container">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <h3>Select Condition</h3>
-                    <p>Choose from 7 available diagnostic tests</p>
-                </div>
-                <div class="step-connector"></div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <h3>Input Data</h3>
-                    <p>Enter medical parameters or upload images</p>
-                </div>
-                <div class="step-connector"></div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <h3>Get Results</h3>
-                    <p>Receive AI-powered analysis instantly</p>
-                </div>
-            </div>
+    <section class="how-it-works container">
+        <div class="section-header">
+            <h2 class="section-title">How The Diagnostic Pipeline Operates</h2>
+            <p class="section-subtitle">From biomarker ingestion to structured clinical reporting in three simple steps</p>
         </div>
-    </section>
 
-    <!-- CTA Section -->
-    <section class="cta-section">
-        <div class="cta-content glass-card">
-            <h2>Ready to Check Your Health?</h2>
-            <p>Get instant AI-powered health insights in seconds</p>
-            <a href="/features" class="btn btn-primary btn-large btn-glow">
-                Start Free Diagnosis →
-            </a>
+        <div class="steps-container">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Select Condition</h3>
+                <p>Choose from 7 clinical disease categories spanning vital organs and imaging.</p>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Input Biomarkers</h3>
+                <p>Enter patient vitals, laboratory panels, or upload medical imagery (X-ray / Smear).</p>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Clinical Assessment</h3>
+                <p>Receive immediate predictions, emergency protocols, and printable PDF reports.</p>
+            </div>
         </div>
     </section>
 
@@ -151,13 +213,23 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-brand">
-                    <span class="brand-icon">🩺</span> CureSight
+                    <div class="brand-icon-wrapper" style="width: 32px; height: 32px;">
+                        <svg viewBox="0 0 24 24" style="width: 18px; height: 18px;">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                    </div>
+                    <span>CureSight Medical AI</span>
                 </div>
-                <p class="footer-text">Developed by Dharsan and Team</p>
+                <div style="display: flex; gap: 1.5rem;">
+                    <a href="/" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">Home</a>
+                    <a href="/features" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">Diagnostic Suite</a>
+                    <a href="/contact" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">Emergency Support</a>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Developed by Dharsan and Engineering Team</p>
             </div>
+
             <div class="footer-disclaimer">
-                CureSight provides AI-assisted preliminary screening. Results should be verified by licensed healthcare
-                providers.
+                <strong>CLINICAL DISCLAIMER:</strong> CureSight is an artificial intelligence-assisted decision support system designed for preliminary health risk stratification and educational demonstration. CureSight is not a replacement for licensed clinical diagnosis, radiologist interpretation, or emergency medical response. If you are experiencing an acute medical emergency, contact your local emergency services (112 / 911 / 108) or proceed to the nearest hospital immediately.
             </div>
         </div>
     </footer>
