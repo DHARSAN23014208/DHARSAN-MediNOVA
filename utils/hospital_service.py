@@ -10,6 +10,7 @@ Provides:
 """
 
 import os
+import re
 import math
 import time
 import json
@@ -461,25 +462,32 @@ def calculate_haversine_distance(lat1: float, lon1: float, lat2: float, lon2: fl
 
 
 # ==============================================================================
-# 4. OPENSTREETMAP NOMINATIM GEOCODING (FORWARD & REVERSE)
+# 4. UNIVERSAL ADDRESS GEOCODING (NOMINATIM PROGRESSIVE + PHOTON BACKUP)
 # ==============================================================================
 
-def geocode_address(query: str) -> Optional[Dict[str, Any]]:
+def normalize_address(raw_input: str) -> str:
     """
-    Geocode human-entered city, postcode, or address using OpenStreetMap Nominatim.
-    Respects OSM Nominatim usage policy (custom User-Agent, caching, timeout).
+    Step A — Normalize the input:
+    - Trim leading and trailing whitespace.
+    - Replace en dashes, em dashes, and hyphen separators with spaces when appropriate.
+    - Collapse duplicate whitespace and repeated commas.
+    - Preserve meaningful address components, building numbers, and postal codes.
+    - Reject empty input with a clear validation message.
     """
-    query = (query or "").strip()
-    if not query:
-        return None
+    if not raw_input or not isinstance(raw_input, str):
+        return ""
+    text = raw_input.strip()
+    # Replace en dashes (–), em dashes (—), and hyphens with spaces
+    text = text.replace("\u2013", " ").replace("\u2014", " ").replace(" - ", " ")
+    text = re.sub(r"\s*[-–—]\s*", " ", text)
+    # Collapse multiple commas and spaces
+    text = re.sub(r",\s*,+", ",", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip(", ")
 
-    cache_key = f"nominatim_forward:{query.lower()}"
-    now = time.time()
-    if cache_key in _GEO_CACHE:
-        cached_time, cached_val = _GEO_CACHE[cache_key]
-        if now - cached_time < CACHE_TTL_SECONDS:
-            return cached_val
 
+def _try_nominatim_query(query: str) -> Optional[Dict[str, Any]]:
+    """Helper to query OpenStreetMap Nominatim with validation of finite coordinates."""
     url = "https://nominatim.openstreetmap.org/search"
     params = {
         "q": query,
@@ -488,34 +496,145 @@ def geocode_address(query: str) -> Optional[Dict[str, Any]]:
         "addressdetails": 1
     }
     headers = {"User-Agent": USER_AGENT, "Accept-Language": "en"}
-
     try:
         resp = requests.get(url, params=params, headers=headers, timeout=REQUEST_TIMEOUT)
         if resp.status_code == 200:
             results = resp.json()
-            if results and len(results) > 0:
+            if results and isinstance(results, list) and len(results) > 0:
                 item = results[0]
                 lat = float(item.get("lat"))
                 lon = float(item.get("lon"))
-                display_name = item.get("display_name", query)
-                addr = item.get("address", {})
-                city = addr.get("city") or addr.get("town") or addr.get("village") or addr.get("county") or ""
-                country = addr.get("country", "")
-
-                output = {
-                    "latitude": lat,
-                    "longitude": lon,
-                    "display_name": display_name,
-                    "city": city,
-                    "country": country,
-                    "source": "OpenStreetMap Nominatim"
-                }
-                _GEO_CACHE[cache_key] = (now, output)
-                return output
+                if math.isfinite(lat) and math.isfinite(lon) and -90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0:
+                    addr = item.get("address", {})
+                    locality = (addr.get("city") or addr.get("town") or addr.get("suburb") or
+                                addr.get("village") or addr.get("county") or "")
+                    state = addr.get("state") or ""
+                    country = addr.get("country") or ""
+                    parts = [p for p in [locality, state, country] if p]
+                    label = ", ".join(parts) if parts else item.get("display_name", query)
+                    return {
+                        "latitude": round(lat, 6),
+                        "longitude": round(lon, 6),
+                        "display_name": label,
+                        "full_display_name": item.get("display_name", query),
+                        "city": locality,
+                        "state": state,
+                        "country": country,
+                        "source": "OpenStreetMap Nominatim",
+                        "resolved_query": query
+                    }
     except Exception as e:
-        logger.warning(f"[GEOCODE WARN] Nominatim search failed for '{query}': {e}")
+        logger.debug(f"[NOMINATIM ATTEMPT WARN] Query '{query}' failed: {e}")
+    return None
+
+
+def _try_photon_query(query: str) -> Optional[Dict[str, Any]]:
+    """Helper to query Photon (Komoot) backup geocoder with coordinate validation."""
+    url = "https://photon.komoot.io/api/"
+    params = {"q": query, "limit": 1}
+    headers = {"User-Agent": USER_AGENT, "Accept-Language": "en"}
+    try:
+        resp = requests.get(url, params=params, headers=headers, timeout=REQUEST_TIMEOUT)
+        if resp.status_code == 200:
+            data = resp.json()
+            features = data.get("features", [])
+            if features and len(features) > 0:
+                feat = features[0]
+                coords = feat.get("geometry", {}).get("coordinates", [])
+                if len(coords) >= 2:
+                    lon = float(coords[0])
+                    lat = float(coords[1])
+                    if math.isfinite(lat) and math.isfinite(lon) and -90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0:
+                        props = feat.get("properties", {})
+                        name = props.get("name") or query
+                        city = props.get("city") or props.get("district") or props.get("county") or ""
+                        state = props.get("state") or ""
+                        country = props.get("country") or ""
+                        parts = [p for p in [name, city, state, country] if p]
+                        label = ", ".join(parts) if parts else name
+                        return {
+                            "latitude": round(lat, 6),
+                            "longitude": round(lon, 6),
+                            "display_name": label,
+                            "full_display_name": label,
+                            "city": city,
+                            "state": state,
+                            "country": country,
+                            "source": "Photon (Komoot)",
+                            "resolved_query": query
+                        }
+    except Exception as e:
+        logger.debug(f"[PHOTON ATTEMPT WARN] Query '{query}' failed: {e}")
+    return None
+
+
+def resolve_any_address(raw_input: str) -> Optional[Dict[str, Any]]:
+    """
+    Universal Address Geocoding Engine implementing:
+    - Step A: Input Normalization.
+    - Step B: Progressive Nominatim geocoding (removing leading hyper-specific segments).
+    - Step C: Boundary-aware Postal Code fallback with locality context.
+    - Step D: Photon backup geocoder.
+    - Step E: Validation of finite geographic ranges (-90..90, -180..180).
+    """
+    normalized = normalize_address(raw_input)
+    if not normalized or len(normalized) < 2:
+        return None
+
+    cache_key = f"resolve_address:{normalized.lower()}"
+    now = time.time()
+    if cache_key in _GEO_CACHE:
+        cached_time, cached_val = _GEO_CACHE[cache_key]
+        if now - cached_time < CACHE_TTL_SECONDS:
+            return cached_val
+
+    # Step B: Progressive Nominatim Geocoding
+    segments = [s.strip() for s in normalized.split(",") if s.strip()]
+    candidate_queries = [normalized]
+    for i in range(1, len(segments)):
+        sub = ", ".join(segments[i:])
+        if sub and sub not in candidate_queries and len(sub) >= 3:
+            candidate_queries.append(sub)
+
+    for q in candidate_queries:
+        res = _try_nominatim_query(q)
+        if res:
+            _GEO_CACHE[cache_key] = (now, res)
+            return res
+        time.sleep(0.1)
+
+    # Step C: Postal Code Fallback
+    postcode_match = re.search(r"\b(\d{5,6})\b", normalized)
+    if postcode_match:
+        postcode = postcode_match.group(1)
+        context_parts = [s for s in segments if not re.search(r"\b\d{5,6}\b", s)]
+        if context_parts:
+            pq = f"{postcode}, {', '.join(context_parts[-2:])}"
+            res = _try_nominatim_query(pq)
+            if res:
+                res["display_name"] = f"Postal Code {postcode} Area ({res['display_name']})"
+                res["is_approximate_postal"] = True
+                _GEO_CACHE[cache_key] = (now, res)
+                return res
+        res = _try_nominatim_query(postcode)
+        if res:
+            res["display_name"] = f"Postal Code {postcode} Area ({res['display_name']})"
+            res["is_approximate_postal"] = True
+            _GEO_CACHE[cache_key] = (now, res)
+            return res
+
+    # Step D: Photon Backup Geocoder
+    for q in candidate_queries[:3]:
+        res = _try_photon_query(q)
+        if res:
+            _GEO_CACHE[cache_key] = (now, res)
+            return res
+        time.sleep(0.1)
 
     return None
+
+
+geocode_address = resolve_any_address  # Backwards compatibility alias
 
 
 def reverse_geocode_coords(latitude: float, longitude: float) -> Optional[str]:
@@ -562,14 +681,72 @@ def reverse_geocode_coords(latitude: float, longitude: float) -> Optional[str]:
 # 5. OVERPASS API NEARBY HEALTHCARE FACILITIES DISCOVERY
 # ==============================================================================
 
+def _query_photon_nearby_hospitals(latitude: float, longitude: float, radius_km: int) -> List[Dict[str, Any]]:
+    """Backup facility discovery using Photon if Overpass endpoints are unavailable."""
+    url = "https://photon.komoot.io/api/"
+    params = {"q": "hospital", "lat": latitude, "lon": longitude, "limit": 40}
+    headers = {"User-Agent": USER_AGENT, "Accept-Language": "en"}
+    hospitals = []
+    seen_names = set()
+    try:
+        resp = requests.get(url, params=params, headers=headers, timeout=REQUEST_TIMEOUT)
+        if resp.status_code == 200:
+            features = resp.json().get("features", [])
+            for feat in features:
+                props = feat.get("properties", {})
+                name = props.get("name")
+                if not name or name.strip().lower() in seen_names:
+                    continue
+                coords = feat.get("geometry", {}).get("coordinates", [])
+                if len(coords) < 2:
+                    continue
+                item_lon, item_lat = float(coords[0]), float(coords[1])
+                dist_km = calculate_haversine_distance(latitude, longitude, item_lat, item_lon)
+                if dist_km > radius_km:
+                    continue
+                seen_names.add(name.strip().lower())
+                city = props.get("city") or props.get("district") or ""
+                country = props.get("country") or ""
+                street = props.get("street") or ""
+                addr_parts = [p for p in [street, city, country] if p]
+                address_str = ", ".join(addr_parts) if addr_parts else f"Near ({round(item_lat, 4)}, {round(item_lon, 4)})"
+
+                hospitals.append({
+                    "id": f"photon-{props.get('osm_id', round(dist_km, 3))}",
+                    "name": name.strip(),
+                    "facility_type": "Multi-Specialty Hospital" if "hospital" in name.lower() else "Healthcare Centre",
+                    "category": "nearby",
+                    "latitude": round(item_lat, 6),
+                    "longitude": round(item_lon, 6),
+                    "address": address_str,
+                    "city": city,
+                    "country": country,
+                    "distance_km": dist_km,
+                    "phone": "Contact via reception",
+                    "website_url": "",
+                    "referral_url": "",
+                    "directions_url": f"https://www.google.com/maps/dir/?api=1&destination={item_lat},{item_lon}",
+                    "osm_specialty": "",
+                    "tags": props,
+                    "telemedicine_available": False,
+                    "international_services": False,
+                    "verified_credentials": "Verified Public Healthcare Facility (OpenStreetMap / Photon Registry)",
+                    "source_attribution": "Photon (Komoot) & OpenStreetMap Contributors",
+                    "last_verified": time.strftime("%Y-%m-%d")
+                })
+    except Exception as e:
+        logger.debug(f"[PHOTON NEARBY BACKUP WARN]: {e}")
+    return hospitals
+
+
 def query_nearby_overpass_hospitals(latitude: float, longitude: float, radius_km: int = 20) -> List[Dict[str, Any]]:
     """
     Discover nearby hospitals and clinical centers using OpenStreetMap Overpass API.
     Normalizes coordinates, addresses, and healthcare metadata into a consistent structure.
-    Applies caching, timeouts, deduplication, and straight-line distance sorting.
+    Strictly filters out facilities exceeding the selected radius (distanceKm <= radius_km).
+    Supports radius options from 5 km up to 50 km.
     """
-    # Clamp radius to accepted range: 5km to 25km
-    radius_km = max(5, min(int(radius_km), 25))
+    radius_km = max(5, min(int(radius_km), 50))
     radius_meters = radius_km * 1000
 
     cache_key = f"overpass:{round(latitude, 2)},{round(longitude, 2)}:r{radius_km}"
@@ -579,36 +756,37 @@ def query_nearby_overpass_hospitals(latitude: float, longitude: float, radius_km
         if now - cached_time < CACHE_TTL_SECONDS:
             return cached_val
 
-    # Overpass QL query: search hospitals, clinics, and doctors within radius
-    overpass_query = f"""
-    [out:json][timeout:15];
-    (
-      node["amenity"="hospital"](around:{radius_meters},{latitude},{longitude});
-      way["amenity"="hospital"](around:{radius_meters},{latitude},{longitude});
-      relation["amenity"="hospital"](around:{radius_meters},{latitude},{longitude});
-      node["amenity"="clinic"](around:{radius_meters},{latitude},{longitude});
-      way["amenity"="clinic"](around:{radius_meters},{latitude},{longitude});
-      node["healthcare"="hospital"](around:{radius_meters},{latitude},{longitude});
-      node["healthcare"="clinic"](around:{radius_meters},{latitude},{longitude});
-      node["healthcare"="centre"](around:{radius_meters},{latitude},{longitude});
-    );
-    out center tags 40;
-    """
+    # Overpass QL query: search hospitals, clinics, and healthcare centres within radius
+    overpass_query = f"""[out:json][timeout:12];
+(
+  node["amenity"="hospital"](around:{radius_meters},{latitude},{longitude});
+  way["amenity"="hospital"](around:{radius_meters},{latitude},{longitude});
+  relation["amenity"="hospital"](around:{radius_meters},{latitude},{longitude});
+  node["healthcare"="hospital"](around:{radius_meters},{latitude},{longitude});
+  way["healthcare"="hospital"](around:{radius_meters},{latitude},{longitude});
+  node["amenity"="clinic"](around:{radius_meters},{latitude},{longitude});
+  way["amenity"="clinic"](around:{radius_meters},{latitude},{longitude});
+  node["healthcare"="clinic"](around:{radius_meters},{latitude},{longitude});
+  node["healthcare"="centre"](around:{radius_meters},{latitude},{longitude});
+);
+out center tags 50;
+"""
 
     overpass_endpoints = [
-        "https://overpass-api.de/api/interpreter",
-        "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
-        "https://overpass.kumi.systems/api/interpreter"
+        "https://overpass.private.coffee/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://overpass.osm.ch/api/interpreter",
+        "https://lz4.overpass-api.de/api/interpreter",
+        "https://overpass-api.de/api/interpreter"
     ]
 
     hospitals: List[Dict[str, Any]] = []
     seen_names = set()
-
     headers = {"User-Agent": USER_AGENT}
 
     for endpoint in overpass_endpoints:
         try:
-            resp = requests.post(endpoint, data={"data": overpass_query}, headers=headers, timeout=REQUEST_TIMEOUT)
+            resp = requests.post(endpoint, data={"data": overpass_query}, headers=headers, timeout=8)
             if resp.status_code == 200:
                 data = resp.json()
                 elements = data.get("elements", [])
@@ -629,8 +807,9 @@ def query_nearby_overpass_hospitals(latitude: float, longitude: float, radius_km
                     if item_lat is None or item_lon is None:
                         continue
 
+                    # Strict Haversine distance enforcement: distance_km <= radius_km
                     dist_km = calculate_haversine_distance(latitude, longitude, float(item_lat), float(item_lon))
-                    if dist_km > radius_km * 1.15:  # Margin for slight geometric variations
+                    if dist_km > radius_km:
                         continue
 
                     seen_names.add(clean_name_key)
@@ -654,7 +833,7 @@ def query_nearby_overpass_hospitals(latitude: float, longitude: float, radius_km
                     website = tags.get("website") or tags.get("contact:website") or ""
                     osm_specialty = tags.get("healthcare:speciality") or tags.get("speciality") or ""
 
-                    # Directions URL (Google Maps or OpenStreetMap)
+                    # Directions URL
                     directions_url = f"https://www.google.com/maps/dir/?api=1&destination={item_lat},{item_lon}"
 
                     hospitals.append({
@@ -674,21 +853,25 @@ def query_nearby_overpass_hospitals(latitude: float, longitude: float, radius_km
                         "directions_url": directions_url,
                         "osm_specialty": osm_specialty,
                         "tags": tags,
-                        "telemedicine_available": False,  # Cannot be verified from OSM alone
+                        "telemedicine_available": False,
                         "international_services": False,
                         "verified_credentials": "Verified Public Healthcare Facility (OpenStreetMap Registry)",
                         "source_attribution": "OpenStreetMap Contributors & Overpass API (Live)",
                         "last_verified": time.strftime("%Y-%m-%d")
                     })
 
-                # If query succeeded and returned results, break endpoint loop
                 if hospitals:
                     break
         except Exception as e:
             logger.warning(f"[OVERPASS ATTEMPT WARN] Endpoint '{endpoint}' failed: {e}")
             continue
 
-    # Sort nearby results by straight-line distance
+    # Fallback to Photon if Overpass returned 0 records or endpoints timed out
+    if not hospitals:
+        logger.info(f"[NEARBY FALLBACK] Querying Photon backup for ({latitude}, {longitude}) radius {radius_km} km")
+        hospitals = _query_photon_nearby_hospitals(latitude, longitude, radius_km)
+
+    # Sort strictly by distance
     hospitals.sort(key=lambda h: h["distance_km"])
     _GEO_CACHE[cache_key] = (now, hospitals)
     return hospitals
@@ -745,25 +928,36 @@ def score_and_recommend_hospitals(
             matched_conditions = hosp.get("condition_ids", [])
             if condition_id in matched_conditions:
                 specialty_match = True
-                score += 50
+                score += 45
                 specialty_label = f"Verified {primary_spec} Centre"
-                reasons.append(f"Official international centre of excellence for {primary_spec}")
+                reasons.append(f"Official accredited referral centre for {primary_spec}")
         else:
             # Check OSM name, tags, and specialty
-            name_lower = hosp["name"].lower()
-            osm_spec = str(hosp.get("osm_specialty", "")).lower()
-            tags_str = json.dumps(hosp.get("tags", {})).lower()
+            name_lower = hosp.get("name", "").lower()
+            tags = hosp.get("tags") or {}
+            osm_spec = str(
+                hosp.get("osm_specialty") or
+                tags.get("healthcare:speciality") or
+                tags.get("healthcare:specialty") or
+                ""
+            ).lower()
+            tags_str = json.dumps(tags).lower()
 
             matches = [kw for kw in keywords if (kw in name_lower or kw in osm_spec or kw in tags_str)]
-            if matches:
+            if osm_spec and any(kw in osm_spec for kw in keywords):
                 specialty_match = True
-                score += 35
-                specialty_label = f"Specialty Matched ({primary_spec})"
-                reasons.append(f"Facility listings reference {', '.join(matches[:2])}")
+                score += 40
+                specialty_label = f"Verified {primary_spec} Centre"
+                reasons.append(f"Official registry verification for {primary_spec}")
+            elif matches:
+                specialty_match = True
+                score += 25
+                specialty_label = f"Likely {primary_spec} (Inferred from facility name)"
+                reasons.append(f"Facility name references {', '.join(matches[:2])}")
             elif "hospital" in name_lower or hosp.get("facility_type") == "Multi-Specialty Hospital":
                 score += 15
                 specialty_label = "Multi-Specialty Facility (Unverified)"
-                reasons.append(f"General multi-specialty hospital; specific {primary_spec} department unverified")
+                reasons.append(f"General multi-specialty hospital; {primary_spec} department unverified")
             else:
                 score += 5
                 specialty_label = "Specialty Not Verified"
@@ -773,15 +967,15 @@ def score_and_recommend_hospitals(
         if dist is not None:
             if dist <= 5.0:
                 score += 30
-                reasons.append(f"Located only ~{dist:.1f} km away (straight-line)")
+                reasons.append(f"Located only ~{dist:.1f} km away")
             elif dist <= 12.0:
                 score += 20
-                reasons.append(f"Located ~{dist:.1f} km away (straight-line)")
+                reasons.append(f"Located ~{dist:.1f} km away")
             elif dist <= 25.0:
                 score += 10
-                reasons.append(f"Within regional radius (~{dist:.1f} km straight-line)")
+                reasons.append(f"Located ~{dist:.1f} km away")
             else:
-                reasons.append(f"Regional / Global referral centre ({dist:.0f} km away)")
+                reasons.append(f"Located ~{dist:.1f} km away")
 
         # 3. Mode compatibility
         telemedicine_supported = bool(hosp.get("telemedicine_available", False))
@@ -800,13 +994,16 @@ def score_and_recommend_hospitals(
         if hosp.get("website_url"):
             score += 5
         if is_curated:
-            score += 15
+            score += 10
 
         # Format transparent human-readable explanation
-        if reasons:
-            explanation = "Recommended because " + "; ".join(reasons) + "."
+        dist_str = f"~{dist:.1f} km away" if dist is not None else "Location approximate"
+        if specialty_match:
+            explanation = f"Nearby facility · {dist_str} · {specialty_label}"
+        elif "Multi-Specialty" in specialty_label:
+            explanation = f"Nearby facility · {dist_str} · Multi-specialty hospital (in-person triage)"
         else:
-            explanation = f"Nearby healthcare facility available for general clinical triage."
+            explanation = f"Nearby facility · {dist_str} · Healthcare provider"
 
         hosp_copy["recommendation_score"] = score
         hosp_copy["specialty_match"] = specialty_match
@@ -834,15 +1031,15 @@ def discover_hospitals_for_patient(
     manual_query: Optional[str] = None,
     radius_km: int = 20,
     preferred_mode: str = "all",
-    include_global: bool = True
+    include_global: bool = False
 ) -> Dict[str, Any]:
     """
     Main orchestration function for hospital discovery:
-    1. Resolves patient coordinates (from GPS or manual search string).
-    2. Fetches nearby hospitals via Overpass API.
-    3. Retrieves disease-matched curated global centres.
-    4. Merges, scores, deduplicates, and annotates recommendations.
-    5. Returns normalized response with location metadata and urgent notices.
+    1. Resolves patient coordinates via progressive address geocoding.
+    2. Fetches real nearby hospitals via Overpass API with Photon backup.
+    3. Strictly enforces distanceKm <= radius_km for all returned facilities.
+    4. Never substitutes distant global hospitals into nearby search results.
+    5. Returns normalized response with location metadata and transparent rationales.
     """
     condition_id = (condition_id or "heart").strip().lower()
     if condition_id not in DISEASE_SPECIALTY_MAP:
@@ -854,7 +1051,7 @@ def discover_hospitals_for_patient(
 
     # Resolve manual query if coordinates not given
     if (patient_lat is None or patient_lon is None) and manual_query:
-        geo_res = geocode_address(manual_query)
+        geo_res = resolve_any_address(manual_query)
         if geo_res:
             patient_lat = geo_res["latitude"]
             patient_lon = geo_res["longitude"]
@@ -865,33 +1062,47 @@ def discover_hospitals_for_patient(
     if patient_lat is not None and patient_lon is not None and location_label == "Location Not Provided":
         location_label = reverse_geocode_coords(patient_lat, patient_lon) or f"{patient_lat:.4f}, {patient_lon:.4f}"
 
+    has_coords = patient_lat is not None and patient_lon is not None
     nearby_facilities: List[Dict[str, Any]] = []
     overpass_error = None
 
-    if patient_lat is not None and patient_lon is not None:
+    if has_coords:
         try:
             nearby_facilities = query_nearby_overpass_hospitals(patient_lat, patient_lon, radius_km)
         except Exception as e:
             logger.error(f"Error querying Overpass API: {e}")
             overpass_error = str(e)
 
-    # Fetch curated global centres for this condition
-    curated_centres: List[Dict[str, Any]] = []
-    if include_global:
-        for centre in CURATED_GLOBAL_CENTRES:
-            if condition_id in centre.get("condition_ids", []):
-                centre_entry = dict(centre)
-                centre_entry["category"] = "global"
-                if patient_lat is not None and patient_lon is not None:
-                    centre_entry["distance_km"] = calculate_haversine_distance(
+        # STRICT GEOGRAPHIC FILTER:
+        # A curated global centre may appear ONLY if its actual facility location
+        # is physically within the selected radius (distance_km <= radius_km).
+        # We never substitute distant worldwide hospitals into nearby results.
+        eligible_curated: List[Dict[str, Any]] = []
+        if include_global:
+            for centre in CURATED_GLOBAL_CENTRES:
+                if condition_id in centre.get("condition_ids", []):
+                    dist = calculate_haversine_distance(
                         patient_lat, patient_lon, centre["latitude"], centre["longitude"]
                     )
-                else:
-                    centre_entry["distance_km"] = None
-                curated_centres.append(centre_entry)
+                    if dist <= radius_km:
+                        centre_entry = dict(centre)
+                        centre_entry["category"] = "nearby"
+                        centre_entry["distance_km"] = dist
+                        eligible_curated.append(centre_entry)
 
-    # Combine facilities
-    all_facilities = nearby_facilities + curated_centres
+        all_facilities = nearby_facilities + eligible_curated
+        # Strict radius guarantee
+        all_facilities = [h for h in all_facilities if h.get("distance_km") is not None and h["distance_km"] <= radius_km]
+    else:
+        # No coordinates provided yet
+        all_facilities = []
+        if include_global:
+            for centre in CURATED_GLOBAL_CENTRES:
+                if condition_id in centre.get("condition_ids", []):
+                    centre_entry = dict(centre)
+                    centre_entry["category"] = "global"
+                    centre_entry["distance_km"] = None
+                    all_facilities.append(centre_entry)
 
     # Run recommendation & scoring engine
     scored_recommendations = score_and_recommend_hospitals(
@@ -910,13 +1121,13 @@ def discover_hospitals_for_patient(
             "longitude": patient_lon,
             "display_name": location_label,
             "radius_km": radius_km,
-            "has_coordinates": patient_lat is not None and patient_lon is not None
+            "has_coordinates": has_coords
         },
         "overpass_error": overpass_error,
         "counts": {
             "total": len(scored_recommendations),
-            "nearby": len(nearby_facilities),
-            "global_centres": len(curated_centres)
+            "nearby": len(scored_recommendations) if has_coords else 0,
+            "global_centres": 0 if has_coords else len(scored_recommendations)
         },
         "recommendations": scored_recommendations,
         "urgent_notice": mapping.get("urgent_warning") if mapping.get("requires_urgent_assessment") else None

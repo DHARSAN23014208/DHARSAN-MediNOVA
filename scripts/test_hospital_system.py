@@ -30,7 +30,9 @@ from utils.hospital_service import (
     CURATED_GLOBAL_CENTRES,
     calculate_haversine_distance,
     score_and_recommend_hospitals,
-    discover_hospitals_for_patient
+    discover_hospitals_for_patient,
+    normalize_address,
+    resolve_any_address
 )
 from utils.appointment_db import (
     create_appointment,
@@ -304,6 +306,196 @@ class TestHospitalDiscoveryAndAppointmentSystem(unittest.TestCase):
 
         print("✅ Test 7 Passed: All Flask endpoints, routes, access controls, and ICS download verified.")
 
+    # --------------------------------------------------------------------------
+    # 8. UNIVERSAL ADDRESS NORMALIZATION & PROGRESSIVE GEOCODING
+    # --------------------------------------------------------------------------
+    def test_08_universal_address_normalization_and_geocoding(self):
+        # 1. Normalization tests (en dash, em dash, hyphen, commas, whitespace)
+        raw_dash = "Saveetha Nagar, Thandalam, Kanchipuram – Chennai Road, Chennai — Tamil Nadu 602105, India"
+        norm = normalize_address(raw_dash)
+        self.assertNotIn("–", norm)
+        self.assertNotIn("—", norm)
+        self.assertIn("602105", norm)
+        self.assertIn("Thandalam", norm)
+        self.assertIn("Chennai", norm)
+
+        # 2. Empty input validation
+        self.assertEqual(normalize_address(""), "")
+        self.assertEqual(normalize_address("   \t  \n  "), "")
+        self.assertIsNone(resolve_any_address(""))
+        self.assertIsNone(resolve_any_address("   "))
+
+        # 3. Invalid address returns None (no uncontrolled request loop or crash)
+        invalid_res = resolve_any_address("xyz999zzzaaa111nonexistentlocation987654321")
+        self.assertIsNone(invalid_res)
+
+        # 4. Dynamic Progressive Geocoding for Prompt's Chennai Test Address
+        # Address: Saveetha Nagar, Thandalam, Kanchipuram – Chennai Road, Chennai, Tamil Nadu 602105, India
+        res = resolve_any_address(raw_dash)
+        self.assertIsNotNone(res, "Universal geocoder should resolve Chennai/Thandalam address via progressive fallback")
+        lat = res.get("latitude")
+        lon = res.get("longitude")
+        display_name = res.get("display_name")
+
+        self.assertIsInstance(lat, float)
+        self.assertIsInstance(lon, float)
+        self.assertTrue(res.get("source"), "Resolved record must have a source")
+        self.assertTrue(display_name, "Resolved record must have a human-readable display name")
+
+        # Validate finite geographic coordinate ranges (-90..90, -180..180)
+        self.assertTrue(-90.0 <= lat <= 90.0)
+        self.assertTrue(-180.0 <= lon <= 180.0)
+
+        # Verify resolved coordinates are in the expected Chennai/Tamil Nadu region (~12.8 - 13.3 N, ~79.8 - 80.3 E)
+        self.assertTrue(12.5 <= lat <= 13.5, f"Latitude {lat} outside expected Tamil Nadu region")
+        self.assertTrue(79.5 <= lon <= 80.5, f"Longitude {lon} outside expected Tamil Nadu region")
+
+        # 5. Locality and City without street address
+        res_locality = resolve_any_address("Thandalam, Chennai, Tamil Nadu, India")
+        self.assertIsNotNone(res_locality)
+        self.assertTrue(-90.0 <= res_locality["latitude"] <= 90.0)
+        self.assertTrue(-180.0 <= res_locality["longitude"] <= 180.0)
+
+        # 6. Postal Code search with country context
+        res_pin = resolve_any_address("602105, Tamil Nadu, India")
+        self.assertIsNotNone(res_pin)
+        self.assertTrue(-90.0 <= res_pin["latitude"] <= 90.0)
+
+        print("✅ Test 8 Passed: Universal address normalization, progressive geocoding, and coordinate validation verified.")
+
+    # --------------------------------------------------------------------------
+    # 9. STRICT RADIUS FILTERING & EXCLUSION OF GLOBAL HOSPITALS FOR LOCAL SEARCHES
+    # --------------------------------------------------------------------------
+    def test_09_strict_radius_and_no_global_fallback(self):
+        # Using resolved coordinates for Thandalam / Chennai (~13.0143, 79.9181)
+        test_lat = 13.0143
+        test_lon = 79.9181
+
+        # Test radius options: 5, 10, 20, 25, 50 km
+        for radius in [5, 10, 20, 25, 50]:
+            results = discover_hospitals_for_patient(
+                condition_id="heart",
+                patient_lat=test_lat,
+                patient_lon=test_lon,
+                radius_km=radius,
+                include_global=False
+            )
+
+            # Strict requirement: Every returned facility MUST have distance_km <= radius
+            self.assertEqual(results.get("status"), "success")
+            hospitals = results.get("recommendations", [])
+            for h in hospitals:
+                dist = h.get("distance_km")
+                self.assertIsNotNone(dist, f"Hospital {h.get('name')} missing distance_km")
+                self.assertLessEqual(
+                    dist, radius,
+                    f"Hospital '{h.get('name')}' distance {dist} km exceeds radius {radius} km!"
+                )
+
+                # Strict requirement: Global distant referral centres must NOT be substituted
+                name = h.get("name", "")
+                self.assertNotIn("Cleveland Clinic", name, "Distant US hospital returned for Chennai search!")
+                self.assertNotIn("Royal Brompton", name, "Distant UK hospital returned for Chennai search!")
+                self.assertNotIn("Mayo Clinic", name, "Distant US hospital returned for Chennai search!")
+                self.assertNotIn("Charité", name, "Distant German hospital returned for Chennai search!")
+
+        print("✅ Test 9 Passed: Strict geographic radius filtering and complete exclusion of global fallback centres verified.")
+
+    # --------------------------------------------------------------------------
+    # 10. SPECIALTY MATCHING & VERIFICATION STATUS
+    # --------------------------------------------------------------------------
+    def test_10_specialty_matching_and_verification_status(self):
+        sample_facilities = [
+            {
+                "id": "hosp-cardio-verified",
+                "name": "Sri Balaji Medical Centre",
+                "facility_type": "Multi-Specialty Hospital",
+                "category": "nearby",
+                "latitude": 13.0150,
+                "longitude": 79.9200,
+                "distance_km": 1.2,
+                "telemedicine_available": False,
+                "tags": {"healthcare:speciality": "cardiology"}
+            },
+            {
+                "id": "hosp-cardio-inferred",
+                "name": "Metropolitan Heart & Cardiac Institute",
+                "facility_type": "Multi-Specialty Hospital",
+                "category": "nearby",
+                "latitude": 13.0200,
+                "longitude": 79.9250,
+                "distance_km": 2.5,
+                "telemedicine_available": True,
+                "tags": {}
+            },
+            {
+                "id": "hosp-general-unverified",
+                "name": "Thandalam Community Healthcare Clinic",
+                "facility_type": "Clinic",
+                "category": "nearby",
+                "latitude": 13.0180,
+                "longitude": 79.9190,
+                "distance_km": 1.8,
+                "telemedicine_available": False,
+                "tags": {}
+            }
+        ]
+
+        scored = score_and_recommend_hospitals(sample_facilities, condition_id="heart")
+        lookup = {h["id"]: h for h in scored}
+
+        # 1. Verified specialty has official tag
+        verified = lookup["hosp-cardio-verified"]
+        self.assertTrue(verified["specialty_match"])
+        self.assertIn("Verified Cardiology Centre", verified["specialty_label"])
+
+        # 2. Inferred specialty clearly says 'Inferred from facility name'
+        inferred = lookup["hosp-cardio-inferred"]
+        self.assertTrue(inferred["specialty_match"])
+        self.assertIn("Likely Cardiology (Inferred from facility name)", inferred["specialty_label"])
+
+        # 3. Unverified facility is marked Specialty Not Verified
+        unverified = lookup["hosp-general-unverified"]
+        self.assertFalse(unverified["specialty_match"])
+        self.assertIn("Specialty Not Verified", unverified["specialty_label"])
+
+        print("✅ Test 10 Passed: Reliable distinction between verified and name-inferred specialties verified.")
+
+    # --------------------------------------------------------------------------
+    # 11. FLASK GEOCODING PROXY & DYNAMIC SEARCH ENDPOINTS
+    # --------------------------------------------------------------------------
+    def test_11_flask_geocoding_api_and_search_endpoint(self):
+        # 1. GET /api/hospitals/geocode with valid address
+        test_addr = "Saveetha Nagar, Thandalam, Kanchipuram – Chennai Road, Chennai, Tamil Nadu 602105, India"
+        res_geo = self.client.get(f'/api/hospitals/geocode?query={test_addr}')
+        self.assertEqual(res_geo.status_code, 200)
+        data_geo = res_geo.get_json()
+        self.assertEqual(data_geo["status"], "success")
+        loc = data_geo["location"]
+        self.assertIsNotNone(loc["latitude"])
+        self.assertIsNotNone(loc["longitude"])
+        self.assertIn("display_name", loc)
+
+        # 2. GET /api/hospitals/geocode with empty query -> 400
+        res_bad = self.client.get('/api/hospitals/geocode?query=')
+        self.assertEqual(res_bad.status_code, 400)
+
+        # 3. GET /api/hospitals/search with address query -> resolves location and searches nearby
+        res_search = self.client.get(f'/api/hospitals/search?condition=heart&radius_km=25&query={test_addr}')
+        self.assertEqual(res_search.status_code, 200)
+        data_search = res_search.get_json()
+        self.assertEqual(data_search["status"], "success")
+        self.assertIsNotNone(data_search.get("location"))
+
+        # Verify no faraway global hospitals are present in recommendations
+        for rec in data_search.get("recommendations", []):
+            self.assertLessEqual(rec["distance_km"], 25.0)
+            self.assertNotIn("Cleveland Clinic", rec["name"])
+            self.assertNotIn("Royal Brompton", rec["name"])
+
+        print("✅ Test 11 Passed: Flask geocoding proxy and dynamic address search endpoints verified.")
+
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -217,7 +217,7 @@
                             </button>
 
                             <div class="location-input-wrapper">
-                                <input type="text" id="manualLocationInput" placeholder="Or enter City, Postcode, or Hospital Name..." style="width: 100%; padding: 0.75rem 1rem; background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: 10px; color: var(--text); font-family: inherit; font-size: 0.92rem;" onkeydown="if(event.key==='Enter'){event.preventDefault(); triggerManualLocationSearch();}">
+                                <input type="text" id="manualLocationInput" placeholder="Enter street address, locality, city, or postal code (e.g. Saveetha Nagar, Thandalam, Chennai)..." style="width: 100%; padding: 0.75rem 1rem; background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: 10px; color: var(--text); font-family: inherit; font-size: 0.92rem;" onkeydown="if(event.key==='Enter'){event.preventDefault(); triggerManualLocationSearch();}">
                             </div>
 
                             <button type="button" class="btn btn-outline btn-sm" onclick="triggerManualLocationSearch()">
@@ -234,25 +234,34 @@
                                     <button type="button" class="radius-pill" onclick="setRadius(10, this)">10 km</button>
                                     <button type="button" class="radius-pill active" onclick="setRadius(20, this)">20 km</button>
                                     <button type="button" class="radius-pill" onclick="setRadius(25, this)">25 km</button>
+                                    <button type="button" class="radius-pill" onclick="setRadius(50, this)">50 km</button>
                                 </div>
                             </div>
 
                             <div style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
                                 <div class="filter-group">
-                                    <span>Mode:</span>
-                                    <select id="modeFilterSelect" class="filter-select" onchange="applyFiltersAndRender()">
-                                        <option value="all">All Modes</option>
-                                        <option value="in_person">In-Person Only</option>
-                                        <option value="telemedicine">Verified Telemedicine</option>
+                                    <span>Specialty:</span>
+                                    <select id="specialtyFilterSelect" class="filter-select" onchange="applyFiltersAndRender()">
+                                        <option value="all">All Specialties</option>
+                                        <option value="matched">Matched Specialty Only</option>
                                     </select>
                                 </div>
 
                                 <div class="filter-group">
-                                    <span>Type:</span>
+                                    <span>Facility:</span>
                                     <select id="typeFilterSelect" class="filter-select" onchange="applyFiltersAndRender()">
                                         <option value="all">All Facilities</option>
-                                        <option value="nearby">Nearby Facilities</option>
-                                        <option value="global">Global Specialty Centres</option>
+                                        <option value="hospital">Hospitals Only</option>
+                                        <option value="clinic">Clinics & Centres</option>
+                                    </select>
+                                </div>
+
+                                <div class="filter-group">
+                                    <span>Mode:</span>
+                                    <select id="modeFilterSelect" class="filter-select" onchange="applyFiltersAndRender()">
+                                        <option value="all">All Modes</option>
+                                        <option value="in_person">In-Person Care</option>
+                                        <option value="telemedicine">Verified Telemed</option>
                                     </select>
                                 </div>
 
@@ -704,106 +713,343 @@
             fetchHospitals();
         }
 
+        // Request token to prevent stale out-of-order responses from overwriting the latest search
+        let CURRENT_SEARCH_REQUEST_ID = 0;
+
+        // =====================================================================
+        // UNIVERSAL ADDRESS GEOCODER (NOMINATIM PROGRESSIVE + PHOTON + BACKEND)
+        // =====================================================================
+        async function resolveAnyAddress(rawInput) {
+            if (!rawInput || typeof rawInput !== 'string') return null;
+
+            // Step A: Normalize
+            let normalized = rawInput.trim();
+            normalized = normalized.replace(/\u2013/g, ' ').replace(/\u2014/g, ' ').replace(/\s*[-–—]\s*/g, ' ');
+            normalized = normalized.replace(/,\s*,+/g, ',');
+            normalized = normalized.replace(/\s+/g, ' ').trim().replace(/^,+|,+$/g, '');
+
+            if (!normalized || normalized.length < 2) return null;
+
+            // Step B: Progressive Nominatim Geocoding
+            const segments = normalized.split(',').map(s => s.trim()).filter(Boolean);
+            const candidateQueries = [normalized];
+            for (let i = 1; i < segments.length; i++) {
+                const sub = segments.slice(i).join(', ').trim();
+                if (sub && !candidateQueries.includes(sub) && sub.length >= 3) {
+                    candidateQueries.push(sub);
+                }
+            }
+
+            // Try Nominatim progressively
+            for (const q of candidateQueries) {
+                try {
+                    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&q=${encodeURIComponent(q)}`;
+                    const resp = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+                    if (resp.ok) {
+                        const results = await resp.json();
+                        if (Array.isArray(results) && results.length > 0) {
+                            const item = results[0];
+                            const lat = parseFloat(item.lat);
+                            const lon = parseFloat(item.lon);
+                            if (!isNaN(lat) && !isNaN(lon) && isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                                const addr = item.address || {};
+                                const locality = addr.city || addr.town || addr.suburb || addr.village || addr.county || '';
+                                const state = addr.state || '';
+                                const country = addr.country || '';
+                                const parts = [locality, state, country].filter(Boolean);
+                                const label = parts.length > 0 ? parts.join(', ') : (item.display_name || q);
+                                return {
+                                    latitude: lat,
+                                    longitude: lon,
+                                    display_name: label,
+                                    full_display_name: item.display_name || q,
+                                    city: locality,
+                                    state: state,
+                                    country: country,
+                                    source: 'OpenStreetMap Nominatim'
+                                };
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.debug('Nominatim client attempt:', e);
+                }
+            }
+
+            // Step C: Boundary-aware Postal Code Fallback
+            const postcodeMatch = normalized.match(/\b(\d{5,6})\b/);
+            if (postcodeMatch) {
+                const postcode = postcodeMatch[1];
+                const contextParts = segments.filter(s => !s.match(/\b\d{5,6}\b/));
+                const postQueries = [];
+                if (contextParts.length > 0) {
+                    postQueries.push(`${postcode}, ${contextParts.slice(-2).join(', ')}`);
+                }
+                postQueries.push(postcode);
+
+                for (const pq of postQueries) {
+                    try {
+                        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&q=${encodeURIComponent(pq)}`;
+                        const resp = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+                        if (resp.ok) {
+                            const results = await resp.json();
+                            if (Array.isArray(results) && results.length > 0) {
+                                const item = results[0];
+                                const lat = parseFloat(item.lat);
+                                const lon = parseFloat(item.lon);
+                                if (!isNaN(lat) && !isNaN(lon) && isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                                    return {
+                                        latitude: lat,
+                                        longitude: lon,
+                                        display_name: `Postal Area ${postcode} (${item.display_name || pq})`,
+                                        full_display_name: item.display_name || pq,
+                                        source: 'OpenStreetMap Nominatim (Postal Code)'
+                                    };
+                                }
+                            }
+                        }
+                    } catch (e) {}
+                }
+            }
+
+            // Step D: Photon Backup Geocoder
+            for (const q of candidateQueries.slice(0, 3)) {
+                try {
+                    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=1`;
+                    const resp = await fetch(url);
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        const features = data.features || [];
+                        if (features.length > 0) {
+                            const feat = features[0];
+                            const coords = feat.geometry ? feat.geometry.coordinates : null;
+                            if (coords && coords.length >= 2) {
+                                const lon = parseFloat(coords[0]);
+                                const lat = parseFloat(coords[1]);
+                                if (!isNaN(lat) && !isNaN(lon) && isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                                    const props = feat.properties || {};
+                                    const name = props.name || q;
+                                    const city = props.city || props.district || props.county || '';
+                                    const state = props.state || '';
+                                    const country = props.country || '';
+                                    const parts = [name, city, state, country].filter(Boolean);
+                                    const label = parts.length > 0 ? parts.join(', ') : name;
+                                    return {
+                                        latitude: lat,
+                                        longitude: lon,
+                                        display_name: label,
+                                        full_display_name: label,
+                                        city: city,
+                                        state: state,
+                                        country: country,
+                                        source: 'Photon (Komoot)'
+                                    };
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.debug('Photon client attempt:', e);
+                }
+            }
+
+            // Step D2: Backend Proxy Geocoder (Handles CORS/Adblock restrictions)
+            try {
+                const resp = await fetch(`/api/hospitals/geocode?query=${encodeURIComponent(normalized)}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.status === 'success' && data.location) {
+                        return data.location;
+                    }
+                }
+            } catch (e) {}
+
+            return null;
+        }
+
+        async function reverseGeocode(lat, lon) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=jsonv2&zoom=13&addressdetails=1`;
+                const resp = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const addr = data.address || {};
+                    const locality = addr.city || addr.town || addr.suburb || addr.neighbourhood || addr.village || addr.county || '';
+                    const state = addr.state || '';
+                    const country = addr.country || '';
+                    const parts = [locality, state, country].filter(Boolean);
+                    return parts.length > 0 ? parts.join(', ') : (data.display_name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+                }
+            } catch (e) {}
+            return `Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+        }
+
+        // =====================================================================
+        // GEOLOCATION & MANUAL SEARCH TRIGGERS
+        // =====================================================================
+
         // 3. Geolocation API Integration
         function requestBrowserGeolocation() {
             const btn = document.getElementById('btnUseGeolocation');
             if (!navigator.geolocation) {
-                alert('Geolocation is not supported by your browser. Please search manually by city or address.');
+                alert('Geolocation is not supported by your browser. Please search manually by address or city.');
                 return;
             }
 
+            const thisReqId = ++CURRENT_SEARCH_REQUEST_ID;
             btn.disabled = true;
-            btn.innerHTML = '<span>⏳ Requesting Location...</span>';
+            btn.innerHTML = '<span>⏳ Requesting GPS...</span>';
+            updateLocationPill('⏳ Acquiring GPS coordinates...', false);
+            renderSearchingState('Detecting your live geographic position...');
 
             navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    PATIENT_COORDS.lat = position.coords.latitude;
-                    PATIENT_COORDS.lon = position.coords.longitude;
+                async function(position) {
+                    if (thisReqId !== CURRENT_SEARCH_REQUEST_ID) return;
+
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    PATIENT_COORDS.lat = lat;
+                    PATIENT_COORDS.lon = lon;
+
                     btn.disabled = false;
                     btn.innerHTML = '<span>📍 Location Detected ✓</span>';
                     btn.style.background = '#10b981';
 
+                    // Reverse geocode to get human-friendly label
+                    const locLabel = await reverseGeocode(lat, lon);
+                    if (thisReqId !== CURRENT_SEARCH_REQUEST_ID) return;
+
+                    PATIENT_COORDS.label = locLabel;
+                    updateLocationPill(`📍 Active Location: ${locLabel} (${lat.toFixed(4)}, ${lon.toFixed(4)})`, false);
+
                     fetchHospitals();
                 },
                 function(error) {
+                    if (thisReqId !== CURRENT_SEARCH_REQUEST_ID) return;
                     btn.disabled = false;
                     btn.innerHTML = '<span>📍 Use My Current Location</span>';
+                    btn.style.background = '';
                     let msg = 'Could not access location.';
                     if (error.code === error.PERMISSION_DENIED) {
-                        msg = 'Location permission was denied. You can still search by city or postcode without GPS.';
+                        msg = 'Location permission was denied. You can still search by city, address, or postal code below.';
                     } else if (error.code === error.TIMEOUT) {
-                        msg = 'Location request timed out. Please enter your city manually.';
+                        msg = 'Location request timed out. Please enter your address or city manually.';
                     }
                     updateLocationPill('Location Access Denied (Manual Search Available)', true);
-                    alert(msg);
+                    renderEmptyTable(msg);
                 },
-                { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 }
+                { timeout: 12000, enableHighAccuracy: true, maximumAge: 60000 }
             );
         }
 
         // 4. Manual Location Search Trigger
-        function triggerManualLocationSearch() {
-            const query = (document.getElementById('manualLocationInput').value || '').trim();
-            if (!query) {
-                alert('Please enter a city, postcode, or address to search.');
+        async function triggerManualLocationSearch() {
+            const rawInput = (document.getElementById('manualLocationInput').value || '').trim();
+            if (!rawInput) {
+                alert('Please enter a street address, locality, city, or postal code to search.');
                 return;
             }
-            // Clear lat/lon so manual query resolves via Nominatim
-            PATIENT_COORDS.lat = null;
-            PATIENT_COORDS.lon = null;
-            fetchHospitals(query);
+
+            const thisReqId = ++CURRENT_SEARCH_REQUEST_ID;
+            updateLocationPill('⏳ Resolving address...', false);
+            renderSearchingState(`Resolving address: "${rawInput}"...`);
+
+            try {
+                const res = await resolveAnyAddress(rawInput);
+                if (thisReqId !== CURRENT_SEARCH_REQUEST_ID) return;
+
+                if (res) {
+                    PATIENT_COORDS.lat = res.latitude;
+                    PATIENT_COORDS.lon = res.longitude;
+                    PATIENT_COORDS.label = res.display_name;
+
+                    updateLocationPill(`📍 Active Location: ${res.display_name} (${res.latitude.toFixed(4)}, ${res.longitude.toFixed(4)})`, false);
+                    fetchHospitals();
+                } else {
+                    PATIENT_COORDS.lat = null;
+                    PATIENT_COORDS.lon = null;
+                    PATIENT_COORDS.label = 'Location Not Found';
+                    updateLocationPill('Location not found. Please enter a more complete address, city, or postal code.', true);
+                    renderEmptyTable('Location not found. Please enter a more complete address, city, or postal code.');
+                }
+            } catch (err) {
+                if (thisReqId !== CURRENT_SEARCH_REQUEST_ID) return;
+                console.error('Geocoding error:', err);
+                updateLocationPill('Error resolving location. Please try again or enter a postal code.', true);
+                renderEmptyTable('Error resolving location. Please check your network connection.');
+            }
         }
 
         function setRadius(radiusKm, btnElem) {
             SEARCH_RADIUS_KM = radiusKm;
             document.querySelectorAll('.radius-pill').forEach(b => b.classList.remove('active'));
-            if (btnElem) btnElem.classList.add('active');
-            fetchHospitals();
+            if (btnElem) {
+                btnElem.classList.add('active');
+            } else {
+                document.querySelectorAll('.radius-pill').forEach(b => {
+                    if (parseInt(b.textContent) === radiusKm) b.classList.add('active');
+                });
+            }
+
+            if (PATIENT_COORDS.lat !== null && PATIENT_COORDS.lon !== null) {
+                fetchHospitals();
+            } else {
+                applyFiltersAndRender();
+            }
         }
 
         // 5. Query Hospitals API
-        async function fetchHospitals(manualQuery = '') {
+        async function fetchHospitals() {
+            const thisReqId = ++CURRENT_SEARCH_REQUEST_ID;
             const condition = document.getElementById('conditionSelect').value || 'heart';
-            const tbody = document.getElementById('hospitalTableBody');
 
+            // If coordinates not detected yet
+            if (PATIENT_COORDS.lat === null || PATIENT_COORDS.lon === null) {
+                renderEmptyTable('Please detect your current location or enter an address above to discover nearby accredited healthcare facilities.');
+                return;
+            }
+
+            renderSearchingState(`Searching accredited healthcare facilities within ${SEARCH_RADIUS_KM} km of ${PATIENT_COORDS.label}...`);
+
+            const url = `/api/hospitals/search?condition=${encodeURIComponent(condition)}&radius_km=${SEARCH_RADIUS_KM}&lat=${PATIENT_COORDS.lat}&lon=${PATIENT_COORDS.lon}&include_global=false`;
+
+            try {
+                const resp = await fetch(url);
+                if (thisReqId !== CURRENT_SEARCH_REQUEST_ID) return;
+
+                const data = await resp.json();
+                if (data.status === 'success') {
+                    ALL_RECOMMENDATIONS = data.recommendations || [];
+
+                    if (data.location && data.location.display_name && PATIENT_COORDS.label === 'Location Not Provided') {
+                        PATIENT_COORDS.label = data.location.display_name;
+                    }
+
+                    const count = ALL_RECOMMENDATIONS.length;
+                    updateLocationPill(`📍 Active Location: ${PATIENT_COORDS.label} (${PATIENT_COORDS.lat.toFixed(4)}, ${PATIENT_COORDS.lon.toFixed(4)}) — ${count} facilities within ${SEARCH_RADIUS_KM} km`, false);
+
+                    applyFiltersAndRender();
+                } else {
+                    renderEmptyTable(data.message || 'Hospital discovery encountered an error. Please try adjusting the radius.');
+                }
+            } catch (err) {
+                if (thisReqId !== CURRENT_SEARCH_REQUEST_ID) return;
+                console.error('Hospital discovery request failed:', err);
+                renderEmptyTable('Network error communicating with hospital discovery service. Please check your connection.');
+            }
+        }
+
+        function renderSearchingState(message) {
+            const tbody = document.getElementById('hospitalTableBody');
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
                         <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">🔍</div>
-                        <strong>Searching Accredited Healthcare Facilities & Global Centres...</strong>
-                        <p style="font-size: 0.85rem; margin-top: 0.3rem;">Querying OpenStreetMap Overpass live health registry.</p>
+                        <strong>${escapeHtml(message)}</strong>
+                        <p style="font-size: 0.85rem; margin-top: 0.3rem;">Querying OpenStreetMap live healthcare registry & Overpass engine.</p>
                     </td>
                 </tr>
             `;
-
-            let url = `/api/hospitals/search?condition=${encodeURIComponent(condition)}&radius_km=${SEARCH_RADIUS_KM}`;
-            if (PATIENT_COORDS.lat && PATIENT_COORDS.lon) {
-                url += `&lat=${PATIENT_COORDS.lat}&lon=${PATIENT_COORDS.lon}`;
-            } else if (manualQuery) {
-                url += `&query=${encodeURIComponent(manualQuery)}`;
-            }
-
-            try {
-                const resp = await fetch(url);
-                const data = await resp.json();
-
-                if (data.status === 'success') {
-                    ALL_RECOMMENDATIONS = data.recommendations || [];
-                    
-                    // Update location pill
-                    if (data.location && data.location.display_name) {
-                        PATIENT_COORDS.label = data.location.display_name;
-                        updateLocationPill(`📍 Search Location: ${data.location.display_name}`);
-                    }
-
-                    applyFiltersAndRender();
-                } else {
-                    renderEmptyTable('Hospital discovery encountered an error. Showing curated centres.');
-                }
-            } catch (err) {
-                console.error('Hospital discovery request failed:', err);
-                renderEmptyTable('Network error communicating with hospital discovery service.');
-            }
         }
 
         function updateLocationPill(text, isWarning = false) {
@@ -818,31 +1064,32 @@
         function applyFiltersAndRender() {
             const modeFilter = document.getElementById('modeFilterSelect').value;
             const typeFilter = document.getElementById('typeFilterSelect').value;
+            const specialtyFilter = document.getElementById('specialtyFilterSelect').value;
             const sortFilter = document.getElementById('sortFilterSelect').value;
 
-            let filtered = [...ALL_RECOMMENDATIONS];
+            // Strict geographic radius filter: distanceKm <= SEARCH_RADIUS_KM
+            let filtered = ALL_RECOMMENDATIONS.filter(h => h.distance_km != null && h.distance_km <= SEARCH_RADIUS_KM);
 
             // Filter by Mode
-            if (modeFilter === 'in_person') {
-                // In-person allowed on all
-            } else if (modeFilter === 'telemedicine') {
+            if (modeFilter === 'telemedicine') {
                 filtered = filtered.filter(h => h.telemedicine_available === true);
             }
 
             // Filter by Facility Type
-            if (typeFilter === 'nearby') {
-                filtered = filtered.filter(h => h.category === 'nearby' || !h.is_curated);
-            } else if (typeFilter === 'global') {
-                filtered = filtered.filter(h => h.is_curated || h.category === 'global');
+            if (typeFilter === 'hospital') {
+                filtered = filtered.filter(h => h.facility_type === 'Multi-Specialty Hospital');
+            } else if (typeFilter === 'clinic') {
+                filtered = filtered.filter(h => h.facility_type !== 'Multi-Specialty Hospital');
+            }
+
+            // Filter by Specialty Match
+            if (specialtyFilter === 'matched') {
+                filtered = filtered.filter(h => h.specialty_match === true);
             }
 
             // Sort
             if (sortFilter === 'distance') {
-                filtered.sort((a, b) => {
-                    const distA = a.distance_km != null ? a.distance_km : 99999;
-                    const distB = b.distance_km != null ? b.distance_km : 99999;
-                    return distA - distB;
-                });
+                filtered.sort((a, b) => (a.distance_km || 0) - (b.distance_km || 0));
             } else if (sortFilter === 'specialty') {
                 filtered.sort((a, b) => (b.specialty_match ? 1 : 0) - (a.specialty_match ? 1 : 0));
             } else {

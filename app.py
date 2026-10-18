@@ -47,6 +47,7 @@ from utils.hospital_service import (
     DISEASE_SPECIALTY_MAP,
     CURATED_GLOBAL_CENTRES,
     discover_hospitals_for_patient,
+    resolve_any_address,
     geocode_address,
     calculate_haversine_distance
 )
@@ -835,11 +836,26 @@ def api_hospital_specialties():
         "global_centres": CURATED_GLOBAL_CENTRES
     })
 
+@app.route('/api/hospitals/geocode', methods=['GET'])
+def api_hospital_geocode():
+    """Universal address geocoding endpoint (Nominatim progressive + Photon backup)."""
+    raw_query = request.args.get('query', '').strip()
+    if not raw_query:
+        return jsonify({"status": "error", "message": "Location search query is required."}), 400
+    res = resolve_any_address(raw_query)
+    if res:
+        return jsonify({"status": "success", "location": res})
+    return jsonify({
+        "status": "not_found",
+        "message": "Location not found. Please enter a more complete address, city, or postal code."
+    }), 404
+
 @app.route('/api/hospitals/search', methods=['GET'])
 def api_hospital_search():
     """
     Search healthcare facilities and specialist referral centres:
-    Combines live Overpass API nearby discovery and curated international centres.
+    Strictly filters nearby facilities within the selected radius (distanceKm <= radius_km).
+    Never substitutes worldwide hospitals for local searches.
     """
     condition = request.args.get('condition', 'heart').strip().lower()
     lat = request.args.get('lat', type=float)
@@ -847,7 +863,11 @@ def api_hospital_search():
     query = request.args.get('query', '').strip()
     radius_km = request.args.get('radius_km', default=20, type=int)
     mode = request.args.get('mode', 'all').strip().lower()
-    include_global = request.args.get('include_global', 'true').lower() in ['true', '1', 'yes']
+
+    # If user provided coordinates or query, default include_global is False (strict nearby search)
+    has_location_input = bool((lat is not None and lon is not None) or query)
+    default_include_global = 'false' if has_location_input else 'true'
+    include_global = request.args.get('include_global', default_include_global).lower() in ['true', '1', 'yes']
 
     try:
         results = discover_hospitals_for_patient(
@@ -864,7 +884,7 @@ def api_hospital_search():
         app.logger.error(f"[HOSPITAL SEARCH ERROR]: {e}")
         return jsonify({
             "status": "error",
-            "message": "Failed to discover facilities. Please refine location or explore curated global centres."
+            "message": "Failed to discover facilities. Please refine location."
         }), 500
 
 @app.route('/api/appointments/book', methods=['POST'])
