@@ -19,6 +19,13 @@ ENV/
 static/uploads/*
 !static/uploads/.gitkeep
 
+# Sensitive patient database, credentials, and local exports
+service_account.json
+*credentials*.json
+data/
+*.xlsx
+*.csv
+
 # OS / Editor files
 .DS_Store
 Thumbs.db

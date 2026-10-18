@@ -5,8 +5,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diagnostic Suite - MediNova AI</title>
-    <meta name="description" content="Choose from 7 clinical AI diagnostic models for rapid disease risk assessment and automated clinical reporting.">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Immediate Theme Application (Zero Flash) -->
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('medinova_theme');
+                if (stored === 'light' || stored === 'dark') {
+                    document.documentElement.setAttribute('data-theme', stored);
+                    return;
+                }
+            } catch (e) {}
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0?v=4.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
@@ -302,6 +318,23 @@
         </div>
     </div>
 
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="brand-icon-wrapper" style="width: 32px; height: 32px;">
+                        <svg viewBox="0 0 24 24" style="width: 18px; height: 18px;">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                    </div>
+                    <span>MediNova Medical AI</span>
+                </div>
+                <p class="developer-footer-credit">DEVELOPED BY <span class="dev-highlight">DHARSANKUMAR</span></p>
+            </div>
+        </div>
+    </footer>
+
     <!-- Client-side filtering script -->
     <script>
         let currentCategory = 'all';
@@ -334,6 +367,7 @@
             });
         }
     </script>
+    <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
     <script src="{{ url_for('static', filename='chatbot.js') }}?v=3"></script>
 </body>
 

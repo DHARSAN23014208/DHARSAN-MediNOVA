@@ -2,10 +2,28 @@
 <html lang="en">
 
 <head>
+    <!-- Immediate Theme Application (Zero Flash) -->
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('medinova_theme');
+                if (stored === 'light' || stored === 'dark') {
+                    document.documentElement.setAttribute('data-theme', stored);
+                    return;
+                }
+            } catch (e) {}
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diabetes & Glycemic Diagnostic - MediNova AI</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
@@ -126,7 +144,7 @@
                         <span class="protocol-card-icon">🏥</span>
                         <h3 class="protocol-card-title {{ 'danger' if is_positive else 'success' }}">Specialist Recommendation</h3>
                     </div>
-                    <p style="font-size: 1rem; font-weight: 700; color: #ffffff; margin-bottom: 0.5rem;">
+                    <p style="font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem;">
                         {{ insights.specialist }}
                     </p>
                     <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
@@ -250,7 +268,7 @@
             <!-- Patient Parameters Table (Structured for Clinical Print) -->
             {% if patient_summary %}
             <div class="patient-data-table-wrapper">
-                <h3 style="font-size: 1.2rem; color: #ffffff; margin-bottom: 0.5rem;">Submitted Patient Metabolic Biomarkers</h3>
+                <h3 style="font-size: 1.2rem; color: var(--text); margin-bottom: 0.5rem;">Submitted Patient Metabolic Biomarkers</h3>
                 <p style="font-size: 0.85rem; color: var(--text-muted);">The following clinical metrics were submitted to the XGBoost gradient boosting model:</p>
                 <table class="patient-data-table">
                     <thead>
@@ -321,7 +339,7 @@
                 </div>
             </div>
 
-            <h2 style="font-size: 1.4rem; margin-bottom: 1.5rem; color: #ffffff;">Enter Patient Health Biomarkers</h2>
+            <h2 style="font-size: 1.4rem; margin-bottom: 1.5rem; color: var(--text);">Enter Patient Health Biomarkers</h2>
             
             <form id="diabetesForm" action="/diabetes" method="POST">
                 <div class="form-grid">
@@ -443,6 +461,7 @@
             }
         }
     </script>
+    <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
     <script src="{{ url_for('static', filename='chatbot.js') }}?v=3"></script>
 </body>
 

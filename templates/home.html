@@ -6,7 +6,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MediNova - AI-Powered Medical Diagnosis & Clinical Screening</title>
     <meta name="description" content="Next-generation AI medical diagnostic intelligence suite for preliminary disease screening across 7 critical conditions.">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Immediate Theme Application (Zero Flash) -->
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('medinova_theme');
+                if (stored === 'light' || stored === 'dark') {
+                    document.documentElement.setAttribute('data-theme', stored);
+                    return;
+                }
+            } catch (e) {}
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
@@ -35,6 +52,30 @@
             <a href="/" class="nav-link active">Home</a>
             <a href="/features" class="nav-link">Diagnostic Suite</a>
             <a href="/contact" class="nav-link">Emergency & Care</a>
+
+            <!-- Dark / Light Mode Switcher -->
+            <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle Dark and Light Mode" title="Toggle Theme (Dark / Light)">
+                <span class="theme-icon-sun" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </span>
+                <span class="theme-icon-moon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </span>
+                <span class="theme-mode-text">Mode</span>
+            </button>
+
             <a href="/contact" class="nav-emergency-btn">
                 <span class="pulse-dot"></span>
                 <span>24/7 Helpline: 112 / 911</span>
@@ -46,9 +87,12 @@
     <section class="hero">
         <div class="hero-content">
             <div class="hero-badge">
-                <span>🔬 Next-Gen Clinical Intelligence</span>
+                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 8px #10b981;"></span>
+                    Clinical AI Intelligence System
+                </span>
                 <span style="opacity: 0.5;">|</span>
-                <span>Multi-Model Architecture</span>
+                <span>7 Multi-Parametric Diagnostic Engines</span>
             </div>
             
             <h1 class="hero-title">
@@ -157,17 +201,17 @@
 
     <!-- Emergency Action Protocol Highlight -->
     <section class="container" style="padding-bottom: 6rem;">
-        <div class="glass-card" style="padding: 3rem 2.5rem; border: 1px solid rgba(244, 63, 94, 0.35); background: linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, rgba(13, 21, 39, 0.85) 100%);">
+        <div class="glass-card emergency-protocol-card">
             <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
                 <div style="font-size: 3.5rem; width: 80px; height: 80px; border-radius: 20px; background: rgba(244, 63, 94, 0.2); border: 2px solid var(--danger); display: flex; align-items: center; justify-content: center;">
                     🚨
                 </div>
                 <div style="flex: 1; min-width: 280px;">
-                    <div style="display: inline-block; padding: 0.2rem 0.6rem; background: rgba(244, 63, 94, 0.2); border-radius: 4px; color: #fecdd3; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.4rem;">
+                    <div class="emergency-badge-tag">
                         Automated Emergency Protocol Suite
                     </div>
-                    <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem; color: #ffffff;">Immediate Guidance When Tests Are Positive</h2>
-                    <p style="color: #cbd5e1; font-size: 0.98rem; line-height: 1.6;">
+                    <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem; color: var(--text);">Immediate Guidance When Tests Are Positive</h2>
+                    <p style="color: var(--text-muted); font-size: 0.98rem; line-height: 1.6;">
                         Unlike standard calculators, MediNova automatically deploys an intensive clinical action plan whenever high-risk or positive markers are identified: specialist referral matching, critical red-flag emergency symptoms, dietary dos/don'ts, tailored doctor consultation questions, and a 1-click printable clinical PDF medical report.
                     </p>
                 </div>
@@ -211,6 +255,24 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
+            <!-- DEVELOPER SIGNATURE SHOWCASE (DEVELOPED BY DHARSANKUMAR) -->
+            <div class="developer-showcase-card">
+                <div class="dev-card-left">
+                    <div class="dev-avatar-pulse">
+                        <span>⚡</span>
+                    </div>
+                    <div>
+                        <span class="dev-role-badge">LEAD ARCHITECT & MEDICAL AI ENGINEERING</span>
+                        <h2 class="dev-name-heading">DEVELOPED BY DHARSANKUMAR</h2>
+                        <p class="dev-desc">Architected with Multi-Model Ensemble Intelligence, Deep Convolutional Neural Networks & Automated Clinical Triage Protocols</p>
+                    </div>
+                </div>
+                <div class="dev-card-right">
+                    <span class="dev-tag">MediNova Clinical AI Platform</span>
+                    <span class="dev-tag-verified">✓ Verified Diagnostic System</span>
+                </div>
+            </div>
+
             <div class="footer-content">
                 <div class="footer-brand">
                     <div class="brand-icon-wrapper" style="width: 32px; height: 32px;">
@@ -220,12 +282,12 @@
                     </div>
                     <span>MediNova Medical AI</span>
                 </div>
-                <div style="display: flex; gap: 1.5rem;">
+                <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
                     <a href="/" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">Home</a>
                     <a href="/features" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">Diagnostic Suite</a>
                     <a href="/contact" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">Emergency Support</a>
                 </div>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Developed by Dharsan and Engineering Team</p>
+                <p class="developer-footer-credit">DEVELOPED BY <span class="dev-highlight">DHARSANKUMAR</span></p>
             </div>
 
             <div class="footer-disclaimer">
@@ -233,6 +295,9 @@
             </div>
         </div>
     </footer>
+
+    <!-- Theme & Chatbot Scripts -->
+    <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
     <script src="{{ url_for('static', filename='chatbot.js') }}?v=3"></script>
 </body>
 

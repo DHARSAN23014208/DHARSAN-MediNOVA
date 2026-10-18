@@ -7,7 +7,7 @@ os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("TF_NUM_INTRAOP_THREADS", "1")
 os.environ.setdefault("TF_NUM_INTEROP_THREADS", "1")
-os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
+# Do NOT force TF_USE_LEGACY_KERAS=1 as our vision CNN models are serialized in Keras 3 schema
 os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
 
 import joblib
@@ -17,16 +17,108 @@ import datetime
 import json
 import re
 import uuid
+import secrets
+import smtplib
+import traceback
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 import requests
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file, abort
 from werkzeug.utils import secure_filename
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image as keras_image
+
+# Modern Keras 3 loader with backward compatibility fallback
+try:
+    import keras
+    from keras.models import load_model as keras_load_model
+    from keras.preprocessing import image as keras_image
+except ImportError:
+    from tensorflow.keras.models import load_model as keras_load_model
+    # pyrefly: ignore[missing-import]
+    from tensorflow.keras.preprocessing import image as keras_image
+
+from utils.google_sheets_logger import (
+    log_patient_prediction,
+    get_sheets_status,
+    SPREADSHEET_NAME
+)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
+def _load_env_file(env_path):
+    """Zero-dependency .env loader for local developer and production environments."""
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        k, v = k.strip(), v.strip().strip("'\"")
+                        if k and k not in os.environ:
+                            os.environ[k] = v
+        except Exception:
+            pass
+
+_load_env_file(os.path.join(BASE_DIR, ".env"))
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'medinova-clinical-secret-key-2026')
+
+# Developer Master Gate Configuration (Strictly restricted to dharshankumarkumar3@gmail.com)
+AUTHORIZED_DEV_EMAIL = os.environ.get('AUTHORIZED_DEV_EMAIL', 'dharshankumarkumar3@gmail.com').strip().lower()
+DEV_ACCESS_KEY = os.environ.get('DEV_ACCESS_KEY', 'medinova_dev_2026_dharshan_secret').strip()
+
+# Ephemeral in-memory OTP storage for developer two-factor authentication
+DEV_OTP_CACHE = {
+    'otp': None,
+    'expires_at': None,
+    'email': None
+}
+
+def send_developer_email(subject, html_content, attachment_path=None):
+    """Deliver emails directly to developer via SMTP."""
+    smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+    smtp_port = int(os.environ.get("SMTP_PORT", 587))
+    smtp_user = os.environ.get("SMTP_USERNAME")
+    smtp_pass = os.environ.get("SMTP_PASSWORD")
+    use_tls = os.environ.get("SMTP_USE_TLS", "true").lower() in ["true", "1", "yes"]
+
+    if not smtp_user or not smtp_pass:
+        print(f"[DEVELOPER NOTICE] SMTP credentials not configured. Email to {AUTHORIZED_DEV_EMAIL} skipped.")
+        return False, "SMTP credentials (SMTP_USERNAME/SMTP_PASSWORD) are not set in environment or .env."
+
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = f"MediNova Clinical Diagnostics <{smtp_user}>"
+        msg["To"] = AUTHORIZED_DEV_EMAIL
+        msg["Subject"] = subject
+        msg.attach(MIMEText(html_content, "html"))
+
+        if attachment_path and os.path.exists(attachment_path):
+            with open(attachment_path, "rb") as f:
+                part = MIMEBase("application", "octet-stream")
+                part.set_payload(f.read())
+            encoders.encode_base64(part)
+            filename = os.path.basename(attachment_path)
+            part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
+            msg.attach(part)
+
+        if smtp_port == 465:
+            server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=15)
+        else:
+            server = smtplib.SMTP(smtp_server, smtp_port, timeout=15)
+            if use_tls:
+                server.starttls()
+
+        server.login(smtp_user, smtp_pass)
+        server.send_message(msg)
+        server.quit()
+        return True, "Email successfully delivered to developer."
+    except Exception as e:
+        print(f"[SMTP ERROR] Failed sending to {AUTHORIZED_DEV_EMAIL}: {e}")
+        return False, str(e)
 
 def to_python_type(obj):
     if isinstance(obj, dict):
@@ -69,36 +161,120 @@ kidney_model = load_pkl_model('kidney_model.pkl')
 liver_model = load_pkl_model('liver_model.pkl')
 breast_cancer_model = load_pkl_model('breast_cancer_model.pkl')
 
-pneumonia_model_path = os.path.join(MODELS_DIR, 'pneumonia_model_new.h5')
-malaria_model_path = os.path.join(MODELS_DIR, 'malaria_cnn_model_fast.h5')
+# Absolute filesystem paths to deep learning vision models
+pneumonia_model_path = os.path.abspath(os.path.join(MODELS_DIR, 'pneumonia_model_new.h5'))
+malaria_model_path = os.path.abspath(os.path.join(MODELS_DIR, 'malaria_cnn_model_fast.h5'))
 
-# Heavy Keras deep learning models are lazy-loaded on demand to stay under Render's 512 MB RAM limit
+# Global model references and diagnostics state
 pneumonia_model = None
+pneumonia_model_error = None
 malaria_model = None
+malaria_model_error = None
+
+def load_vision_model(model_path, model_name="Vision Model"):
+    """
+    Safely load a Keras/TensorFlow HDF5 deep learning model with multi-tier fallback architecture,
+    absolute path resolution, and comprehensive traceback logging.
+    
+    Returns:
+        tuple: (model_instance, error_message_or_None)
+    """
+    abs_path = os.path.abspath(model_path)
+    if not os.path.exists(abs_path):
+        err_msg = f"{model_name} weight file not found at: {abs_path}"
+        app.logger.error(f"[MODEL ERROR] {err_msg}")
+        print(f"[MODEL ERROR] {err_msg}")
+        return None, err_msg
+
+    print(f"[MODEL LOADER] Loading {model_name} from: {abs_path} ({os.path.getsize(abs_path):,} bytes)...")
+
+    # Tier 1: Load via Keras 3 with compile=False (optimal for models serialized in Keras 3 format)
+    try:
+        import keras
+        model = keras.models.load_model(abs_path, compile=False)
+        print(f"[MODEL LOADER] SUCCESS: {model_name} loaded via Keras 3 engine.")
+        return model, None
+    except Exception as e_k3:
+        tb_k3 = traceback.format_exc()
+        app.logger.warning(f"Keras 3 loader failed for {model_name}: {e_k3}\n{tb_k3}")
+        print(f"[MODEL LOADER] Keras 3 attempt failed for {model_name}: {e_k3}")
+
+    # Tier 2: Fallback to tensorflow.keras loader
+    try:
+        from tensorflow.keras.models import load_model as tf_load_model
+        model = tf_load_model(abs_path, compile=False)
+        print(f"[MODEL LOADER] SUCCESS: {model_name} loaded via tensorflow.keras engine.")
+        return model, None
+    except Exception as e_tf:
+        tb_tf = traceback.format_exc()
+        app.logger.warning(f"tensorflow.keras loader failed for {model_name}: {e_tf}\n{tb_tf}")
+        print(f"[MODEL LOADER] tensorflow.keras attempt failed for {model_name}: {e_tf}")
+
+    # Tier 3: Fallback to tf_keras (legacy Keras 2) with PatchedInputLayer for batch_shape
+    try:
+        import tf_keras
+        class PatchedInputLayer(tf_keras.layers.InputLayer):
+            @classmethod
+            def from_config(cls, config):
+                cfg = config.copy()
+                if "batch_shape" in cfg:
+                    cfg["batch_input_shape"] = cfg.pop("batch_shape")
+                return super().from_config(cfg)
+
+        model = tf_keras.models.load_model(
+            abs_path,
+            compile=False,
+            custom_objects={"InputLayer": PatchedInputLayer}
+        )
+        print(f"[MODEL LOADER] SUCCESS: {model_name} loaded via tf_keras legacy compatibility patch.")
+        return model, None
+    except Exception as e_tfk:
+        tb_tfk = traceback.format_exc()
+        app.logger.error(f"tf_keras fallback failed for {model_name}: {e_tfk}\n{tb_tfk}")
+        print(f"[MODEL LOADER] tf_keras fallback failed for {model_name}: {e_tfk}")
+
+    # All loader tiers failed
+    full_err = f"Failed to load {model_name} from {abs_path}. All loader tiers (Keras 3, TF Keras, and legacy patch) raised exceptions."
+    app.logger.error(f"[MODEL LOADER FATAL] {full_err}")
+    print(f"[MODEL LOADER FATAL] {full_err}")
+    return None, full_err
 
 def get_pneumonia_model():
     """Lazy-load Pneumonia Keras model on demand and cache globally."""
-    global pneumonia_model
-    if pneumonia_model is None and os.path.exists(pneumonia_model_path):
-        try:
-            print("Lazy-loading Pneumonia Keras model on demand...")
-            pneumonia_model = load_model(pneumonia_model_path)
-            print("Pneumonia model loaded successfully.")
-        except Exception as e:
-            print(f"Error lazy-loading Pneumonia model: {e}")
+    global pneumonia_model, pneumonia_model_error
+    if pneumonia_model is None:
+        pneumonia_model, pneumonia_model_error = load_vision_model(pneumonia_model_path, "Pneumonia Radiography CNN Model")
     return pneumonia_model
 
 def get_malaria_model():
     """Lazy-load Malaria Keras model on demand and cache globally."""
-    global malaria_model
-    if malaria_model is None and os.path.exists(malaria_model_path):
-        try:
-            print("Lazy-loading Malaria Keras model on demand...")
-            malaria_model = load_model(malaria_model_path)
-            print("Malaria model loaded successfully.")
-        except Exception as e:
-            print(f"Error lazy-loading Malaria model: {e}")
+    global malaria_model, malaria_model_error
+    if malaria_model is None:
+        malaria_model, malaria_model_error = load_vision_model(malaria_model_path, "Malaria Parasite Vision CNN Model")
     return malaria_model
+
+def verify_vision_models_startup(preload=False):
+    """
+    Startup verification check: verifies model weight paths and file presence on disk.
+    If preload=True or PRELOAD_VISION_MODELS=1, pre-warms the models into global memory.
+    """
+    print("--- [STARTUP VERIFICATION] Vision Deep Learning Models ---")
+    for name, p in [("Malaria Vision CNN", malaria_model_path), ("Pneumonia Chest Radiography CNN", pneumonia_model_path)]:
+        if os.path.exists(p):
+            print(f"  [OK] {name}: Found at {p} ({os.path.getsize(p):,} bytes)")
+        else:
+            print(f"  [MISSING] {name}: NOT found at {p}")
+
+    if preload or os.environ.get("PRELOAD_VISION_MODELS", "0").lower() in ("1", "true"):
+        print("  [PRELOAD] Eagerly loading vision models into global state...")
+        get_malaria_model()
+        get_pneumonia_model()
+    else:
+        print("  [LAZY-LOAD] Vision models will be lazy-loaded on first diagnostic request (conserving RAM).")
+    print("---------------------------------------------------------")
+
+# Run startup filesystem verification for vision models
+verify_vision_models_startup()
 
 # ============================================================================
 # COMPREHENSIVE CLINICAL INSIGHTS & EMERGENCY PROTOCOLS
@@ -658,6 +834,27 @@ def heart():
             insight_key = 'positive' if is_pos else 'negative'
             insights = DISEASE_INSIGHTS['heart_disease'][insight_key]
 
+            # Calculate confidence score
+            conf_score = 95.0
+            try:
+                if hasattr(heart_model, "predict_proba"):
+                    probs = heart_model.predict_proba([features_vec])[0]
+                    conf_score = float(probs[1] if is_pos else probs[0]) * 100.0
+            except Exception:
+                pass
+
+            # Silent Background Google Sheets Logging (Zero Patient Visibility)
+            try:
+                log_patient_prediction(
+                    module_name="Heart_Disease",
+                    form_data=request.form.to_dict(),
+                    raw_prediction=int(prediction),
+                    is_positive=is_pos,
+                    confidence_score=conf_score
+                )
+            except Exception as log_err:
+                app.logger.warning(f"Silent Google Sheets logging failed in heart: {log_err}")
+
             # Formatted patient data for printable report
             patient_summary = [
                 {'label': 'Age', 'value': f"{int(raw_data['age'])} years"},
@@ -736,6 +933,27 @@ def diabetes():
             insight_key = 'positive' if is_pos else 'negative'
             insights = DISEASE_INSIGHTS['diabetes'][insight_key]
 
+            # Calculate confidence score
+            conf_score = 95.0
+            try:
+                if hasattr(diabetes_model, "predict_proba"):
+                    probs = diabetes_model.predict_proba([feature_vector])[0]
+                    conf_score = float(probs[1] if is_pos else probs[0]) * 100.0
+            except Exception:
+                pass
+
+            # Silent Background Google Sheets Logging (Zero Patient Visibility)
+            try:
+                log_patient_prediction(
+                    module_name="Diabetes",
+                    form_data=request.form.to_dict(),
+                    raw_prediction=int(prediction),
+                    is_positive=is_pos,
+                    confidence_score=conf_score
+                )
+            except Exception as log_err:
+                app.logger.warning(f"Silent Google Sheets logging failed in diabetes: {log_err}")
+
             patient_summary = [
                 {'label': 'Gender', 'value': gender},
                 {'label': 'Age', 'value': f"{int(age)} years"},
@@ -782,6 +1000,27 @@ def kidney():
             result = "Positive - Chronic Kidney Disease Indicators" if is_pos else "Negative - Healthy Renal Function"
             insight_key = 'positive' if is_pos else 'negative'
             insights = DISEASE_INSIGHTS['kidney_disease'][insight_key]
+
+            # Calculate confidence score
+            conf_score = 95.0
+            try:
+                if hasattr(kidney_model, "predict_proba"):
+                    probs = kidney_model.predict_proba([features])[0]
+                    conf_score = float(probs[1] if is_pos else probs[0]) * 100.0
+            except Exception:
+                pass
+
+            # Silent Background Google Sheets Logging (Zero Patient Visibility)
+            try:
+                log_patient_prediction(
+                    module_name="Kidney_Disease",
+                    form_data=request.form.to_dict(),
+                    raw_prediction=int(prediction),
+                    is_positive=is_pos,
+                    confidence_score=conf_score
+                )
+            except Exception as log_err:
+                app.logger.warning(f"Silent Google Sheets logging failed in kidney: {log_err}")
 
             patient_summary = [
                 {'label': 'Age', 'value': f"{int(features[0])} years"},
@@ -845,6 +1084,27 @@ def liver():
             insight_key = 'positive' if is_pos else 'negative'
             insights = DISEASE_INSIGHTS['liver_disease'][insight_key]
 
+            # Calculate confidence score
+            conf_score = 95.0
+            try:
+                if hasattr(liver_model, "predict_proba"):
+                    probs = liver_model.predict_proba([features])[0]
+                    conf_score = float(probs[1] if is_pos else probs[0]) * 100.0
+            except Exception:
+                pass
+
+            # Silent Background Google Sheets Logging (Zero Patient Visibility)
+            try:
+                log_patient_prediction(
+                    module_name="Liver_Disease",
+                    form_data=request.form.to_dict(),
+                    raw_prediction=int(prediction),
+                    is_positive=is_pos,
+                    confidence_score=conf_score
+                )
+            except Exception as log_err:
+                app.logger.warning(f"Silent Google Sheets logging failed in liver: {log_err}")
+
             patient_summary = [
                 {'label': 'Age', 'value': f"{int(features[0])} years"},
                 {'label': 'Gender', 'value': 'Male' if gender_val == 1 else 'Female'},
@@ -897,6 +1157,28 @@ def breast_cancer():
             result = "Malignant Neoplasm Indicators" if is_pos else "Benign Cellular Characteristics"
             insight_key = 'malignant' if is_pos else 'benign'
             insights = DISEASE_INSIGHTS['breast_cancer'][insight_key]
+
+            # Calculate confidence score
+            conf_score = 95.0
+            try:
+                if hasattr(breast_cancer_model, "predict_proba"):
+                    probs = breast_cancer_model.predict_proba([features])[0]
+                    cls_idx = list(breast_cancer_model.classes_).index(prediction) if hasattr(breast_cancer_model, 'classes_') else int(prediction)
+                    conf_score = float(probs[cls_idx]) * 100.0
+            except Exception:
+                pass
+
+            # Silent Background Google Sheets Logging (Zero Patient Visibility)
+            try:
+                log_patient_prediction(
+                    module_name="Breast_Cancer",
+                    form_data=request.form.to_dict(),
+                    raw_prediction="Malignant" if is_pos else "Benign",
+                    is_positive=is_pos,
+                    confidence_score=conf_score
+                )
+            except Exception as log_err:
+                app.logger.warning(f"Silent Google Sheets logging failed in breast cancer: {log_err}")
 
             patient_summary = [
                 {'label': 'Mean Nuclear Radius', 'value': f"{features[0]:.2f} µm"},
@@ -957,7 +1239,9 @@ def malaria():
 
             model = get_malaria_model()
             if model is None:
-                return render_template('malaria.html', error="Malaria model is not loaded")
+                err_detail = malaria_model_error or "Model file missing or deserialization failed. Check server logs."
+                app.logger.error(f"Malaria diagnosis request aborted: {err_detail}")
+                return render_template('malaria.html', error=f"Analysis Error: Malaria model could not be loaded ({err_detail})")
 
             img = keras_image.load_img(filepath, target_size=(50, 50))
             img_array = keras_image.img_to_array(img)
@@ -974,6 +1258,24 @@ def malaria():
             result = f"Infected (Parasitized) - {confidence:.1f}% Confidence" if is_pos else f"Uninfected (Healthy) - {confidence:.1f}% Confidence"
             insight_key = 'infected' if is_pos else 'uninfected'
             insights = DISEASE_INSIGHTS['malaria'][insight_key]
+
+            # Silent Background Google Sheets Logging (Zero Patient Visibility)
+            try:
+                log_patient_prediction(
+                    module_name="Malaria",
+                    form_data=request.form.to_dict(),
+                    raw_prediction=f"{'Parasitized' if is_pos else 'Uninfected'} (class={pred_class})",
+                    is_positive=is_pos,
+                    confidence_score=confidence,
+                    extra_metadata={
+                        "Image_Filename": filename or "sample_microscopy.png",
+                        "Original_Resolution": "50 x 50 Microscopic Blood Smear",
+                        "Input_Shape": "(1, 50, 50, 3)",
+                        "Model_Used": "Fast Deep CNN (Keras)"
+                    }
+                )
+            except Exception as log_err:
+                app.logger.warning(f"Silent Google Sheets logging failed in malaria: {log_err}")
 
             patient_summary = [
                 {'label': 'Image Analyzed', 'value': filename},
@@ -1029,7 +1331,9 @@ def pneumonia():
 
             model = get_pneumonia_model()
             if model is None:
-                return render_template('pneumonia.html', error="Pneumonia model is not loaded")
+                err_detail = pneumonia_model_error or "Model file missing or deserialization failed. Check server logs."
+                app.logger.error(f"Pneumonia diagnosis request aborted: {err_detail}")
+                return render_template('pneumonia.html', error=f"Analysis Error: Pneumonia model could not be loaded ({err_detail})")
 
             img = keras_image.load_img(filepath, target_size=(150, 150))
             img_array = keras_image.img_to_array(img)
@@ -1046,6 +1350,24 @@ def pneumonia():
             result = f"Pneumonia Detected - {confidence:.1f}% Confidence" if is_pos else f"Normal Lung Fields - {confidence:.1f}% Confidence"
             insight_key = 'positive' if is_pos else 'negative'
             insights = DISEASE_INSIGHTS['pneumonia'][insight_key]
+
+            # Silent Background Google Sheets Logging (Zero Patient Visibility)
+            try:
+                log_patient_prediction(
+                    module_name="Pneumonia",
+                    form_data=request.form.to_dict(),
+                    raw_prediction=f"{'Pneumonia Detected' if is_pos else 'Normal Lung Fields'} (prob={prob:.4f})",
+                    is_positive=is_pos,
+                    confidence_score=confidence,
+                    extra_metadata={
+                        "Image_Filename": filename or "sample_radiograph.jpeg",
+                        "Original_Resolution": "150 x 150 Chest Radiograph",
+                        "Input_Shape": "(1, 150, 150, 3)",
+                        "Model_Used": "Deep Convolutional Neural Network (Keras)"
+                    }
+                )
+            except Exception as log_err:
+                app.logger.warning(f"Silent Google Sheets logging failed in pneumonia: {log_err}")
 
             patient_summary = [
                 {'label': 'Chest X-Ray File', 'value': filename},
@@ -2578,6 +2900,158 @@ def api_chat_reset():
             {"label": "🔍 All 7 Diagnostic Suites", "url": "/features"}
         ]
     })
+
+
+# ============================================================================
+# DEVELOPER-ONLY PORTAL & GOOGLE SHEETS AUDIT GATEWAY
+# Strict Security Access: dharshankumarkumar3@gmail.com Only
+# ============================================================================
+
+def is_developer_authenticated() -> bool:
+    """Check if current session has authenticated as the authorized developer."""
+    return bool(
+        session.get('dev_authenticated') is True and 
+        session.get('dev_email', '').strip().lower() == AUTHORIZED_DEV_EMAIL
+    )
+
+
+@app.route('/developer/patient-records', methods=['GET', 'POST'])
+def developer_patient_records():
+    """
+    Developer-only portal for inspecting Google Sheets synchronization status.
+    Accessible only to dharshankumarkumar3@gmail.com with secret key or OTP.
+    Zero patient visibility: Not exposed in any patient template.
+    """
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+
+    # 1. If already authenticated and GET request, render Dashboard view
+    if request.method == 'GET':
+        if is_developer_authenticated():
+            stats = get_sheets_status()
+            return render_template(
+                'dev_access.html',
+                is_authenticated=True,
+                developer_email=session.get('dev_email'),
+                stats=stats
+            )
+        return render_template('dev_access.html', is_authenticated=False, prefill_email=AUTHORIZED_DEV_EMAIL)
+
+    # 2. Handle POST: Developer Authentication Gate
+    email = request.form.get('email', '').strip().lower()
+    auth_method = request.form.get('auth_method', 'key').strip().lower()
+    access_key = request.form.get('access_key', '').strip()
+    otp_entered = request.form.get('otp', '').strip()
+
+    # Layer 1: Strict Developer Email Verification
+    if email != AUTHORIZED_DEV_EMAIL:
+        app.logger.warning(
+            f"[SECURITY 403] Unauthorized access attempt blocked from IP {client_ip} with email '{email}'. "
+            f"Authorized target is '{AUTHORIZED_DEV_EMAIL}'."
+        )
+        return render_template(
+            'dev_access.html',
+            error=f"403 Forbidden: Email '{email}' is not authorized. Access strictly reserved for Developer ({AUTHORIZED_DEV_EMAIL}).",
+            error_code=403,
+            is_authenticated=False,
+            prefill_email=email
+        ), 403
+
+    # Layer 2: Verification of Key or OTP
+    authenticated = False
+    auth_failure_reason = ""
+
+    if auth_method == 'otp' or otp_entered:
+        # OTP verification
+        cached_otp = DEV_OTP_CACHE.get('otp')
+        expires_at = DEV_OTP_CACHE.get('expires_at')
+        if not cached_otp or not expires_at:
+            auth_failure_reason = "No active OTP found. Please click 'Send OTP' to request a new verification code."
+        elif datetime.datetime.now() > expires_at:
+            auth_failure_reason = "OTP has expired. Please request a new 6-digit code."
+        elif otp_entered != cached_otp:
+            auth_failure_reason = "Invalid OTP verification code. Please check your developer inbox or server log."
+        else:
+            authenticated = True
+            DEV_OTP_CACHE['otp'] = None
+            DEV_OTP_CACHE['expires_at'] = None
+    else:
+        # Access Key verification
+        if access_key and access_key == DEV_ACCESS_KEY:
+            authenticated = True
+        else:
+            auth_failure_reason = "Invalid Developer Master Access Key."
+
+    if not authenticated:
+        app.logger.warning(
+            f"[SECURITY 403] Failed developer authentication attempt from IP {client_ip} for '{email}'. Reason: {auth_failure_reason}"
+        )
+        return render_template(
+            'dev_access.html',
+            error=f"403 Forbidden: {auth_failure_reason}",
+            error_code=403,
+            is_authenticated=False,
+            prefill_email=email
+        ), 403
+
+    # Success: Establish authenticated developer session
+    session['dev_authenticated'] = True
+    session['dev_email'] = AUTHORIZED_DEV_EMAIL
+    session['dev_login_time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    app.logger.info(f"[SECURITY AUDIT] Developer '{AUTHORIZED_DEV_EMAIL}' successfully authenticated from IP {client_ip}.")
+
+    return redirect(url_for('developer_patient_records'))
+
+
+@app.route('/developer/request-otp', methods=['POST'])
+def developer_request_otp():
+    """Generates and sends a 6-digit OTP to AUTHORIZED_DEV_EMAIL."""
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    data = request.get_json(silent=True) or {}
+    email = data.get('email', '').strip().lower()
+
+    if email != AUTHORIZED_DEV_EMAIL:
+        app.logger.warning(f"[SECURITY 403] OTP generation blocked for unauthorized email '{email}' from IP {client_ip}")
+        return jsonify({"success": False, "message": "403 Forbidden: Email is not authorized for developer access."}), 403
+
+    # Generate cryptographically secure 6-digit OTP
+    otp_val = f"{secrets.randbelow(900000) + 100000}"
+    DEV_OTP_CACHE['otp'] = otp_val
+    DEV_OTP_CACHE['expires_at'] = datetime.datetime.now() + datetime.timedelta(minutes=10)
+    DEV_OTP_CACHE['email'] = email
+
+    print(f"\n====================================================================")
+    print(f"[DEVELOPER SECURITY GATEWAY] Generated 6-digit OTP: {otp_val}")
+    print(f"Target Developer: {AUTHORIZED_DEV_EMAIL}")
+    print(f"Valid for: 10 minutes (Expires: {DEV_OTP_CACHE['expires_at'].strftime('%H:%M:%S')})")
+    print(f"====================================================================\n")
+
+    subject = f"[MediNova Developer Core] One-Time Verification Code: {otp_val}"
+    body_html = f"""
+    <div style="font-family: Arial, sans-serif; background: #0b1120; color: #f8fafc; padding: 24px; border-radius: 8px;">
+        <h2 style="color: #38bdf8; margin-top: 0;">MediNova Developer Security Gate</h2>
+        <p>You requested developer access to the MediNova Patient Diagnostic Records database.</p>
+        <div style="background: #1e293b; padding: 18px; border-radius: 6px; text-align: center; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #38bdf8;">{otp_val}</span>
+        </div>
+        <p style="color: #94a3b8; font-size: 13px;">This code is valid for 10 minutes. If you did not request this code, no action is required.</p>
+    </div>
+    """
+    email_sent, email_msg = send_developer_email(subject, body_html)
+    if email_sent:
+        msg = f"OTP successfully sent to {AUTHORIZED_DEV_EMAIL}."
+    else:
+        msg = f"OTP active! (Console log active: {otp_val}. Notice: {email_msg})"
+
+    return jsonify({"success": True, "message": msg})
+
+
+@app.route('/developer/logout', methods=['GET'])
+def developer_logout():
+    """Clear developer session and lock access."""
+    session.pop('dev_authenticated', None)
+    session.pop('dev_email', None)
+    session.pop('dev_login_time', None)
+    return redirect(url_for('developer_patient_records'))
 
 
 @app.route('/healthz', methods=['GET'])

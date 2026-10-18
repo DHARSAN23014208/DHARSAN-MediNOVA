@@ -2,10 +2,28 @@
 <html lang="en">
 
 <head>
+    <!-- Immediate Theme Application (Zero Flash) -->
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('medinova_theme');
+                if (stored === 'light' || stored === 'dark') {
+                    document.documentElement.setAttribute('data-theme', stored);
+                    return;
+                }
+            } catch (e) {}
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pneumonia Detection - MediNova AI</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
@@ -96,7 +114,7 @@
                 <div class="uploaded-image-preview-card">
                     <img src="{{ uploaded_image_url }}" alt="Analyzed Chest X-Ray" class="analyzed-img">
                     <div>
-                        <h4 style="color: #ffffff; margin-bottom: 0.3rem;">Chest Radiograph Analyzed</h4>
+                        <h4 style="color: var(--text); margin-bottom: 0.3rem;">Chest Radiograph Analyzed</h4>
                         <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.5;">
                             {{ 'Pulmonary parenchymal opacification detected by neural convolutional feature maps.' if is_positive else 'Clear bilateral lung fields and normal bronchovascular markings confirmed.' }}
                         </p>
@@ -128,7 +146,7 @@
                         <span class="protocol-card-icon">🏥</span>
                         <h3 class="protocol-card-title {{ 'danger' if is_positive else 'success' }}">Specialist Recommendation</h3>
                     </div>
-                    <p style="font-size: 1rem; font-weight: 700; color: #ffffff; margin-bottom: 0.5rem;">
+                    <p style="font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem;">
                         {{ insights.specialist }}
                     </p>
                     <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
@@ -225,7 +243,7 @@
             <!-- Patient Parameters Table (Structured for Clinical Print) -->
             {% if patient_summary %}
             <div class="patient-data-table-wrapper">
-                <h3 style="font-size: 1.2rem; color: #ffffff; margin-bottom: 0.5rem;">Radiograph Vision Inference Summary</h3>
+                <h3 style="font-size: 1.2rem; color: var(--text); margin-bottom: 0.5rem;">Radiograph Vision Inference Summary</h3>
                 <table class="patient-data-table">
                     <thead>
                         <tr>
@@ -280,13 +298,13 @@
                 </div>
             </div>
 
-            <h2 style="font-size: 1.4rem; margin-bottom: 1.5rem; text-align: center; color: #ffffff;">Upload Chest Radiograph (X-Ray)</h2>
+            <h2 style="font-size: 1.4rem; margin-bottom: 1.5rem; text-align: center; color: var(--text);">Upload Chest Radiograph (X-Ray)</h2>
             
             <form id="pneumoniaUploadForm" action="/pneumonia" method="POST" enctype="multipart/form-data">
                 <div class="file-upload-area" id="dropArea">
                     <input type="file" name="file" id="pneumoniaFile" accept="image/*" required onchange="previewImage(this)">
                     <span class="upload-icon">🩻</span>
-                    <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; color: #ffffff;">Drag & Drop Chest X-Ray Scan Here</h3>
+                    <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; color: var(--text);">Drag & Drop Chest X-Ray Scan Here</h3>
                     <p style="color: var(--text-muted); font-size: 0.9rem;">or click to browse your computer (JPG, PNG, JPEG supported)</p>
                     <img id="imagePreview" class="file-preview-thumbnail" style="display: none;" alt="Preview">
                 </div>
@@ -321,6 +339,7 @@
             }
         }
     </script>
+    <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
     <script src="{{ url_for('static', filename='chatbot.js') }}?v=3"></script>
 </body>
 
