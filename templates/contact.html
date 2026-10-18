@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emergency Care & Clinical Support - MediNova AI</title>
+    <title>Hospital Discovery & Priority Specialist Appointments - MediNova Clinical AI</title>
     <!-- Immediate Theme Application (Zero Flash) -->
     <script>
         (function() {
@@ -22,8 +22,8 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
@@ -43,28 +43,32 @@
                 </svg>
             </div>
             <span class="brand-gradient">MediNova</span>
-            <span class="brand-tag">Emergency Care</span>
+            <span class="brand-tag">Hospital Discovery</span>
         </a>
 
         <div class="nav-links">
             <a href="/" class="nav-link">Home</a>
             <a href="/features" class="nav-link">Diagnostic Suite</a>
-            <a href="/contact" class="nav-link active">Emergency & Care</a>
-            <a href="/contact" class="nav-emergency-btn">
+            <a href="/contact" class="nav-link active">Hospital Discovery & Care</a>
+            <a href="#trackingSection" class="nav-link" style="color: var(--primary-light);">Track Appointment</a>
+            <a href="tel:112" class="nav-emergency-btn">
                 <span class="pulse-dot"></span>
-                <span>24/7 Helpline: 112 / 911</span>
+                <span>24/7 Emergency: 112 / 911</span>
             </a>
         </div>
     </nav>
 
     <div class="content-wrapper container">
+        <!-- Section Header -->
         <div class="section-header">
-            <h1 class="section-title">Emergency Care & Clinical Directory</h1>
-            <p class="section-subtitle">If you or someone around you is experiencing acute symptoms, connect immediately with accredited medical responders or schedule an urgent specialist consultation.</p>
+            <h1 class="section-title">Hospital Discovery & Specialist Appointment Management</h1>
+            <p class="section-subtitle">
+                Connect with verified medical specialty referral centres and nearby hospitals tailored to your diagnostic screening. Discover healthcare facilities, compare verified services, and submit priority consultation requests.
+            </p>
         </div>
 
         <!-- High-Priority Emergency Callout Grid -->
-        <div class="protocol-grid" style="margin-bottom: 3.5rem;">
+        <div class="protocol-grid" style="margin-bottom: 2.5rem;">
             <div class="critical-alert-card" style="margin-bottom: 0;">
                 <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
                     <span style="font-size: 2.2rem;">🚑</span>
@@ -74,7 +78,7 @@
                     </div>
                 </div>
                 <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.25rem;">
-                    For crushing chest pain, acute respiratory collapse, severe blood loss, sudden stroke symptoms (FAST), or loss of consciousness.
+                    For crushing chest pain, acute respiratory collapse, severe blood loss, sudden stroke symptoms (FAST), or loss of consciousness. Do not wait for an appointment.
                 </p>
                 <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
                     <a href="tel:112" class="btn btn-danger btn-sm">Dial 112 (Universal / India / EU)</a>
@@ -92,7 +96,7 @@
                     </div>
                 </div>
                 <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.25rem;">
-                    Speak with a triage registered nurse to evaluate whether your lab markers or symptoms require urgent care, emergency room, or primary clinic visit.
+                    Speak with a triage registered nurse to evaluate whether your lab markers or symptoms require urgent emergency care, specialized clinic visit, or telemedicine consultation.
                 </p>
                 <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
                     <a href="tel:104" class="btn btn-primary btn-sm">Call 104 (Medical Advice Helpline)</a>
@@ -101,61 +105,490 @@
             </div>
         </div>
 
-        <!-- Specialist Consultation Appointment Request Form -->
-        <div class="form-card" style="max-width: 850px; margin: 0 auto;">
-            <h2 style="font-size: 1.5rem; color: var(--text); margin-bottom: 0.5rem; text-align: center;">Book Priority Specialist Consultation</h2>
-            <p style="text-align: center; color: var(--text-muted); font-size: 0.95rem; margin-bottom: 2rem;">
-                Submit your preliminary diagnostic result ID to be matched with an affiliated specialist hospital or accredited telemedicine physician.
-            </p>
+        <!-- Dynamic Emergency Alert Banner (Shown if acute symptoms detected) -->
+        <div id="urgentSymptomsAlert" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.5); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 2rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span style="font-size: 2rem;">🚨</span>
+                <div style="flex: 1;">
+                    <h4 style="margin: 0; color: #f87171; font-size: 1.15rem;">Emergency Medical Attention Recommended</h4>
+                    <p style="margin: 0.35rem 0 0 0; color: #fecdd3; font-size: 0.92rem;">
+                        Your symptoms or condition indicate elevated clinical urgency. Please call emergency services (<a href="tel:112" style="color: #ffffff; font-weight: bold; text-decoration: underline;">112</a> / <a href="tel:911" style="color: #ffffff; font-weight: bold; text-decoration: underline;">911</a>) or visit the nearest emergency department immediately.
+                    </p>
+                </div>
+            </div>
+        </div>
 
-            <form id="contactForm" onsubmit="event.preventDefault(); alert('Appointment Request Received! Our clinical care coordinator will contact you within 2 hours with doctor availability.'); this.reset();">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Full Patient Name</label>
-                        <input type="text" required placeholder="e.g. John Doe">
+        <!-- Main Hospital Discovery & Appointment Booking Container -->
+        <div class="booking-system-card" id="bookingCard">
+            <div style="text-align: center; margin-bottom: 2.25rem;">
+                <h2 style="font-size: 1.85rem; color: var(--text); margin-bottom: 0.5rem;">
+                    Book Priority Specialist Consultation
+                </h2>
+                <p style="color: var(--text-muted); font-size: 1rem; max-width: 720px; margin: 0 auto;">
+                    Discover hospitals and accredited global specialty centres matching your diagnostic condition. Submit your consultation request with preferred date, time, and consultation mode.
+                </p>
+            </div>
+
+            <form id="appointmentBookingForm" onsubmit="handleAppointmentSubmit(event)">
+                
+                <!-- STEP 1: PATIENT INFORMATION -->
+                <div style="margin-bottom: 2.5rem;">
+                    <div class="flow-step-header">
+                        <span class="flow-step-badge">1</span>
+                        <div>
+                            <h3 class="flow-step-title">Patient Identification & Contact Information</h3>
+                            <p class="flow-step-desc">Used strictly by clinic care coordinators to verify identity and dispatch confirmation notices.</p>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Phone Number</label>
-                        <input type="tel" required placeholder="+1 (555) 000-0000 / +91 ...">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="patientName">Full Patient Name <span style="color: var(--danger);">*</span></label>
+                            <input type="text" id="patientName" required placeholder="e.g. Eleanor Vance" autocomplete="name">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="patientPhone">Phone Number (with Country Code) <span style="color: var(--danger);">*</span></label>
+                            <input type="tel" id="patientPhone" required placeholder="+1 (555) 019-2834 / +91 98765 43210" autocomplete="tel">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="patientEmail">Email Address <span style="color: var(--danger);">*</span></label>
+                            <input type="email" id="patientEmail" required placeholder="patient@example.com" autocomplete="email">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="conditionSelect">Diagnostic Condition Tested <span style="color: var(--danger);">*</span></label>
+                            <select id="conditionSelect" required onchange="handleConditionChange(this.value)">
+                                <option value="">Select Tested Diagnostic Condition...</option>
+                                <option value="heart" {% if prefill_condition == 'heart' %}selected{% endif %}>Cardiovascular / Heart Disease</option>
+                                <option value="diabetes" {% if prefill_condition == 'diabetes' %}selected{% endif %}>Diabetes & Glycemic Profile</option>
+                                <option value="kidney" {% if prefill_condition == 'kidney' %}selected{% endif %}>Chronic Kidney Disease</option>
+                                <option value="liver" {% if prefill_condition == 'liver' %}selected{% endif %}>Liver Disease & Hepatic Panel</option>
+                                <option value="cancer" {% if prefill_condition == 'cancer' %}selected{% endif %}>Breast Oncology Morphology</option>
+                                <option value="malaria" {% if prefill_condition == 'malaria' %}selected{% endif %}>Malaria Blood Smear</option>
+                                <option value="pneumonia" {% if prefill_condition == 'pneumonia' %}selected{% endif %}>Pneumonia Chest Radiograph</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label for="clinicalNotes">Brief Clinical Notes / Current Symptoms</label>
+                            <textarea id="clinicalNotes" oninput="checkClinicalNotesUrgency(this.value)" style="width: 100%; padding: 0.85rem 1rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); color: var(--text); font-family: inherit; font-size: 0.95rem; min-height: 85px;" placeholder="Describe symptom duration, current medications, or specific questions for the specialist doctor..."></textarea>
+                            <small style="color: var(--text-muted); font-size: 0.8rem; display: block; margin-top: 0.35rem;">
+                                🔒 Data Minimization Notice: Clinical notes are shared only with your selected healthcare provider with your informed consent.
+                            </small>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Email Address</label>
-                        <input type="email" required placeholder="patient@example.com">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Diagnostic Condition Tested</label>
-                        <select required>
-                            <option value="">Select Tested Condition...</option>
-                            <option value="heart">Cardiovascular / Heart Disease</option>
-                            <option value="diabetes">Diabetes & Glycemic Profile</option>
-                            <option value="kidney">Chronic Kidney Disease</option>
-                            <option value="liver">Liver Disease & Hepatic Panel</option>
-                            <option value="cancer">Breast Oncology Morphology</option>
-                            <option value="malaria">Malaria Blood Smear</option>
-                            <option value="pneumonia">Pneumonia Chest Radiograph</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <label>Preferred Hospital / Clinic Location or City</label>
-                        <input type="text" required placeholder="e.g. City Hospital, Metro Medical Center">
-                    </div>
-
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <label>Brief Clinical Notes / Current Symptoms</label>
-                        <textarea style="width: 100%; padding: 0.8rem 1rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); color: var(--text); font-family: inherit; font-size: 0.95rem; min-height: 100px;" placeholder="Describe symptom duration, medications you take, or any questions for the specialist..."></textarea>
+                    <!-- Specialty Preview Card -->
+                    <div id="specialtyPreviewCard" class="specialty-preview-card" style="display: none;">
+                        <div class="specialty-preview-header">
+                            <div>
+                                <strong id="specCanonicalName" style="color: var(--text); font-size: 1.05rem;">Cardiovascular / Heart Disease</strong>
+                                <span style="color: var(--text-muted); font-size: 0.88rem; display: block;" id="specSpecialistTypes">Specialists: Cardiologist, Cardiothoracic Surgeon</span>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <span class="specialty-badge-pill" id="specPrimaryBadge">Cardiology</span>
+                                <span id="specTelemedBadge" class="hosp-badge telemed-yes">Telemedicine Eligible</span>
+                            </div>
+                        </div>
+                        <p id="specClinicalNotice" style="margin: 0; font-size: 0.86rem; color: #fde68a; line-height: 1.4;"></p>
                     </div>
                 </div>
 
-                <div style="margin-top: 2rem; text-align: center;">
-                    <button type="submit" class="btn btn-primary btn-large" style="min-width: 280px;">
-                        <span>Request Priority Appointment</span>
-                    </button>
+                <!-- STEP 2: HOSPITAL DISCOVERY & GEOLOCATION -->
+                <div style="margin-bottom: 2.5rem;">
+                    <div class="flow-step-header">
+                        <span class="flow-step-badge">2</span>
+                        <div>
+                            <h3 class="flow-step-title">Discover Healthcare Facilities & Specialty Referral Centres</h3>
+                            <p class="flow-step-desc">Detect nearby facilities using live GPS or search manually by city, postcode, or address.</p>
+                        </div>
+                    </div>
+
+                    <!-- Discovery Toolbar -->
+                    <div class="discovery-toolbar">
+                        <div class="location-input-row">
+                            <button type="button" id="btnUseGeolocation" class="btn-geo-action" onclick="requestBrowserGeolocation()">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                </svg>
+                                <span>📍 Use My Current Location</span>
+                            </button>
+
+                            <div class="location-input-wrapper">
+                                <input type="text" id="manualLocationInput" placeholder="Or enter City, Postcode, or Hospital Name..." style="width: 100%; padding: 0.75rem 1rem; background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: 10px; color: var(--text); font-family: inherit; font-size: 0.92rem;" onkeydown="if(event.key==='Enter'){event.preventDefault(); triggerManualLocationSearch();}">
+                            </div>
+
+                            <button type="button" class="btn btn-outline btn-sm" onclick="triggerManualLocationSearch()">
+                                Search Location
+                            </button>
+                        </div>
+
+                        <!-- Location & Filter Status Line -->
+                        <div class="filter-controls-row">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">ACTIVE RADIUS:</span>
+                                <div class="radius-pill-group">
+                                    <button type="button" class="radius-pill" onclick="setRadius(5, this)">5 km</button>
+                                    <button type="button" class="radius-pill" onclick="setRadius(10, this)">10 km</button>
+                                    <button type="button" class="radius-pill active" onclick="setRadius(20, this)">20 km</button>
+                                    <button type="button" class="radius-pill" onclick="setRadius(25, this)">25 km</button>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
+                                <div class="filter-group">
+                                    <span>Mode:</span>
+                                    <select id="modeFilterSelect" class="filter-select" onchange="applyFiltersAndRender()">
+                                        <option value="all">All Modes</option>
+                                        <option value="in_person">In-Person Only</option>
+                                        <option value="telemedicine">Verified Telemedicine</option>
+                                    </select>
+                                </div>
+
+                                <div class="filter-group">
+                                    <span>Type:</span>
+                                    <select id="typeFilterSelect" class="filter-select" onchange="applyFiltersAndRender()">
+                                        <option value="all">All Facilities</option>
+                                        <option value="nearby">Nearby Facilities</option>
+                                        <option value="global">Global Specialty Centres</option>
+                                    </select>
+                                </div>
+
+                                <div class="filter-group">
+                                    <span>Sort By:</span>
+                                    <select id="sortFilterSelect" class="filter-select" onchange="applyFiltersAndRender()">
+                                        <option value="recommended">Smart Recommendation</option>
+                                        <option value="distance">Distance (Closest First)</option>
+                                        <option value="specialty">Specialty Relevance</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Active Geolocation Resolution Pill -->
+                        <div id="activeLocationBanner" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.25rem;">
+                            <span id="activeLocationPill" class="location-status-pill">
+                                <span>📍 Showing: Global Specialty Referral Centres</span>
+                            </span>
+                            <span style="font-size: 0.78rem; color: var(--text-subtle);">
+                                Note: Distances shown are straight-line approximations (Haversine formula).
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: INTERACTIVE HOSPITAL COMPARISON TABLE -->
+                    <div class="hospital-table-container">
+                        <table class="hospital-table" id="hospitalComparisonTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px; text-align: center;">Select</th>
+                                    <th>Hospital Name & Facility Type</th>
+                                    <th>Specialty Match</th>
+                                    <th>Address & Straight-line Distance</th>
+                                    <th>Consultation Mode</th>
+                                    <th>Verified Services</th>
+                                    <th style="text-align: center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hospitalTableBody">
+                                <!-- Dynamic Rows Injected by JavaScript -->
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+                                        <div style="font-size: 2rem; margin-bottom: 0.75rem;">🏥</div>
+                                        <strong>Loading Verified Specialty Hospitals...</strong>
+                                        <p style="font-size: 0.88rem; margin-top: 0.4rem;">Select your condition above to discover tailored healthcare facilities.</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Selected Hospital Highlight Banner -->
+                    <div id="selectedHospitalBanner" class="selected-hospital-banner" style="display: none;">
+                        <div class="selected-hospital-info">
+                            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem;">
+                                <span class="hosp-badge curated" id="selBadge">Global Specialty Centre</span>
+                                <span class="hosp-badge spec-verified" id="selSpecMatchBadge">Specialty Matched</span>
+                            </div>
+                            <h4 id="selHospName">Cleveland Clinic Heart & Vascular Institute</h4>
+                            <p id="selHospAddress">9500 Euclid Ave, Cleveland, OH 44195, USA</p>
+                            <p id="selHospRationale" style="margin-top: 0.4rem; font-size: 0.84rem; color: var(--primary-light);"></p>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="showHospitalDetailsModal(CURRENT_SELECTED_HOSPITAL)">
+                                View Full Credentials
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 4: CONSULTATION MODE & PREFERRED SCHEDULE -->
+                <div style="margin-bottom: 2.5rem;">
+                    <div class="flow-step-header">
+                        <span class="flow-step-badge">3</span>
+                        <div>
+                            <h3 class="flow-step-title">Consultation Mode & Preferred Appointment Schedule</h3>
+                            <p class="flow-step-desc">Choose your preferred consultation format and requested date/time slot.</p>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Consultation Mode <span style="color: var(--danger);">*</span></label>
+                            <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.25rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text); font-weight: 500;">
+                                    <input type="radio" name="consultationMode" value="in_person" checked onchange="handleConsultationModeChange(this.value)">
+                                    <span>🏥 In-Person Consultation</span>
+                                </label>
+                                <label id="telemedRadioLabel" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text); font-weight: 500;">
+                                    <input type="radio" name="consultationMode" value="telemedicine" id="telemedRadio" onchange="handleConsultationModeChange(this.value)">
+                                    <span>💻 Telemedicine Video Consultation</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="preferredDate">Preferred Appointment Date <span style="color: var(--danger);">*</span></label>
+                            <input type="date" id="preferredDate" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="preferredTimeSlot">Preferred Time Slot <span style="color: var(--danger);">*</span></label>
+                            <select id="preferredTimeSlot" required>
+                                <option value="">Select Preferred Time Slot...</option>
+                                <option value="09:00 - 10:00 AM">09:00 - 10:00 AM (Morning Session)</option>
+                                <option value="10:00 - 11:00 AM">10:00 - 11:00 AM (Morning Session)</option>
+                                <option value="11:00 - 12:00 PM">11:00 - 12:00 PM (Mid-day Session)</option>
+                                <option value="02:00 - 03:00 PM">02:00 - 03:00 PM (Afternoon Session)</option>
+                                <option value="03:00 - 04:00 PM">03:00 - 04:00 PM (Afternoon Session)</option>
+                                <option value="04:00 - 05:00 PM">04:00 - 05:00 PM (Evening Session)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Critical Scheduling Disclaimer Box -->
+                    <div class="scheduling-disclaimer-box" style="margin-top: 1.5rem;">
+                        <span class="icon">⚠️</span>
+                        <div>
+                            <strong style="color: #fbbf24; font-size: 0.95rem; display: block; margin-bottom: 0.25rem;">
+                                Scheduling Status Notice: Preferred Slot vs Confirmed Appointment
+                            </strong>
+                            <p>
+                                The preferred date and time selected above represents your requested timing. MediNova coordinates with the selected facility's clinic administration. 
+                                <strong>Your appointment is NOT confirmed until verified by the hospital.</strong> Initial status will be set to <em>"Awaiting Hospital Confirmation"</em>.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 5: INFORMED CONSENT & SUBMISSION -->
+                <div style="margin-bottom: 2rem;">
+                    <div class="flow-step-header">
+                        <span class="flow-step-badge">4</span>
+                        <div>
+                            <h3 class="flow-step-title">Informed Consent & Priority Submission</h3>
+                            <p class="flow-step-desc">Verify your consultation parameters before submitting the coordination request.</p>
+                        </div>
+                    </div>
+
+                    <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-glass); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem;">
+                        <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; color: var(--text); font-size: 0.92rem; line-height: 1.5;">
+                            <input type="checkbox" id="consentCheckbox" required style="margin-top: 0.25rem;">
+                            <span>
+                                I consent to MediNova transmitting my contact details and diagnostic condition summary to the chosen healthcare facility solely to schedule this consultation. I understand this request is subject to clinic confirmation.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div style="text-align: center;">
+                        <button type="submit" id="btnSubmitAppointment" class="btn btn-primary btn-large" style="min-width: 320px;">
+                            <span id="btnSubmitText">Request Priority Appointment &rarr;</span>
+                        </button>
+                    </div>
                 </div>
             </form>
+        </div>
+
+        <!-- MY BOOKED APPOINTMENTS DASHBOARD SECTION -->
+        <div class="tracking-card" id="trackingSection">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+                <div>
+                    <h2 style="font-size: 1.45rem; color: var(--text); margin: 0 0 0.35rem 0;">
+                        📋 My Booked Appointments & Live Status Tracking
+                    </h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">
+                        Enter your unique Reference ID and verification contact to track live hospital confirmation status.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Tracking Lookup Form -->
+            <form onsubmit="handleTrackingLookup(event)" class="tracking-search-bar">
+                <input type="text" id="trackRefId" placeholder="Reference ID (e.g. APT-2026-AB12CD)" required style="flex: 1; min-width: 220px; padding: 0.75rem 1rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-glass); border-radius: 10px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.95rem;" value="{{ tracking_ref }}">
+                <input type="text" id="trackContact" placeholder="Patient Email or Phone Number" required style="flex: 1; min-width: 220px; padding: 0.75rem 1rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-glass); border-radius: 10px; color: var(--text); font-family: inherit; font-size: 0.95rem;">
+                <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.5rem;">
+                    Track Status
+                </button>
+            </form>
+
+            <!-- Tracking Result Panel -->
+            <div id="trackingResultPanel" style="display: none; background: var(--bg-surface-elevated); border: 1px solid var(--border-glass); border-radius: 12px; padding: 1.75rem; margin-top: 1.5rem;">
+                <!-- Populated dynamically by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: APPOINTMENT CONFIRMATION RECEIPT & PRINT SLIP -->
+    <div id="appointmentReceiptModal" class="med-modal-backdrop">
+        <div class="med-modal-card print-slip-area">
+            <button type="button" class="med-modal-close-btn no-print" onclick="closeReceiptModal()">&times;</button>
+            
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-glass); padding-bottom: 1.25rem; margin-bottom: 1.25rem;">
+                <div>
+                    <span style="font-size: 0.8rem; color: var(--primary-light); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">MediNova Priority Consultation</span>
+                    <h3 style="margin: 0.25rem 0 0 0; color: var(--text); font-size: 1.45rem;">Appointment Request Receipt</h3>
+                </div>
+                <div style="text-align: right;">
+                    <span id="receiptStatusBadge" class="status-pill awaiting">Awaiting Hospital Confirmation</span>
+                </div>
+            </div>
+
+            <!-- Prominent Reference Banner -->
+            <div style="background: rgba(6, 182, 212, 0.1); border: 1px dashed var(--primary); border-radius: 10px; padding: 1rem; text-align: center; margin-bottom: 1.5rem;">
+                <span style="font-size: 0.82rem; color: var(--text-muted); text-transform: uppercase;">Unique Reference ID</span>
+                <div id="receiptReferenceId" style="font-size: 1.6rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--primary-light); letter-spacing: 0.05em;">
+                    APT-2026-AB12CD
+                </div>
+                <span style="font-size: 0.78rem; color: var(--text-muted);">Please retain this ID for all hospital inquiries and status tracking.</span>
+            </div>
+
+            <!-- Receipt Detail Table -->
+            <table class="receipt-table">
+                <tr>
+                    <td>Patient Name</td>
+                    <td id="receiptPatientName">-</td>
+                </tr>
+                <tr>
+                    <td>Contact Details</td>
+                    <td id="receiptContact">-</td>
+                </tr>
+                <tr>
+                    <td>Diagnostic Condition</td>
+                    <td id="receiptCondition">-</td>
+                </tr>
+                <tr>
+                    <td>Requested Hospital</td>
+                    <td id="receiptHospitalName">-</td>
+                </tr>
+                <tr>
+                    <td>Hospital Address</td>
+                    <td id="receiptHospitalAddress" style="font-size: 0.88rem; color: var(--text-muted);">-</td>
+                </tr>
+                <tr>
+                    <td>Consultation Mode</td>
+                    <td id="receiptMode">-</td>
+                </tr>
+                <tr>
+                    <td>Requested Date & Slot</td>
+                    <td id="receiptSchedule">-</td>
+                </tr>
+                <tr>
+                    <td>Request Timestamp</td>
+                    <td id="receiptTimestamp">-</td>
+                </tr>
+                <tr id="receiptNotesRow">
+                    <td>Clinical Notes</td>
+                    <td id="receiptNotes" style="font-size: 0.88rem; font-weight: normal; color: var(--text-muted);">-</td>
+                </tr>
+            </table>
+
+            <!-- Confirmation Notice -->
+            <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1.5rem;">
+                <p style="margin: 0; font-size: 0.84rem; color: #fde68a; line-height: 1.45;">
+                    ℹ️ <strong>Status Notice:</strong> Your appointment request has been submitted. The hospital has <strong>not yet confirmed</strong> the appointment unless the status explicitly states <em>"Confirmed by Hospital"</em>.
+                </p>
+            </div>
+
+            <!-- Action Toolbar (Hidden in Print) -->
+            <div class="no-print" style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: flex-end; align-items: center; border-top: 1px solid var(--border-glass); padding-top: 1.25rem;">
+                <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: var(--text-muted); margin-right: auto; cursor: pointer;">
+                    <input type="checkbox" id="toggleHideNotesPrint" onchange="document.getElementById('receiptNotesRow').style.display = this.checked ? 'none' : 'table-row';">
+                    <span>Hide clinical notes on printed slip</span>
+                </label>
+
+                <a id="btnReceiptGoogleCalendar" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm">
+                    📅 Add to Google Calendar
+                </a>
+
+                <a id="btnReceiptDownloadICS" href="#" class="btn btn-outline btn-sm">
+                    📥 Download .ICS
+                </a>
+
+                <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">
+                    🖨️ Print Slip / PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: HOSPITAL FULL CREDENTIALS & DETAILS -->
+    <div id="hospitalDetailsModal" class="med-modal-backdrop">
+        <div class="med-modal-card">
+            <button type="button" class="med-modal-close-btn" onclick="closeHospitalDetailsModal()">&times;</button>
+            
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem;">
+                <span id="modalHospCategoryBadge" class="hosp-badge curated">Global Specialty Centre</span>
+                <span id="modalHospSpecBadge" class="hosp-badge spec-verified">Specialty Verified</span>
+            </div>
+
+            <h3 id="modalHospName" style="color: var(--text); font-size: 1.4rem; margin: 0 0 0.5rem 0;">Cleveland Clinic</h3>
+            <p id="modalHospType" style="color: var(--primary-light); font-size: 0.9rem; margin: 0 0 1.25rem 0;">Academic Medical Centre</p>
+
+            <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-glass); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.25rem;">
+                <strong style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">Transparent Matching Rationale:</strong>
+                <p id="modalHospRationale" style="margin: 0.4rem 0 0 0; font-size: 0.92rem; color: var(--text); line-height: 1.45;"></p>
+            </div>
+
+            <table class="receipt-table" style="margin: 0 0 1.5rem 0;">
+                <tr>
+                    <td>Full Address</td>
+                    <td id="modalHospAddress">-</td>
+                </tr>
+                <tr>
+                    <td>Straight-line Distance</td>
+                    <td id="modalHospDistance">-</td>
+                </tr>
+                <tr>
+                    <td>Telemedicine Service</td>
+                    <td id="modalHospTelemed">-</td>
+                </tr>
+                <tr>
+                    <td>Verified Accreditations</td>
+                    <td id="modalHospCredentials">-</td>
+                </tr>
+                <tr>
+                    <td>Contact Phone</td>
+                    <td id="modalHospPhone">-</td>
+                </tr>
+                <tr>
+                    <td>Data Source & Verification</td>
+                    <td id="modalHospSource" style="font-size: 0.85rem; color: var(--text-muted);">-</td>
+                </tr>
+            </table>
+
+            <div style="display: flex; gap: 0.75rem; justify-content: flex-end; flex-wrap: wrap;">
+                <a id="modalHospDirectionsBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm">
+                    🗺️ Open Map Directions
+                </a>
+                <a id="modalHospWebsiteBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm">
+                    🌐 Official Hospital Portal
+                </a>
+                <button type="button" class="btn btn-primary btn-sm" onclick="selectHospitalFromModal()">
+                    ✓ Select This Hospital
+                </button>
+            </div>
         </div>
     </div>
 
@@ -175,8 +608,718 @@
             </div>
         </div>
     </footer>
+
+    <!-- Scripts -->
     <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
     <script src="{{ url_for('static', filename='chatbot.js') }}?v=3"></script>
+
+    <!-- HOSPITAL DISCOVERY & APPOINTMENT MANAGEMENT CONTROLLER -->
+    <script>
+        // State Management
+        let CURRENT_SPECIALTIES = {};
+        let ALL_RECOMMENDATIONS = [];
+        let CURRENT_SELECTED_HOSPITAL = null;
+        let PATIENT_COORDS = { lat: null, lon: null, label: 'Location Not Provided' };
+        let SEARCH_RADIUS_KM = 20;
+
+        // Initialize minimum date to today
+        document.addEventListener('DOMContentLoaded', function() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('preferredDate');
+            if (dateInput) {
+                dateInput.min = todayStr;
+                // Set default to tomorrow
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                dateInput.value = tomorrow.toISOString().split('T')[0];
+            }
+
+            // Fetch Specialty Mappings
+            fetchSpecialtyMappings().then(() => {
+                const condSelect = document.getElementById('conditionSelect');
+                if (condSelect && condSelect.value) {
+                    handleConditionChange(condSelect.value);
+                } else {
+                    handleConditionChange('heart');
+                }
+            });
+
+            // If tracking ref passed in URL, trigger lookup automatically
+            const trackRefInput = document.getElementById('trackRefId');
+            if (trackRefInput && trackRefInput.value) {
+                document.getElementById('trackingSection').scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+
+        // 1. Fetch Specialties Metadata from Backend
+        async function fetchSpecialtyMappings() {
+            try {
+                const resp = await fetch('/api/hospitals/specialties');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    CURRENT_SPECIALTIES = data.specialties || {};
+                }
+            } catch (err) {
+                console.warn('Failed to load specialties metadata:', err);
+            }
+        }
+
+        // 2. Condition Change Handler
+        function handleConditionChange(conditionId) {
+            if (!conditionId) return;
+
+            const specInfo = CURRENT_SPECIALTIES[conditionId];
+            const previewCard = document.getElementById('specialtyPreviewCard');
+            if (specInfo && previewCard) {
+                previewCard.style.display = 'flex';
+                document.getElementById('specCanonicalName').textContent = specInfo.canonical_name || conditionId;
+                document.getElementById('specSpecialistTypes').textContent = 'Specialists: ' + (specInfo.specialist_types || []).join(', ');
+                document.getElementById('specPrimaryBadge').textContent = specInfo.primary_specialty || 'General Medicine';
+
+                const telemedBadge = document.getElementById('specTelemedBadge');
+                if (specInfo.telemedicine_eligible) {
+                    telemedBadge.className = 'hosp-badge telemed-yes';
+                    telemedBadge.textContent = 'Telemedicine Eligible';
+                    document.getElementById('telemedRadioLabel').style.opacity = '1';
+                    document.getElementById('telemedRadio').disabled = false;
+                } else {
+                    telemedBadge.className = 'hosp-badge telemed-no';
+                    telemedBadge.textContent = 'Mandatory In-Person Care';
+                    document.getElementById('telemedRadioLabel').style.opacity = '0.5';
+                    document.getElementById('telemedRadio').disabled = true;
+                    // Reset to in-person if currently on telemed
+                    document.querySelector('input[name="consultationMode"][value="in_person"]').checked = true;
+                }
+
+                const noticeEl = document.getElementById('specClinicalNotice');
+                if (specInfo.urgent_warning) {
+                    noticeEl.textContent = '⚠️ Clinical Notice: ' + specInfo.urgent_warning;
+                    noticeEl.style.display = 'block';
+                } else {
+                    noticeEl.style.display = 'none';
+                }
+            }
+
+            // Fetch hospital recommendations for this condition
+            fetchHospitals();
+        }
+
+        // 3. Geolocation API Integration
+        function requestBrowserGeolocation() {
+            const btn = document.getElementById('btnUseGeolocation');
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser. Please search manually by city or address.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ Requesting Location...</span>';
+
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    PATIENT_COORDS.lat = position.coords.latitude;
+                    PATIENT_COORDS.lon = position.coords.longitude;
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>📍 Location Detected ✓</span>';
+                    btn.style.background = '#10b981';
+
+                    fetchHospitals();
+                },
+                function(error) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>📍 Use My Current Location</span>';
+                    let msg = 'Could not access location.';
+                    if (error.code === error.PERMISSION_DENIED) {
+                        msg = 'Location permission was denied. You can still search by city or postcode without GPS.';
+                    } else if (error.code === error.TIMEOUT) {
+                        msg = 'Location request timed out. Please enter your city manually.';
+                    }
+                    updateLocationPill('Location Access Denied (Manual Search Available)', true);
+                    alert(msg);
+                },
+                { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 }
+            );
+        }
+
+        // 4. Manual Location Search Trigger
+        function triggerManualLocationSearch() {
+            const query = (document.getElementById('manualLocationInput').value || '').trim();
+            if (!query) {
+                alert('Please enter a city, postcode, or address to search.');
+                return;
+            }
+            // Clear lat/lon so manual query resolves via Nominatim
+            PATIENT_COORDS.lat = null;
+            PATIENT_COORDS.lon = null;
+            fetchHospitals(query);
+        }
+
+        function setRadius(radiusKm, btnElem) {
+            SEARCH_RADIUS_KM = radiusKm;
+            document.querySelectorAll('.radius-pill').forEach(b => b.classList.remove('active'));
+            if (btnElem) btnElem.classList.add('active');
+            fetchHospitals();
+        }
+
+        // 5. Query Hospitals API
+        async function fetchHospitals(manualQuery = '') {
+            const condition = document.getElementById('conditionSelect').value || 'heart';
+            const tbody = document.getElementById('hospitalTableBody');
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+                        <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">🔍</div>
+                        <strong>Searching Accredited Healthcare Facilities & Global Centres...</strong>
+                        <p style="font-size: 0.85rem; margin-top: 0.3rem;">Querying OpenStreetMap Overpass live health registry.</p>
+                    </td>
+                </tr>
+            `;
+
+            let url = `/api/hospitals/search?condition=${encodeURIComponent(condition)}&radius_km=${SEARCH_RADIUS_KM}`;
+            if (PATIENT_COORDS.lat && PATIENT_COORDS.lon) {
+                url += `&lat=${PATIENT_COORDS.lat}&lon=${PATIENT_COORDS.lon}`;
+            } else if (manualQuery) {
+                url += `&query=${encodeURIComponent(manualQuery)}`;
+            }
+
+            try {
+                const resp = await fetch(url);
+                const data = await resp.json();
+
+                if (data.status === 'success') {
+                    ALL_RECOMMENDATIONS = data.recommendations || [];
+                    
+                    // Update location pill
+                    if (data.location && data.location.display_name) {
+                        PATIENT_COORDS.label = data.location.display_name;
+                        updateLocationPill(`📍 Search Location: ${data.location.display_name}`);
+                    }
+
+                    applyFiltersAndRender();
+                } else {
+                    renderEmptyTable('Hospital discovery encountered an error. Showing curated centres.');
+                }
+            } catch (err) {
+                console.error('Hospital discovery request failed:', err);
+                renderEmptyTable('Network error communicating with hospital discovery service.');
+            }
+        }
+
+        function updateLocationPill(text, isWarning = false) {
+            const pill = document.getElementById('activeLocationPill');
+            if (pill) {
+                pill.textContent = text;
+                pill.className = isWarning ? 'location-status-pill warning' : 'location-status-pill';
+            }
+        }
+
+        // 6. Apply In-Memory Filters and Render Table
+        function applyFiltersAndRender() {
+            const modeFilter = document.getElementById('modeFilterSelect').value;
+            const typeFilter = document.getElementById('typeFilterSelect').value;
+            const sortFilter = document.getElementById('sortFilterSelect').value;
+
+            let filtered = [...ALL_RECOMMENDATIONS];
+
+            // Filter by Mode
+            if (modeFilter === 'in_person') {
+                // In-person allowed on all
+            } else if (modeFilter === 'telemedicine') {
+                filtered = filtered.filter(h => h.telemedicine_available === true);
+            }
+
+            // Filter by Facility Type
+            if (typeFilter === 'nearby') {
+                filtered = filtered.filter(h => h.category === 'nearby' || !h.is_curated);
+            } else if (typeFilter === 'global') {
+                filtered = filtered.filter(h => h.is_curated || h.category === 'global');
+            }
+
+            // Sort
+            if (sortFilter === 'distance') {
+                filtered.sort((a, b) => {
+                    const distA = a.distance_km != null ? a.distance_km : 99999;
+                    const distB = b.distance_km != null ? b.distance_km : 99999;
+                    return distA - distB;
+                });
+            } else if (sortFilter === 'specialty') {
+                filtered.sort((a, b) => (b.specialty_match ? 1 : 0) - (a.specialty_match ? 1 : 0));
+            } else {
+                // Default: Recommendation score descending
+                filtered.sort((a, b) => (b.recommendation_score || 0) - (a.recommendation_score || 0));
+            }
+
+            renderHospitalRows(filtered);
+        }
+
+        function renderHospitalRows(hospitals) {
+            const tbody = document.getElementById('hospitalTableBody');
+            if (!hospitals || hospitals.length === 0) {
+                renderEmptyTable('No facilities found matching your exact filter criteria. Try expanding search radius or selecting "All Modes".');
+                return;
+            }
+
+            let html = '';
+            hospitals.forEach((h, idx) => {
+                const isSelected = CURRENT_SELECTED_HOSPITAL && CURRENT_SELECTED_HOSPITAL.id === h.id;
+                const distanceLabel = h.distance_km != null ? `~${h.distance_km.toFixed(1)} km (straight-line)` : 'Global Centre';
+                const typeBadgeClass = h.is_curated ? 'curated' : 'nearby';
+                const typeBadgeText = h.is_curated ? 'Global Specialty Centre' : 'Nearby Facility';
+                const specBadgeClass = h.specialty_match ? 'spec-verified' : 'spec-unverified';
+                const telemedBadgeClass = h.telemedicine_available ? 'telemed-yes' : 'telemed-no';
+                const telemedText = h.telemedicine_available ? 'Telemedicine Verified' : 'In-Person Only';
+
+                html += `
+                    <tr class="hospital-row ${isSelected ? 'selected' : ''}" onclick="selectHospitalById('${h.id}')" data-id="${h.id}">
+                        <td data-label="Select" style="text-align: center;">
+                            <input type="radio" name="selectedHospitalRadio" value="${h.id}" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); selectHospitalById('${h.id}')">
+                        </td>
+                        <td data-label="Facility">
+                            <strong style="color: var(--text); font-size: 0.98rem;">${escapeHtml(h.name)}</strong>
+                            <div style="margin-top: 0.25rem;">
+                                <span class="hosp-badge ${typeBadgeClass}">${typeBadgeText}</span>
+                                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.4rem;">${escapeHtml(h.facility_type || '')}</span>
+                            </div>
+                        </td>
+                        <td data-label="Specialty">
+                            <span class="hosp-badge ${specBadgeClass}">${escapeHtml(h.specialty_label || 'Specialty Matched')}</span>
+                            <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.3rem;">
+                                ${escapeHtml(h.primary_specialty || '')}
+                            </div>
+                        </td>
+                        <td data-label="Location">
+                            <span style="font-weight: 600; color: var(--primary-light);">${distanceLabel}</span>
+                            <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem;">
+                                ${escapeHtml(h.city || '')}${h.country ? ', ' + escapeHtml(h.country) : ''}
+                            </div>
+                        </td>
+                        <td data-label="Consultation Mode">
+                            <span class="hosp-badge ${telemedBadgeClass}">${telemedText}</span>
+                        </td>
+                        <td data-label="Verified Services">
+                            <span style="font-size: 0.82rem; color: var(--text-subtle);">
+                                ${escapeHtml(h.verified_credentials || 'Registered Medical Facility')}
+                            </span>
+                        </td>
+                        <td data-label="Actions" style="text-align: center; white-space: nowrap;">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="event.stopPropagation(); showHospitalDetailsModalById('${h.id}')">
+                                Details &rarr;
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+
+            // Auto-select first recommended if none selected
+            if (!CURRENT_SELECTED_HOSPITAL && hospitals.length > 0) {
+                selectHospitalById(hospitals[0].id);
+            }
+        }
+
+        function renderEmptyTable(message) {
+            const tbody = document.getElementById('hospitalTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+                        <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">🏥</div>
+                        <strong>${escapeHtml(message)}</strong>
+                        <div style="margin-top: 1rem;">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="setRadius(25); document.getElementById('typeFilterSelect').value='all'; applyFiltersAndRender();">
+                                Expand to 25 km & Show All
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // 7. Hospital Selection Logic
+        function selectHospitalById(hospId) {
+            const found = ALL_RECOMMENDATIONS.find(h => h.id === hospId);
+            if (!found) return;
+
+            CURRENT_SELECTED_HOSPITAL = found;
+
+            // Update radio checks & row selected styling
+            document.querySelectorAll('#hospitalTableBody tr.hospital-row').forEach(row => {
+                if (row.getAttribute('data-id') === hospId) {
+                    row.classList.add('selected');
+                    const radio = row.querySelector('input[type="radio"]');
+                    if (radio) radio.checked = true;
+                } else {
+                    row.classList.remove('selected');
+                }
+            });
+
+            // Update Highlight Summary Card
+            const banner = document.getElementById('selectedHospitalBanner');
+            banner.style.display = 'flex';
+            document.getElementById('selHospName').textContent = found.name;
+            document.getElementById('selHospAddress').textContent = found.address || found.city || 'Verified Medical Centre';
+            document.getElementById('selBadge').textContent = found.is_curated ? 'Global Specialty Centre' : 'Nearby Facility';
+            document.getElementById('selBadge').className = found.is_curated ? 'hosp-badge curated' : 'hosp-badge nearby';
+            document.getElementById('selSpecMatchBadge').textContent = found.specialty_label || 'Specialty Matched';
+            document.getElementById('selSpecMatchBadge').className = found.specialty_match ? 'hosp-badge spec-verified' : 'hosp-badge spec-unverified';
+            document.getElementById('selHospRationale').textContent = found.recommendation_rationale || '';
+
+            // Handle Telemedicine Radio Disabled state
+            const teleRadio = document.getElementById('telemedRadio');
+            const teleLabel = document.getElementById('telemedRadioLabel');
+            if (found.telemedicine_available) {
+                teleRadio.disabled = false;
+                teleLabel.style.opacity = '1';
+                teleLabel.title = 'Telemedicine available for this provider.';
+            } else {
+                teleRadio.disabled = true;
+                teleLabel.style.opacity = '0.5';
+                teleLabel.title = 'Telemedicine unverified for this provider. In-person visit required.';
+                // Default to in-person
+                document.querySelector('input[name="consultationMode"][value="in_person"]').checked = true;
+            }
+        }
+
+        // 8. Hospital Details Modal
+        function showHospitalDetailsModalById(hospId) {
+            const found = ALL_RECOMMENDATIONS.find(h => h.id === hospId);
+            if (found) showHospitalDetailsModal(found);
+        }
+
+        function showHospitalDetailsModal(hosp) {
+            if (!hosp) return;
+            document.getElementById('modalHospName').textContent = hosp.name;
+            document.getElementById('modalHospType').textContent = hosp.facility_type || 'Specialized Healthcare Facility';
+            document.getElementById('modalHospCategoryBadge').textContent = hosp.is_curated ? 'Global Specialty Centre' : 'Nearby Facility';
+            document.getElementById('modalHospCategoryBadge').className = hosp.is_curated ? 'hosp-badge curated' : 'hosp-badge nearby';
+            document.getElementById('modalHospSpecBadge').textContent = hosp.specialty_label || 'Specialty Match';
+            document.getElementById('modalHospSpecBadge').className = hosp.specialty_match ? 'hosp-badge spec-verified' : 'hosp-badge spec-unverified';
+            document.getElementById('modalHospRationale').textContent = hosp.recommendation_rationale || 'General healthcare provider.';
+            document.getElementById('modalHospAddress').textContent = hosp.address || 'Address on file';
+            document.getElementById('modalHospDistance').textContent = hosp.distance_km != null ? `~${hosp.distance_km.toFixed(1)} km (straight-line)` : 'Global Centre';
+            document.getElementById('modalHospTelemed').textContent = hosp.telemedicine_available ? 'Verified Telemedicine Consultations Available' : 'In-Person Facility Visit Required';
+            document.getElementById('modalHospCredentials').textContent = hosp.verified_credentials || 'Public Healthcare Provider';
+            document.getElementById('modalHospPhone').textContent = hosp.phone || 'Available via reception';
+            document.getElementById('modalHospSource').textContent = hosp.source_attribution || 'Live Healthcare Registry';
+
+            // Directions button
+            const dirBtn = document.getElementById('modalHospDirectionsBtn');
+            if (hosp.directions_url) {
+                dirBtn.href = hosp.directions_url;
+                dirBtn.style.display = 'inline-flex';
+            } else {
+                dirBtn.style.display = 'none';
+            }
+
+            // Website button
+            const webBtn = document.getElementById('modalHospWebsiteBtn');
+            if (hosp.website_url) {
+                webBtn.href = hosp.website_url;
+                webBtn.style.display = 'inline-flex';
+            } else {
+                webBtn.style.display = 'none';
+            }
+
+            document.getElementById('hospitalDetailsModal').classList.add('active');
+        }
+
+        function closeHospitalDetailsModal() {
+            document.getElementById('hospitalDetailsModal').classList.remove('active');
+        }
+
+        function selectHospitalFromModal() {
+            if (CURRENT_SELECTED_HOSPITAL) {
+                selectHospitalById(CURRENT_SELECTED_HOSPITAL.id);
+            }
+            closeHospitalDetailsModal();
+        }
+
+        // 9. Real-Time Emergency Symptoms Detection in Notes
+        function checkClinicalNotesUrgency(text) {
+            const lower = (text || '').toLowerCase();
+            const redFlags = ['crushing chest pain', 'cannot breathe', 'stroke', 'loss of consciousness', 'vomiting blood', 'seizure', 'unresponsive'];
+            const alertBox = document.getElementById('urgentSymptomsAlert');
+            const hasUrgent = redFlags.some(flag => lower.includes(flag));
+            if (alertBox) {
+                alertBox.style.display = hasUrgent ? 'block' : 'none';
+            }
+        }
+
+        function handleConsultationModeChange(mode) {
+            // Handled via radio checked
+        }
+
+        // 10. Form Submission & Appointment Booking
+        async function handleAppointmentSubmit(event) {
+            event.preventDefault();
+
+            if (!CURRENT_SELECTED_HOSPITAL) {
+                alert('Please select a healthcare facility from the hospital discovery table above before submitting.');
+                return;
+            }
+
+            const patientName = document.getElementById('patientName').value.trim();
+            const phone = document.getElementById('patientPhone').value.trim();
+            const email = document.getElementById('patientEmail').value.trim();
+            const conditionId = document.getElementById('conditionSelect').value;
+            const clinicalNotes = document.getElementById('clinicalNotes').value.trim();
+            const prefDate = document.getElementById('preferredDate').value;
+            const prefSlot = document.getElementById('preferredTimeSlot').value;
+            const mode = document.querySelector('input[name="consultationMode"]:checked').value;
+            const consent = document.getElementById('consentCheckbox').checked;
+
+            if (!patientName || !phone || !email || !conditionId || !prefDate || !prefSlot) {
+                alert('Please fill in all required fields marked with *.');
+                return;
+            }
+
+            if (!consent) {
+                alert('Please indicate your informed consent to process this appointment request.');
+                return;
+            }
+
+            const specInfo = CURRENT_SPECIALTIES[conditionId] || {};
+            const condName = specInfo.canonical_name || conditionId;
+
+            const payload = {
+                patient_name: patientName,
+                phone: phone,
+                email: email,
+                condition_id: conditionId,
+                condition_name: condName,
+                clinical_notes: clinicalNotes,
+                hospital_id: CURRENT_SELECTED_HOSPITAL.id,
+                hospital_name: CURRENT_SELECTED_HOSPITAL.name,
+                facility_type: CURRENT_SELECTED_HOSPITAL.facility_type,
+                hospital_address: CURRENT_SELECTED_HOSPITAL.address || CURRENT_SELECTED_HOSPITAL.city || 'Verified Address',
+                hospital_website: CURRENT_SELECTED_HOSPITAL.website_url,
+                directions_url: CURRENT_SELECTED_HOSPITAL.directions_url,
+                distance_km: CURRENT_SELECTED_HOSPITAL.distance_km,
+                specialty_label: CURRENT_SELECTED_HOSPITAL.specialty_label,
+                consultation_mode: mode,
+                preferred_date: prefDate,
+                preferred_time_slot: prefSlot,
+                consent_given: 1
+            };
+
+            const submitBtn = document.getElementById('btnSubmitAppointment');
+            const submitText = document.getElementById('btnSubmitText');
+            submitBtn.disabled = true;
+            submitText.textContent = 'Submitting Consultation Request...';
+
+            try {
+                const resp = await fetch('/api/appointments/book', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const resData = await resp.json();
+
+                submitBtn.disabled = false;
+                submitText.textContent = 'Request Priority Appointment →';
+
+                if (resData.success && resData.appointment) {
+                    showConfirmationReceiptModal(resData);
+                    // Also populate tracking section
+                    document.getElementById('trackRefId').value = resData.appointment.reference_id;
+                    document.getElementById('trackContact').value = email;
+                } else {
+                    alert('Submission error: ' + (resData.message || 'Could not record appointment.'));
+                }
+            } catch (err) {
+                submitBtn.disabled = false;
+                submitText.textContent = 'Request Priority Appointment →';
+                console.error('Booking submission failed:', err);
+                alert('Connection failure while submitting appointment request. Please verify network.');
+            }
+        }
+
+        // 11. Confirmation Modal Populator
+        function showConfirmationReceiptModal(data) {
+            const apt = data.appointment;
+            document.getElementById('receiptReferenceId').textContent = apt.reference_id;
+            document.getElementById('receiptStatusBadge').textContent = apt.status || 'Awaiting Hospital Confirmation';
+            document.getElementById('receiptPatientName').textContent = apt.patient_name;
+            document.getElementById('receiptContact').textContent = `${apt.phone} | ${apt.email}`;
+            document.getElementById('receiptCondition').textContent = apt.condition_name;
+            document.getElementById('receiptHospitalName').textContent = apt.hospital_name;
+            document.getElementById('receiptHospitalAddress').textContent = apt.hospital_address;
+            document.getElementById('receiptMode').textContent = apt.consultation_mode === 'in_person' ? '🏥 In-Person Consultation' : '💻 Telemedicine Consultation';
+            document.getElementById('receiptSchedule').textContent = `${apt.preferred_date} (${apt.preferred_time_slot})`;
+            document.getElementById('receiptTimestamp').textContent = apt.created_at;
+
+            const notesEl = document.getElementById('receiptNotes');
+            if (apt.clinical_notes) {
+                notesEl.textContent = apt.clinical_notes;
+                document.getElementById('receiptNotesRow').style.display = 'table-row';
+            } else {
+                document.getElementById('receiptNotesRow').style.display = 'none';
+            }
+
+            // Google Calendar link
+            const gcalBtn = document.getElementById('btnReceiptGoogleCalendar');
+            if (data.google_calendar_url) {
+                gcalBtn.href = data.google_calendar_url;
+                gcalBtn.style.display = 'inline-flex';
+            } else {
+                gcalBtn.style.display = 'none';
+            }
+
+            // ICS Download link
+            const icsBtn = document.getElementById('btnReceiptDownloadICS');
+            if (data.ics_url) {
+                icsBtn.href = data.ics_url;
+                icsBtn.style.display = 'inline-flex';
+            } else {
+                icsBtn.style.display = 'none';
+            }
+
+            document.getElementById('appointmentReceiptModal').classList.add('active');
+        }
+
+        function closeReceiptModal() {
+            document.getElementById('appointmentReceiptModal').classList.remove('active');
+        }
+
+        // 12. Patient Tracking Lookup
+        async function handleTrackingLookup(event) {
+            event.preventDefault();
+            const refId = document.getElementById('trackRefId').value.trim().toUpperCase();
+            const contact = document.getElementById('trackContact').value.trim();
+
+            if (!refId || !contact) {
+                alert('Please enter both your Reference ID and contact email or phone.');
+                return;
+            }
+
+            const resultPanel = document.getElementById('trackingResultPanel');
+            resultPanel.style.display = 'block';
+            resultPanel.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Retrieving live appointment record...</p>';
+
+            try {
+                const resp = await fetch('/api/appointments/lookup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reference_id: refId, contact: contact })
+                });
+                const resData = await resp.json();
+
+                if (resData.success && resData.appointment) {
+                    renderTrackingRecord(resData.appointment, resData.google_calendar_url, resData.ics_url);
+                } else {
+                    resultPanel.innerHTML = `
+                        <div style="text-align: center; color: #f87171; padding: 1rem;">
+                            ⚠️ ${escapeHtml(resData.message || 'No matching appointment record found.')}
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.error('Tracking lookup error:', err);
+                resultPanel.innerHTML = '<p style="color: #f87171; text-align: center;">Error connecting to appointment registry.</p>';
+            }
+        }
+
+        function renderTrackingRecord(apt, gcalUrl, icsUrl) {
+            const panel = document.getElementById('trackingResultPanel');
+            let statusClass = 'awaiting';
+            if (apt.status === 'Confirmed by Hospital') statusClass = 'confirmed';
+            else if (apt.status === 'Cancelled' || apt.status === 'Rejected') statusClass = 'cancelled';
+
+            const canCancel = apt.status === 'Awaiting Hospital Confirmation' || apt.status === 'Request Submitted';
+
+            let timelineHtml = '';
+            (apt.status_history || []).forEach(item => {
+                timelineHtml += `
+                    <li style="margin-bottom: 0.6rem;">
+                        <strong style="color: var(--text);">${escapeHtml(item.status)}</strong>
+                        <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;">${escapeHtml(item.timestamp || '')}</span>
+                        <div style="font-size: 0.84rem; color: var(--text-subtle);">${escapeHtml(item.note || '')}</div>
+                    </li>
+                `;
+            });
+
+            panel.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 1rem; margin-bottom: 1.25rem;">
+                    <div>
+                        <span style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase;">Reference ID</span>
+                        <h3 style="margin: 0; font-family: 'JetBrains Mono', monospace; color: var(--primary-light); font-size: 1.35rem;">${escapeHtml(apt.reference_id)}</h3>
+                    </div>
+                    <div>
+                        <span class="status-pill ${statusClass}">${escapeHtml(apt.status)}</span>
+                    </div>
+                </div>
+
+                <div class="form-grid" style="margin-bottom: 1.5rem;">
+                    <div>
+                        <strong style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">Patient Name</strong>
+                        <div style="color: var(--text); font-size: 1rem; font-weight: 600;">${escapeHtml(apt.patient_name)}</div>
+                    </div>
+                    <div>
+                        <strong style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">Diagnostic Condition</strong>
+                        <div style="color: var(--text); font-size: 1rem; font-weight: 600;">${escapeHtml(apt.condition_name)}</div>
+                    </div>
+                    <div>
+                        <strong style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">Selected Facility</strong>
+                        <div style="color: var(--text); font-size: 1rem; font-weight: 600;">${escapeHtml(apt.hospital_name)}</div>
+                        <div style="font-size: 0.82rem; color: var(--text-muted);">${escapeHtml(apt.hospital_address)}</div>
+                    </div>
+                    <div>
+                        <strong style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">Requested Date & Slot</strong>
+                        <div style="color: var(--text); font-size: 1rem; font-weight: 600;">${escapeHtml(apt.preferred_date)} (${escapeHtml(apt.preferred_time_slot)})</div>
+                    </div>
+                </div>
+
+                <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-glass); border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+                    <strong style="color: var(--text); font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Audit & Status Timeline:</strong>
+                    <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.88rem;">
+                        ${timelineHtml}
+                    </ul>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: flex-end; align-items: center;">
+                    ${gcalUrl ? `<a href="${gcalUrl}" target="_blank" class="btn btn-outline btn-sm">📅 Google Calendar</a>` : ''}
+                    ${icsUrl ? `<a href="${icsUrl}" class="btn btn-outline btn-sm">📥 Download .ICS</a>` : ''}
+                    <button type="button" class="btn btn-outline btn-sm" onclick="showConfirmationReceiptModal({ appointment: ${JSON.stringify(apt).replace(/"/g, '&quot;')}, google_calendar_url: '${gcalUrl}', ics_url: '${icsUrl}' })">
+                        🖨️ View Printable Slip
+                    </button>
+                    ${canCancel ? `<button type="button" class="btn btn-danger btn-sm" onclick="triggerPatientCancel('${apt.reference_id}')">Cancel Request</button>` : ''}
+                </div>
+            `;
+        }
+
+        async function triggerPatientCancel(refId) {
+            const contact = document.getElementById('trackContact').value.trim();
+            if (!confirm(`Are you sure you want to cancel appointment request ${refId}?`)) return;
+
+            try {
+                const resp = await fetch('/api/appointments/cancel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reference_id: refId, contact: contact, reason: 'Patient cancelled via self-service tracker' })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    alert('Appointment successfully cancelled.');
+                    handleTrackingLookup(new Event('submit'));
+                } else {
+                    alert('Cancellation error: ' + data.message);
+                }
+            } catch (err) {
+                alert('Failed to connect to appointment server.');
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
 </body>
 
 </html>

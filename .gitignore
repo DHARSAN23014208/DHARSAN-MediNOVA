@@ -25,6 +25,8 @@ service_account.json
 data/
 *.xlsx
 *.csv
+*.db
+*.sqlite3
 
 # OS / Editor files
 .DS_Store

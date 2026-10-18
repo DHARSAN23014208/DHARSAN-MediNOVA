@@ -125,7 +125,7 @@
                     <button onclick="window.print()" class="btn btn-primary">
                         <span>📄 Download / Print Medical Report (PDF)</span>
                     </button>
-                    <button type="button" class="btn btn-copilot-explain" onclick="askCopilotToExplainResult('Diabetes', {{ (prediction or '') | tojson }})">
+                    <button type="button" class="btn btn-copilot-explain" data-condition="Diabetes" data-prediction="{{ prediction or '' }}" onclick="askCopilotToExplainResult('Diabetes', this.dataset.prediction)">
                         <span>🤖 Ask MediNova AI to Explain This Result</span>
                     </button>
                     {% if is_positive %}

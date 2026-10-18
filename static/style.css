@@ -3399,4 +3399,581 @@ input::placeholder {
 [data-theme="light"] .developer-footer-credit .dev-highlight {
     color: #0284c7;
     text-shadow: none;
-}
+}
+
+/* ==========================================================================
+   MediNova Smart Hospital Discovery & Appointment Management System (v4.0)
+   ========================================================================== */
+
+.booking-system-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-lg, 16px);
+    padding: 2.5rem;
+    box-shadow: 0 12px 36px -10px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(16px);
+    margin-bottom: 3.5rem;
+}
+
+@media (max-width: 768px) {
+    .booking-system-card {
+        padding: 1.5rem 1rem;
+    }
+}
+
+/* Flow Step Header & Badges */
+.flow-step-header {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+.flow-step-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 0.95rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.4);
+    flex-shrink: 0;
+}
+
+.flow-step-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+}
+
+.flow-step-desc {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    margin-top: 0.2rem;
+}
+
+/* Specialty Preview Callout */
+.specialty-preview-card {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-glass-hover);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-top: 1rem;
+    margin-bottom: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.specialty-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.specialty-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.85rem;
+    background: rgba(6, 182, 212, 0.15);
+    border: 1px solid var(--primary-light);
+    border-radius: 9999px;
+    color: var(--primary-light);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* Hospital Discovery Search Bar */
+.discovery-toolbar {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.location-input-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.location-input-wrapper {
+    flex: 1;
+    min-width: 260px;
+    position: relative;
+}
+
+.btn-geo-action {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.75rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.92rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-geo-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4);
+}
+
+.btn-geo-action:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Filter Controls Row */
+.filter-controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.filter-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+}
+
+.filter-select {
+    padding: 0.45rem 0.85rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-glass);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+/* Radius Pills */
+.radius-pill-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.radius-pill {
+    padding: 0.3rem 0.7rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-glass);
+    border-radius: 9999px;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.radius-pill:hover,
+.radius-pill.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+}
+
+/* Location Status Pill */
+.location-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.9rem;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: 9999px;
+    font-size: 0.84rem;
+    color: #34d399;
+}
+
+.location-status-pill.warning {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.35);
+    color: #fbbf24;
+}
+
+/* Responsive Hospital Comparison Table */
+.hospital-table-container {
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    overflow-x: auto;
+    background: var(--bg-surface-elevated);
+    margin-bottom: 1.75rem;
+}
+
+.hospital-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    text-align: left;
+}
+
+.hospital-table th {
+    background: rgba(15, 23, 42, 0.8);
+    color: var(--text-muted);
+    padding: 1rem 1.1rem;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-glass);
+    white-space: nowrap;
+}
+
+.hospital-table td {
+    padding: 1.1rem;
+    border-bottom: 1px solid var(--border-glass);
+    color: var(--text);
+    vertical-align: middle;
+}
+
+.hospital-table tr:last-child td {
+    border-bottom: none;
+}
+
+.hospital-table tr.hospital-row {
+    transition: background-color 0.15s ease;
+    cursor: pointer;
+}
+
+.hospital-table tr.hospital-row:hover {
+    background: rgba(6, 182, 212, 0.05);
+}
+
+.hospital-table tr.hospital-row.selected {
+    background: rgba(6, 182, 212, 0.12);
+    border-left: 4px solid var(--primary);
+}
+
+/* Hospital Badges */
+.hosp-badge {
+    display: inline-block;
+    padding: 0.25rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.hosp-badge.curated {
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.45);
+    color: #a5b4fc;
+}
+
+.hosp-badge.nearby {
+    background: rgba(6, 182, 212, 0.18);
+    border: 1px solid rgba(6, 182, 212, 0.4);
+    color: #67e8f9;
+}
+
+.hosp-badge.spec-verified {
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #34d399;
+}
+
+.hosp-badge.spec-unverified {
+    background: rgba(245, 158, 11, 0.18);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    color: #f59e0b;
+}
+
+.hosp-badge.telemed-yes {
+    background: rgba(56, 189, 248, 0.18);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    color: #38bdf8;
+}
+
+.hosp-badge.telemed-no {
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    color: #94a3b8;
+}
+
+/* Selected Hospital Summary Banner */
+.selected-hospital-banner {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(99, 102, 241, 0.15));
+    border: 1px solid var(--primary-light);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.selected-hospital-info h4 {
+    margin: 0 0 0.3rem 0;
+    font-size: 1.15rem;
+    color: var(--text);
+}
+
+.selected-hospital-info p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+/* Scheduling Disclaimer Alert */
+.scheduling-disclaimer-box {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.75rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+}
+
+.scheduling-disclaimer-box .icon {
+    font-size: 1.4rem;
+    line-height: 1;
+}
+
+.scheduling-disclaimer-box p {
+    margin: 0;
+    font-size: 0.88rem;
+    color: #fde68a;
+    line-height: 1.45;
+}
+
+[data-theme="light"] .scheduling-disclaimer-box p {
+    color: #92400e;
+}
+
+/* Modal Window for Details / Receipt */
+.med-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(3, 7, 18, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 1.5rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.med-modal-backdrop.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.med-modal-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-glass-hover);
+    border-radius: 16px;
+    max-width: 650px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 2.25rem;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    position: relative;
+    transform: translateY(20px);
+    transition: transform 0.25s ease;
+}
+
+.med-modal-backdrop.active .med-modal-card {
+    transform: translateY(0);
+}
+
+.med-modal-close-btn {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border-glass);
+    color: var(--text-muted);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.15s ease;
+}
+
+.med-modal-close-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+/* Printable Medical Receipt Slip */
+.receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.95rem;
+}
+
+.receipt-table td {
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+.receipt-table td:first-child {
+    color: var(--text-muted);
+    width: 40%;
+    font-weight: 500;
+}
+
+.receipt-table td:last-child {
+    color: var(--text);
+    font-weight: 600;
+}
+
+/* Status Pill */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 9999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.status-pill.awaiting {
+    background: rgba(245, 158, 11, 0.18);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    color: #fbbf24;
+}
+
+.status-pill.confirmed {
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #34d399;
+}
+
+.status-pill.cancelled {
+    background: rgba(239, 68, 68, 0.18);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #f87171;
+}
+
+/* Tracking Section */
+.tracking-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-glass);
+    border-radius: 14px;
+    padding: 2rem;
+    margin-bottom: 3.5rem;
+}
+
+.tracking-search-bar {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+/* Mobile Card layout for table on small screens */
+@media (max-width: 768px) {
+    .hospital-table,
+    .hospital-table tbody,
+    .hospital-table tr,
+    .hospital-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .hospital-table thead {
+        display: none;
+    }
+
+    .hospital-table tr.hospital-row {
+        margin-bottom: 1rem;
+        border: 1px solid var(--border-glass);
+        border-radius: 12px;
+        padding: 0.75rem;
+        background: var(--bg-surface);
+    }
+
+    .hospital-table td {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        padding: 0.6rem 0.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .hospital-table td:last-child {
+        border-bottom: none;
+    }
+
+    .hospital-table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+    }
+}
+
+/* Print Styles for Appointment Confirmation Slip */
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+    .print-slip-area,
+    .print-slip-area * {
+        visibility: visible !important;
+    }
+    .print-slip-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 20px;
+        background: #ffffff !important;
+        color: #0f172a !important;
+    }
+    .no-print {
+        display: none !important;
+    }
+}
+

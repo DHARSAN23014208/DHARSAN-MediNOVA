@@ -704,7 +704,8 @@
     window.closeMediNovaChat = closeMediNovaChat;
     window.resetMediNovaChat = resetMediNovaChat;
     window.askCopilotToExplainResult = function (condition, prediction) {
-        openMediNovaChat("Explain my latest test result");
+        var query = condition ? ("Explain my " + condition + " result" + (prediction ? (": " + prediction) : "")) : "Explain my latest test result";
+        openMediNovaChat(query);
     };
 
     // Bind any static page buttons (e.g. .btn-copilot-explain or hero buttons)
@@ -712,7 +713,13 @@
         document.querySelectorAll('.btn-copilot-explain, [onclick*="askCopilotToExplainResult"], [onclick*="toggleMediNovaChat"]').forEach(btn => {
             btn.onclick = function (e) {
                 e.preventDefault();
-                openMediNovaChat("Explain my latest test result");
+                var cond = btn.getAttribute('data-condition');
+                var pred = btn.getAttribute('data-prediction');
+                if (cond) {
+                    askCopilotToExplainResult(cond, pred);
+                } else {
+                    openMediNovaChat("Explain my latest test result");
+                }
             };
         });
     }

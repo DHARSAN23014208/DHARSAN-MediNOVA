@@ -43,6 +43,27 @@ from utils.google_sheets_logger import (
     get_sheets_status,
     SPREADSHEET_NAME
 )
+from utils.hospital_service import (
+    DISEASE_SPECIALTY_MAP,
+    CURATED_GLOBAL_CENTRES,
+    discover_hospitals_for_patient,
+    geocode_address,
+    calculate_haversine_distance
+)
+from utils.appointment_db import (
+    create_appointment,
+    get_appointment_by_ref,
+    get_appointment_by_token,
+    list_appointments_admin,
+    update_appointment_status,
+    cancel_appointment_patient,
+    VALID_STATUSES
+)
+from utils.calendar_service import (
+    generate_google_calendar_url,
+    generate_ics_content
+)
+from utils.appointment_notifier import notify_appointment_request
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -795,7 +816,159 @@ def features():
 
 @app.route('/contact')
 def contact():
-    return render_template('contact.html')
+    prefill_condition = request.args.get('condition', '').strip().lower()
+    prefill_result = request.args.get('result', '').strip()
+    tracking_ref = request.args.get('track', '').strip().upper()
+    return render_template(
+        'contact.html',
+        prefill_condition=prefill_condition,
+        prefill_result=prefill_result,
+        tracking_ref=tracking_ref
+    )
+
+@app.route('/api/hospitals/specialties', methods=['GET'])
+def api_hospital_specialties():
+    """Return canonical seven-disease specialty mappings and curated global specialty centres."""
+    return jsonify({
+        "status": "success",
+        "specialties": DISEASE_SPECIALTY_MAP,
+        "global_centres": CURATED_GLOBAL_CENTRES
+    })
+
+@app.route('/api/hospitals/search', methods=['GET'])
+def api_hospital_search():
+    """
+    Search healthcare facilities and specialist referral centres:
+    Combines live Overpass API nearby discovery and curated international centres.
+    """
+    condition = request.args.get('condition', 'heart').strip().lower()
+    lat = request.args.get('lat', type=float)
+    lon = request.args.get('lon', type=float)
+    query = request.args.get('query', '').strip()
+    radius_km = request.args.get('radius_km', default=20, type=int)
+    mode = request.args.get('mode', 'all').strip().lower()
+    include_global = request.args.get('include_global', 'true').lower() in ['true', '1', 'yes']
+
+    try:
+        results = discover_hospitals_for_patient(
+            condition_id=condition,
+            patient_lat=lat,
+            patient_lon=lon,
+            manual_query=query,
+            radius_km=radius_km,
+            preferred_mode=mode,
+            include_global=include_global
+        )
+        return jsonify(results)
+    except Exception as e:
+        app.logger.error(f"[HOSPITAL SEARCH ERROR]: {e}")
+        return jsonify({
+            "status": "error",
+            "message": "Failed to discover facilities. Please refine location or explore curated global centres."
+        }), 500
+
+@app.route('/api/appointments/book', methods=['POST'])
+def api_book_appointment():
+    """
+    Submit and validate a new priority specialist consultation appointment request.
+    Creates persistent database record and sets initial status to 'Awaiting Hospital Confirmation'.
+    """
+    try:
+        data = request.get_json(silent=True) or request.form.to_dict()
+        if not data:
+            return jsonify({"success": False, "message": "Invalid request: missing appointment payload."}), 400
+
+        # Check for acute red-flag symptoms in clinical notes
+        notes = str(data.get('clinical_notes', '')).lower()
+        emergency_keywords = [
+            "crushing chest pain", "cannot breathe", "severe dyspnea", "stroke", "loss of consciousness",
+            "vomiting blood", "coughing blood", "anaphylaxis", "passed out", "seizure", "unresponsive"
+        ]
+        is_emergency = any(kw in notes for kw in emergency_keywords)
+        if is_emergency:
+            data['is_urgent'] = 1
+
+        success, record, err = create_appointment(data)
+        if not success:
+            return jsonify({"success": False, "message": err}), 400
+
+        # Dispatch notification to clinic care coordinator / developer
+        email_sent, email_msg = notify_appointment_request(record, send_developer_email)
+
+        # Generate Google Calendar and ICS links
+        gcal_url = generate_google_calendar_url(record)
+        ics_url = f"/api/appointments/{record['reference_id']}/ics"
+
+        return jsonify({
+            "success": True,
+            "message": "Priority consultation request submitted successfully.",
+            "appointment": record,
+            "google_calendar_url": gcal_url,
+            "ics_url": ics_url,
+            "notification_dispatched": email_sent,
+            "notification_notice": email_msg,
+            "urgent_alert": is_emergency
+        }), 201
+    except Exception as e:
+        app.logger.error(f"[BOOK APPOINTMENT ERROR]: {e}")
+        return jsonify({"success": False, "message": "A system error occurred while processing your request. Please try again."}), 500
+
+@app.route('/api/appointments/lookup', methods=['POST'])
+def api_lookup_appointment():
+    """
+    Patient appointment lookup and status tracking.
+    Enforces strict access control: requires Reference ID and matching Phone or Email.
+    """
+    data = request.get_json(silent=True) or {}
+    ref_id = data.get('reference_id', '').strip().upper()
+    contact = data.get('contact', '').strip()
+
+    if not ref_id or not contact:
+        return jsonify({"success": False, "message": "Reference ID and contact email/phone are both required."}), 400
+
+    record = get_appointment_by_ref(ref_id, verification_contact=contact)
+    if not record:
+        return jsonify({"success": False, "message": "No matching appointment found with the provided Reference ID and contact details."}), 404
+
+    gcal_url = generate_google_calendar_url(record)
+    ics_url = f"/api/appointments/{record['reference_id']}/ics"
+
+    return jsonify({
+        "success": True,
+        "appointment": record,
+        "google_calendar_url": gcal_url,
+        "ics_url": ics_url
+    })
+
+@app.route('/api/appointments/cancel', methods=['POST'])
+def api_cancel_appointment():
+    """Allows patient to cancel an appointment if in an eligible pending state."""
+    data = request.get_json(silent=True) or {}
+    ref_id = data.get('reference_id', '').strip().upper()
+    contact = data.get('contact', '').strip()
+    reason = data.get('reason', '').strip()
+
+    if not ref_id or not contact:
+        return jsonify({"success": False, "message": "Reference ID and contact verification are required."}), 400
+
+    success, msg = cancel_appointment_patient(ref_id, verification_contact=contact, reason=reason)
+    if success:
+        return jsonify({"success": True, "message": msg})
+    return jsonify({"success": False, "message": msg}), 400
+
+@app.route('/api/appointments/<reference_id>/ics', methods=['GET'])
+def api_appointment_ics(reference_id):
+    """Download RFC 5545 compliant iCalendar (.ics) file for an appointment."""
+    record = get_appointment_by_ref(reference_id)
+    if not record:
+        abort(404)
+    ics_text = generate_ics_content(record)
+    from flask import Response
+    return Response(
+        ics_text,
+        mimetype="text/calendar",
+        headers={"Content-Disposition": f"attachment; filename=appointment_{reference_id}.ics"}
+    )
 
 # --- Heart Disease ---
 @app.route('/heart', methods=['GET', 'POST'])
@@ -2928,11 +3101,13 @@ def developer_patient_records():
     if request.method == 'GET':
         if is_developer_authenticated():
             stats = get_sheets_status()
+            appointments = list_appointments_admin()
             return render_template(
                 'dev_access.html',
                 is_authenticated=True,
                 developer_email=session.get('dev_email'),
-                stats=stats
+                stats=stats,
+                appointments=appointments
             )
         return render_template('dev_access.html', is_authenticated=False, prefill_email=AUTHORIZED_DEV_EMAIL)
 
@@ -3052,6 +3227,37 @@ def developer_logout():
     session.pop('dev_email', None)
     session.pop('dev_login_time', None)
     return redirect(url_for('developer_patient_records'))
+
+
+@app.route('/api/admin/appointments', methods=['GET'])
+def api_admin_list_appointments():
+    """Retrieve appointment records for authenticated clinic administrators."""
+    if not is_developer_authenticated():
+        return jsonify({"success": False, "message": "403 Forbidden: Authorized developer session required."}), 403
+    status = request.args.get('status')
+    condition = request.args.get('condition')
+    appointments = list_appointments_admin(status_filter=status, condition_filter=condition)
+    return jsonify({"success": True, "appointments": appointments})
+
+
+@app.route('/api/admin/appointments/update-status', methods=['POST'])
+def api_admin_update_status():
+    """Perform an authenticated status transition on an appointment record with an audit entry."""
+    if not is_developer_authenticated():
+        return jsonify({"success": False, "message": "403 Forbidden: Authorized developer session required."}), 403
+    data = request.get_json(silent=True) or {}
+    ref_id = data.get('reference_id', '').strip().upper()
+    new_status = data.get('status', '').strip()
+    notes = data.get('admin_notes', '').strip()
+
+    if not ref_id or not new_status:
+        return jsonify({"success": False, "message": "Reference ID and target status are required."}), 400
+
+    admin_actor = f"Clinic Admin ({session.get('dev_email', 'dharshan')})"
+    success, err = update_appointment_status(ref_id, new_status, admin_actor, admin_notes=notes)
+    if success:
+        return jsonify({"success": True, "message": f"Appointment {ref_id} status updated to '{new_status}'."})
+    return jsonify({"success": False, "message": err or "Failed to update status."}), 400
 
 
 @app.route('/healthz', methods=['GET'])

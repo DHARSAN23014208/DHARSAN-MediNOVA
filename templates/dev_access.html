@@ -418,6 +418,14 @@
             font-family: 'JetBrains Mono', monospace;
         }
 
+        .stat-value.stat-success {
+            color: #34d399;
+        }
+
+        .stat-value.stat-warning {
+            color: #f59e0b;
+        }
+
         .stat-subtext {
             font-size: 0.78rem;
             color: #64748b;
@@ -690,7 +698,7 @@
                 <div class="stats-grid">
                     <div class="stat-card">
                         <span class="stat-label">Cloud Sync State</span>
-                        <span class="stat-value" style="font-size: 1.2rem; color: {% if stats.has_credentials %}#34d399{% else %}#f59e0b{% endif %};">
+                        <span class="stat-value {{ 'stat-success' if stats.has_credentials else 'stat-warning' }}" style="font-size: 1.2rem;">
                             {% if stats.has_credentials %}
                                 Authenticated
                             {% else %}
@@ -792,11 +800,109 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Specialist Appointments Administration Card -->
+            <div class="dev-card" style="margin-top: 2rem;">
+                <div class="dash-header">
+                    <div class="dash-title-group">
+                        <h2>🏥 Priority Specialist Appointments & Hospital Scheduling Management</h2>
+                        <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">
+                            Authorized clinic care coordinator dashboard for reviewing and confirming patient hospital consultation requests.
+                        </p>
+                    </div>
+                    <div>
+                        <span class="status-pill confirmed">
+                            Total Records: {{ appointments|length if appointments else 0 }}
+                        </span>
+                    </div>
+                </div>
+
+                {% if appointments and appointments|length > 0 %}
+                <div class="table-wrapper">
+                    <table class="dev-table">
+                        <thead>
+                            <tr>
+                                <th>Reference ID</th>
+                                <th>Patient Details</th>
+                                <th>Condition & Facility</th>
+                                <th>Requested Schedule</th>
+                                <th>Current Status</th>
+                                <th>Admin Status Transition</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for apt in appointments %}
+                            <tr id="adminRow-{{ apt.reference_id }}">
+                                <td>
+                                    <strong style="color: #38bdf8; font-family: 'JetBrains Mono', monospace; font-size: 0.95rem;">
+                                        {{ apt.reference_id }}
+                                    </strong>
+                                    <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.2rem;">
+                                        {{ apt.created_at }}
+                                    </div>
+                                    {% if apt.is_urgent %}
+                                        <span style="display: inline-block; background: #ef4444; color: #fff; font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-top: 4px;">🚨 URGENT</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong style="color: #f1f5f9;">{{ apt.patient_name }}</strong>
+                                    <div style="font-size: 0.8rem; color: #94a3b8;">{{ apt.email }}</div>
+                                    <div style="font-size: 0.8rem; color: #94a3b8;">{{ apt.phone }}</div>
+                                </td>
+                                <td>
+                                    <span style="color: #34d399; font-weight: 600;">{{ apt.condition_name }}</span>
+                                    <div style="font-size: 0.82rem; color: #e2e8f0; margin-top: 0.2rem;">{{ apt.hospital_name }}</div>
+                                    <div style="font-size: 0.78rem; color: #64748b;">{{ apt.hospital_address }}</div>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 600; color: #f8fafc;">{{ apt.preferred_date }}</div>
+                                    <div style="font-size: 0.8rem; color: #94a3b8;">{{ apt.preferred_time_slot }}</div>
+                                    <div style="font-size: 0.75rem; color: #38bdf8; text-transform: uppercase;">
+                                        {{ 'In-Person' if apt.consultation_mode == 'in_person' else 'Telemedicine' }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span id="adminBadge-{{ apt.reference_id }}" class="status-pill {% if apt.status == 'Confirmed by Hospital' %}confirmed{% elif apt.status in ['Cancelled', 'Rejected'] %}cancelled{% else %}awaiting{% endif %}">
+                                        {{ apt.status }}
+                                    </span>
+                                    <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.3rem;">
+                                        Notify: {{ apt.notification_status or 'Pending' }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="display: flex; flex-direction: column; gap: 0.4rem; min-width: 220px;">
+                                        <select id="statusSelect-{{ apt.reference_id }}" class="filter-select" style="font-size: 0.8rem; padding: 0.35rem 0.5rem;">
+                                            <option value="Confirmed by Hospital" {% if apt.status == 'Confirmed by Hospital' %}selected{% endif %}>Confirmed by Hospital</option>
+                                            <option value="Awaiting Hospital Confirmation" {% if apt.status == 'Awaiting Hospital Confirmation' %}selected{% endif %}>Awaiting Hospital Confirmation</option>
+                                            <option value="Rescheduling Required" {% if apt.status == 'Rescheduling Required' %}selected{% endif %}>Rescheduling Required</option>
+                                            <option value="Completed" {% if apt.status == 'Completed' %}selected{% endif %}>Completed</option>
+                                            <option value="Cancelled" {% if apt.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                                            <option value="Rejected" {% if apt.status == 'Rejected' %}selected{% endif %}>Rejected</option>
+                                        </select>
+                                        <input type="text" id="adminNotes-{{ apt.reference_id }}" placeholder="Admin notes (optional)" style="font-size: 0.78rem; padding: 0.35rem 0.6rem; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: #f8fafc;">
+                                        <button type="button" class="btn-dev-primary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="adminUpdateStatus('{{ apt.reference_id }}')">
+                                            Update Status &rarr;
+                                        </button>
+                                        <span id="adminMsg-{{ apt.reference_id }}" style="font-size: 0.74rem;"></span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div style="text-align: center; padding: 2.5rem 1rem; color: #94a3b8;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
+                    <p style="margin: 0;">No patient consultation requests recorded in SQLite database yet.</p>
+                </div>
+                {% endif %}
+            </div>
         {% endif %}
     </main>
 
     <footer class="dev-footer">
-        &copy; 2026 MediNova Clinical AI Systems. Strictly Confidential. Cloud Google Sheets Logging.
+        &copy; 2026 MediNova Clinical AI Systems. Strictly Confidential. Cloud Google Sheets Logging & SQLite Appointment Registry.
     </footer>
 
     <script>
@@ -860,6 +966,45 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Send OTP \u2192';
+            }
+        }
+
+        async function adminUpdateStatus(refId) {
+            const statusSelect = document.getElementById('statusSelect-' + refId);
+            const notesInput = document.getElementById('adminNotes-' + refId);
+            const msgEl = document.getElementById('adminMsg-' + refId);
+            const badgeEl = document.getElementById('adminBadge-' + refId);
+
+            const newStatus = statusSelect.value;
+            const notes = notesInput.value.trim();
+
+            msgEl.style.color = '#94a3b8';
+            msgEl.textContent = 'Updating...';
+
+            try {
+                const resp = await fetch('/api/admin/appointments/update-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reference_id: refId,
+                        status: newStatus,
+                        admin_notes: notes
+                    })
+                });
+
+                const data = await resp.json();
+                if (resp.ok && data.success) {
+                    msgEl.style.color = '#10b981';
+                    msgEl.textContent = 'Updated ✓';
+                    badgeEl.textContent = newStatus;
+                    badgeEl.className = 'status-pill ' + (newStatus === 'Confirmed by Hospital' ? 'confirmed' : (newStatus === 'Cancelled' || newStatus === 'Rejected' ? 'cancelled' : 'awaiting'));
+                } else {
+                    msgEl.style.color = '#ef4444';
+                    msgEl.textContent = data.message || 'Update failed.';
+                }
+            } catch (err) {
+                msgEl.style.color = '#ef4444';
+                msgEl.textContent = 'Network error.';
             }
         }
     </script>
