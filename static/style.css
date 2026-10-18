@@ -1585,10 +1585,21 @@ input::placeholder {
    ========================================================================== */
 
 @media print {
+    @page {
+        size: A4 portrait;
+        margin: 15mm;
+    }
+
+    html,
     body {
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
         background: #ffffff !important;
         color: #0f172a !important;
-        font-family: Arial, sans-serif !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
 
     .navbar,
@@ -3953,16 +3964,16 @@ input::placeholder {
     }
 }
 
-/* Print Styles for Appointment Confirmation Slip */
+/* Print Styles for Appointment Confirmation Slip (Scoped to slip modal print) */
 @media print {
-    body * {
+    body.printing-slip * {
         visibility: hidden !important;
     }
-    .print-slip-area,
-    .print-slip-area * {
+    body.printing-slip .print-slip-area,
+    body.printing-slip .print-slip-area * {
         visibility: visible !important;
     }
-    .print-slip-area {
+    body.printing-slip .print-slip-area {
         position: absolute;
         left: 0;
         top: 0;

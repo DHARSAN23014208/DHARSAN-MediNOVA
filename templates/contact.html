@@ -526,7 +526,7 @@
                     📥 Download .ICS
                 </a>
 
-                <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">
+                <button type="button" class="btn btn-primary btn-sm" onclick="printAppointmentSlipModal()">
                     🖨️ Print Slip / PDF
                 </button>
             </div>
@@ -1175,12 +1175,28 @@
                 icsBtn.style.display = 'none';
             }
 
+            try {
+                localStorage.setItem('medinova_last_appointment', JSON.stringify(apt));
+            } catch (e) {}
+
             document.getElementById('appointmentReceiptModal').classList.add('active');
         }
 
         function closeReceiptModal() {
             document.getElementById('appointmentReceiptModal').classList.remove('active');
         }
+
+        function printAppointmentSlipModal() {
+            document.body.classList.add('printing-slip');
+            window.print();
+            setTimeout(function() {
+                document.body.classList.remove('printing-slip');
+            }, 1000);
+        }
+
+        window.addEventListener('afterprint', function() {
+            document.body.classList.remove('printing-slip');
+        });
 
         // 12. Patient Tracking Lookup
         async function handleTrackingLookup(event) {

@@ -122,7 +122,7 @@
 
                 <!-- Action Toolbar -->
                 <div class="result-action-toolbar no-print">
-                    <button onclick="window.print()" class="btn btn-primary">
+                    <button type="button" onclick="generateMedicalReportPDF()" class="btn btn-primary btn-print-report">
                         <span>📄 Download / Print Medical Report (PDF)</span>
                     </button>
                     <button type="button" class="btn btn-copilot-explain" data-condition="Heart Disease" data-prediction="{{ prediction or '' }}" onclick="askCopilotToExplainResult('Heart Disease', this.dataset.prediction)">
@@ -530,6 +530,7 @@
     </script>
     <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
     <script src="{{ url_for('static', filename='chatbot.js') }}?v=3"></script>
+    <script src="{{ url_for('static', filename='medical_report.js') }}?v=4.0"></script>
 </body>
 
 </html>
