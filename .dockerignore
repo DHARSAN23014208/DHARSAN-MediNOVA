@@ -17,3 +17,10 @@ Dockerfile
 .dockerignore
 static/uploads/*
 !static/uploads/.gitkeep
+private_uploads/
+instance/
+*.db
+*.sqlite3
+service_account.json
+*credentials*.json
+*.log

@@ -19,6 +19,8 @@ import re
 import uuid
 import secrets
 import smtplib
+import time
+import threading
 import traceback
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -46,6 +48,7 @@ from utils.google_sheets_logger import (
 from utils.hospital_service import (
     DISEASE_SPECIALTY_MAP,
     CURATED_GLOBAL_CENTRES,
+    get_specialty_mapping,
     discover_hospitals_for_patient,
     resolve_any_address,
     geocode_address,
@@ -65,6 +68,21 @@ from utils.calendar_service import (
     generate_ics_content
 )
 from utils.appointment_notifier import notify_appointment_request
+from utils.report_scanner import process_report_pipeline, SUPPORTED_MODULES, MAX_FILE_SIZE
+from utils.report_verifier import (
+    init_report_verifier_db,
+    get_verified_report,
+    generate_qr_code_image,
+    register_report
+)
+from utils.diagnostic_predictor import (
+    predict_heart,
+    predict_diabetes,
+    predict_kidney,
+    predict_liver,
+    predict_breast_cancer,
+    generate_report_id
+)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -85,18 +103,42 @@ def _load_env_file(env_path):
 
 _load_env_file(os.path.join(BASE_DIR, ".env"))
 
+# Check environment and enforce secret strength in production
+IS_PRODUCTION = (
+    os.environ.get("FLASK_ENV") == "production"
+    or os.environ.get("ENV") == "production"
+    or os.environ.get("RENDER") == "true"
+    or os.environ.get("PRODUCTION", "").lower() in ["true", "1", "yes"]
+)
+
+RAW_SECRET_KEY = os.environ.get('SECRET_KEY')
+RAW_DEV_ACCESS_KEY = os.environ.get('DEV_ACCESS_KEY')
+DEFAULT_INSECURE_SECRET = 'medinova-clinical-secret-key-2026'
+DEFAULT_INSECURE_DEV_KEY = 'medinova_dev_2026_dharshan_secret'
+
+if IS_PRODUCTION:
+    if not RAW_SECRET_KEY or RAW_SECRET_KEY == DEFAULT_INSECURE_SECRET:
+        raise RuntimeError("CRITICAL SECURITY ERROR: In production, SECRET_KEY must be set in environment variables and cannot use default value.")
+    if not RAW_DEV_ACCESS_KEY or RAW_DEV_ACCESS_KEY == DEFAULT_INSECURE_DEV_KEY:
+        raise RuntimeError("CRITICAL SECURITY ERROR: In production, DEV_ACCESS_KEY must be set in environment variables and cannot use default value.")
+
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'medinova-clinical-secret-key-2026')
+app.secret_key = RAW_SECRET_KEY or DEFAULT_INSECURE_SECRET
+init_report_verifier_db()
 
-# Developer Master Gate Configuration (Strictly restricted to dharshankumarkumar3@gmail.com)
+# Developer Master Gate Configuration (Strictly restricted to authorized developer email)
 AUTHORIZED_DEV_EMAIL = os.environ.get('AUTHORIZED_DEV_EMAIL', 'dharshankumarkumar3@gmail.com').strip().lower()
-DEV_ACCESS_KEY = os.environ.get('DEV_ACCESS_KEY', 'medinova_dev_2026_dharshan_secret').strip()
+DEV_ACCESS_KEY = RAW_DEV_ACCESS_KEY or DEFAULT_INSECURE_DEV_KEY
 
-# Ephemeral in-memory OTP storage for developer two-factor authentication
+# Thread-safe in-memory OTP storage for developer two-factor authentication
+DEV_OTP_LOCK = threading.Lock()
 DEV_OTP_CACHE = {
     'otp': None,
     'expires_at': None,
-    'email': None
+    'email': None,
+    'attempts': 0,
+    'last_requested_at': 0,
+    'max_attempts': 5
 }
 
 def send_developer_email(subject, html_content, attachment_path=None):
@@ -159,14 +201,75 @@ def to_python_type(obj):
 
 
 # Configure Upload & Sample Folders (Anchored to BASE_DIR for Cloud WSGI/Gunicorn)
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
+# Patient medical scans are stored privately outside static directory to preserve HIPAA-aligned privacy
+PRIVATE_UPLOADS_DIR = os.path.join(BASE_DIR, 'private_uploads')
 SAMPLES_FOLDER = os.path.join(BASE_DIR, 'static', 'samples')
 MODELS_DIR = os.path.join(BASE_DIR, 'models')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(PRIVATE_UPLOADS_DIR, exist_ok=True)
 os.makedirs(SAMPLES_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['UPLOAD_FOLDER'] = PRIVATE_UPLOADS_DIR
 app.config['SAMPLES_FOLDER'] = SAMPLES_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max
+
+
+def validate_and_save_patient_image(uploaded_file):
+    """
+    Validates uploaded patient image:
+    1. Size <= 16MB.
+    2. Extension in allowed list: png, jpg, jpeg, webp.
+    3. Content validation via PIL.Image to ensure file is not corrupted, unsupported, or a polyglot.
+    4. Saves to private_uploads directory (outside static/).
+    5. Generates short-lived preview token bound to the current session.
+    
+    Returns:
+        tuple: (filepath, preview_url, error_message)
+    """
+    if not uploaded_file or uploaded_file.filename == '':
+        return None, None, "No file selected."
+
+    filename = secure_filename(uploaded_file.filename)
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    if ext not in {'png', 'jpg', 'jpeg', 'webp'}:
+        return None, None, "Invalid image format. Please upload a PNG, JPG, JPEG, or WebP medical scan."
+
+    file_bytes = uploaded_file.read()
+    if len(file_bytes) > 16 * 1024 * 1024:
+        return None, None, "File size exceeds 16 MB limit."
+
+    # Validate image content with Pillow
+    try:
+        from io import BytesIO
+        from PIL import Image
+        img = Image.open(BytesIO(file_bytes))
+        img.verify()
+        if img.format.lower() not in ['png', 'jpeg', 'webp']:
+            return None, None, "Unsupported or corrupted medical image content."
+    except Exception:
+        return None, None, "The uploaded file is not a valid or readable medical image."
+
+    # Generate secure random filename in private_uploads
+    unique_name = f"{uuid.uuid4().hex}_{secrets.token_hex(4)}.{ext}"
+    saved_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
+    try:
+        with open(saved_path, 'wb') as f:
+            f.write(file_bytes)
+    except Exception as e:
+        return None, None, f"Failed to save upload safely: {str(e)}"
+
+    # Generate session-bound preview token
+    token = secrets.token_urlsafe(32)
+    preview_tokens = session.get('image_preview_tokens', {})
+    if not isinstance(preview_tokens, dict):
+        preview_tokens = {}
+    preview_tokens[token] = {
+        'filepath': saved_path,
+        'created_at': time.time(),
+        'mimetype': uploaded_file.mimetype or f"image/{ext}"
+    }
+    session['image_preview_tokens'] = preview_tokens
+
+    preview_url = url_for('patient_image_preview', token=token)
+    return saved_path, preview_url, None
 
 # Load Pre-trained Models
 print("Loading medical diagnostic models...")
@@ -857,11 +960,67 @@ def api_hospital_search():
     Strictly filters nearby facilities within the selected radius (distanceKm <= radius_km).
     Never substitutes worldwide hospitals for local searches.
     """
-    condition = request.args.get('condition', 'heart').strip().lower()
-    lat = request.args.get('lat', type=float)
-    lon = request.args.get('lon', type=float)
+    raw_condition = request.args.get('condition')
+    if not raw_condition or not raw_condition.strip():
+        return jsonify({
+            "status": "error",
+            "message": "Diagnostic condition is required. Please select a valid clinical condition."
+        }), 400
+
+    condition = raw_condition.strip().lower()
+    spec_map = get_specialty_mapping(condition)
+    if spec_map.get("is_unmapped_condition"):
+        return jsonify({
+            "status": "error",
+            "message": f"Unsupported diagnostic condition '{condition}'. Please select a valid supported condition."
+        }), 400
+
+    # Coordinate validation
+    lat_val = request.args.get('lat')
+    lon_val = request.args.get('lon')
+    lat = None
+    lon = None
+
+    if lat_val is not None or lon_val is not None:
+        if lat_val is None or lon_val is None:
+            return jsonify({
+                "status": "error",
+                "message": "Both latitude and longitude must be provided."
+            }), 400
+        try:
+            lat = float(lat_val)
+            lon = float(lon_val)
+        except (ValueError, TypeError):
+            return jsonify({
+                "status": "error",
+                "message": "Invalid coordinates format. Latitude and longitude must be numbers."
+            }), 400
+
+        if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lon <= 180.0):
+            return jsonify({
+                "status": "error",
+                "message": "Coordinates out of bounds. Latitude must be in [-90, 90] and longitude in [-180, 180]."
+            }), 400
+
     query = request.args.get('query', '').strip()
-    radius_km = request.args.get('radius_km', default=20, type=int)
+    
+    # Radius validation
+    radius_val = request.args.get('radius_km', default=25)
+    try:
+        radius_km = int(radius_val)
+    except (ValueError, TypeError):
+        return jsonify({
+            "status": "error",
+            "message": "Invalid radius. Must be an integer between 1 and 100 km."
+        }), 400
+
+    if radius_km < 1 or radius_km > 100:
+        return jsonify({
+            "status": "error",
+            "message": "Search radius must be between 1 km and 100 km."
+        }), 400
+
+    min_rating = request.args.get('min_rating', default=3.0, type=float)
     mode = request.args.get('mode', 'all').strip().lower()
 
     # If user provided coordinates or query, default include_global is False (strict nearby search)
@@ -876,6 +1035,7 @@ def api_hospital_search():
             patient_lon=lon,
             manual_query=query,
             radius_km=radius_km,
+            min_rating=min_rating,
             preferred_mode=mode,
             include_global=include_global
         )
@@ -994,91 +1154,92 @@ def api_appointment_ics(reference_id):
 @app.route('/heart', methods=['GET', 'POST'])
 def heart():
     if request.method == 'POST':
+        is_json_req = bool(request.is_json or 'application/json' in request.headers.get('Accept', '') or (request.content_type and 'application/json' in request.content_type))
         try:
-            raw_data = {
-                'age': float(request.form['age']),
-                'sex': float(request.form['sex']),
-                'cp': float(request.form['cp']),
-                'bp': float(request.form['bp']),
-                'chol': float(request.form['chol']),
-                'fbs': float(request.form['fbs']),
-                'ekg': float(request.form['ekg']),
-                'max_hr': float(request.form['max_hr']),
-                'exang': float(request.form['exang']),
-                'oldpeak': float(request.form['oldpeak']),
-                'slope': float(request.form['slope']),
-                'ca': float(request.form['ca']),
-                'thal': float(request.form['thal'])
-            }
+            req_data = request.get_json(silent=True) if request.is_json else None
+            if not req_data:
+                req_data = request.form.to_dict()
 
-            features_vec = [
-                raw_data['age'], raw_data['sex'], raw_data['cp'], raw_data['bp'],
-                raw_data['chol'], raw_data['fbs'], raw_data['ekg'], raw_data['max_hr'],
-                raw_data['exang'], raw_data['oldpeak'], raw_data['slope'], raw_data['ca'],
-                raw_data['thal']
-            ]
-            
             if heart_model is None:
-                return render_template('heart.html', error="Heart disease diagnostic model is not loaded or missing from server.")
+                err_msg = "Heart disease diagnostic model is not loaded or missing from server."
+                if is_json_req:
+                    return jsonify({"success": False, "error": err_msg}), 503
+                return render_template('heart.html', error=err_msg)
             
-            prediction = heart_model.predict([features_vec])[0]
-            is_pos = bool(int(prediction) == 1)
-            result = "Presence of Cardiovascular Risk" if is_pos else "Absence of Significant Risk"
-            insight_key = 'positive' if is_pos else 'negative'
-            insights = DISEASE_INSIGHTS['heart_disease'][insight_key]
-
-            # Calculate confidence score
-            conf_score = 95.0
-            try:
-                if hasattr(heart_model, "predict_proba"):
-                    probs = heart_model.predict_proba([features_vec])[0]
-                    conf_score = float(probs[1] if is_pos else probs[0]) * 100.0
-            except Exception:
-                pass
-
-            # Silent Background Google Sheets Logging (Zero Patient Visibility)
-            try:
-                log_patient_prediction(
-                    module_name="Heart_Disease",
-                    form_data=request.form.to_dict(),
-                    raw_prediction=int(prediction),
-                    is_positive=is_pos,
-                    confidence_score=conf_score
-                )
-            except Exception as log_err:
-                app.logger.warning(f"Silent Google Sheets logging failed in heart: {log_err}")
-
-            # Formatted patient data for printable report
-            patient_summary = [
-                {'label': 'Age', 'value': f"{int(raw_data['age'])} years"},
-                {'label': 'Sex', 'value': 'Male' if raw_data['sex'] == 1 else 'Female'},
-                {'label': 'Chest Pain Type', 'value': ['Typical Angina', 'Atypical Angina', 'Non-Anginal', 'Asymptomatic'][int(raw_data['cp'])]},
-                {'label': 'Resting Blood Pressure', 'value': f"{int(raw_data['bp'])} mm Hg"},
-                {'label': 'Serum Cholesterol', 'value': f"{int(raw_data['chol'])} mg/dL"},
-                {'label': 'Fasting Blood Sugar > 120', 'value': 'Yes' if raw_data['fbs'] == 1 else 'No'},
-                {'label': 'Resting ECG', 'value': ['Normal', 'ST-T Wave Abnormality', 'Left Ventricular Hypertrophy'][int(raw_data['ekg'])]},
-                {'label': 'Max Heart Rate', 'value': f"{int(raw_data['max_hr'])} bpm"},
-                {'label': 'Exercise Induced Angina', 'value': 'Yes' if raw_data['exang'] == 1 else 'No'},
-                {'label': 'ST Depression (Oldpeak)', 'value': f"{raw_data['oldpeak']}"},
-                {'label': 'ST Slope', 'value': ['Upsloping', 'Flat', 'Downsloping'][int(raw_data['slope'])]},
-                {'label': 'Major Vessels Fluro', 'value': f"{int(raw_data['ca'])}"},
-                {'label': 'Thallium Stress Result', 'value': {3: 'Normal', 6: 'Fixed Defect', 7: 'Reversible Defect'}.get(int(raw_data['thal']), str(raw_data['thal']))}
-            ]
+            res = predict_heart(req_data, heart_model, DISEASE_INSIGHTS, is_scanner=False)
             
+            # Normalize confidence, percent, risk_label, probability, and feature contributions
+            conf_val = res.get("confidence_score") or res.get("confidence") or res.get("percent")
+            risk_label = res.get("risk_label", res.get("prediction", "Evaluated"))
+            prob_val = round(float(conf_val) / 100.0, 4) if conf_val is not None else None
+            feat_contribs = res.get("feature_contributions", res.get("top_risk_factors", []))
+            gauges = res.get("biomarker_gauges", [])
+
+            # Safe validation for each biomarker gauge and feature contribution
+            for g in gauges:
+                if isinstance(g, dict):
+                    g["percent"] = g.get("percent", 0) if isinstance(g, dict) else getattr(g, "percent", 0)
+                    g["low"] = g.get("low", 0)
+                    g["high"] = g.get("high", 0)
+                    g["analyte"] = g.get("analyte", g.get("name", ""))
+
+            for f in feat_contribs:
+                if isinstance(f, dict):
+                    f["percent"] = f.get("percent", 0) if isinstance(f, dict) else getattr(f, "percent", 0)
+                    f["weight"] = f.get("weight", f.get("global_sensitivity_weight", f.get("percent", 10.0) / 100.0))
+                    f["feature_name"] = f.get("feature_name", f.get("label", f.get("feature", "Clinical Indicator")))
+                    f["clinical_context"] = f.get("clinical_context", f.get("benchmark", ""))
+
             session['last_diagnosis'] = to_python_type({
                 'condition': 'Heart Disease',
                 'route': '/heart',
-                'prediction': result,
-                'is_positive': is_pos,
-                'patient_summary': patient_summary,
-                'specialist': insights.get('specialist'),
-                'urgency_window': insights.get('urgency_window'),
-                'recommended_tests': insights.get('recommended_tests', []),
+                'prediction': res['prediction'],
+                'risk_label': risk_label,
+                'is_positive': res['is_positive'],
+                'confidence_score': conf_val,
+                'percent': conf_val,
+                'probability': prob_val,
+                'patient_summary': res['patient_summary'],
+                'report_id': res['report_id'],
+                'specialist': res['insights'].get('specialist'),
+                'urgency_window': res['insights'].get('urgency_window'),
+                'recommended_tests': res['insights'].get('recommended_tests', []),
                 'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             })
             
-            return render_template('heart.html', prediction=result, insights=insights, is_positive=is_pos, patient_summary=patient_summary)
+            if is_json_req:
+                return jsonify({
+                    "success": True,
+                    "prediction": res['prediction'],
+                    "risk_label": risk_label,
+                    "is_positive": res['is_positive'],
+                    "confidence": conf_val,
+                    "confidence_score": conf_val,
+                    "percent": conf_val,
+                    "probability": prob_val,
+                    "patient_summary": res['patient_summary'],
+                    "report_id": res['report_id'],
+                    "biomarker_gauges": gauges,
+                    "top_risk_factors": feat_contribs,
+                    "feature_contributions": feat_contribs,
+                    "insights": res['insights']
+                }), 200
+
+            return render_template(
+                'heart.html',
+                prediction=res['prediction'],
+                insights=res['insights'],
+                is_positive=res['is_positive'],
+                confidence_score=conf_val,
+                patient_summary=res['patient_summary'],
+                report_id=res['report_id'],
+                biomarker_gauges=gauges,
+                top_risk_factors=feat_contribs
+            )
         except Exception as e:
+            app.logger.error(f"[HEART EVALUATION ERROR] {e}", exc_info=True)
+            if is_json_req:
+                return jsonify({"success": False, "error": str(e)}), 400
             return render_template('heart.html', error=str(e))
     return render_template('heart.html')
 
@@ -1087,90 +1248,36 @@ def heart():
 def diabetes():
     if request.method == 'POST':
         try:
-            gender = request.form['gender']
-            smoking = request.form['smoking_history']
-            age = float(request.form['age'])
-            hypertension = int(request.form['hypertension'])
-            heart_disease = int(request.form['heart_disease'])
-            bmi = float(request.form['bmi'])
-            HbA1c_level = float(request.form['HbA1c_level'])
-            blood_glucose_level = float(request.form['blood_glucose_level'])
-
-            data = {
-                'age': age,
-                'hypertension': hypertension,
-                'heart_disease': heart_disease,
-                'bmi': bmi,
-                'HbA1c_level': HbA1c_level,
-                'blood_glucose_level': blood_glucose_level,
-                'gender_Male': 1 if gender == 'Male' else 0,
-                'gender_Other': 1 if gender == 'Other' else 0,
-                'smoking_history_current': 1 if smoking == 'current' else 0,
-                'smoking_history_ever': 1 if smoking == 'ever' else 0,
-                'smoking_history_former': 1 if smoking == 'former' else 0,
-                'smoking_history_never': 1 if smoking == 'never' else 0,
-                'smoking_history_not current': 1 if smoking == 'not current' else 0
-            }
-            
-            feature_order = ['age', 'hypertension', 'heart_disease', 'bmi', 'HbA1c_level', 'blood_glucose_level', 
-                             'gender_Male', 'gender_Other', 'smoking_history_current', 'smoking_history_ever', 
-                             'smoking_history_former', 'smoking_history_never', 'smoking_history_not current']
-            
-            feature_vector = [data[col] for col in feature_order]
             if diabetes_model is None:
                 return render_template('diabetes.html', error="Diabetes diagnostic model is not loaded or missing from server.")
             
-            prediction = diabetes_model.predict([feature_vector])[0]
-            is_pos = bool(int(prediction) == 1)
-            result = "Positive - Elevated Diabetes Risk" if is_pos else "Negative - Normal Glycemic Indicators"
-            insight_key = 'positive' if is_pos else 'negative'
-            insights = DISEASE_INSIGHTS['diabetes'][insight_key]
-
-            # Calculate confidence score
-            conf_score = 95.0
-            try:
-                if hasattr(diabetes_model, "predict_proba"):
-                    probs = diabetes_model.predict_proba([feature_vector])[0]
-                    conf_score = float(probs[1] if is_pos else probs[0]) * 100.0
-            except Exception:
-                pass
-
-            # Silent Background Google Sheets Logging (Zero Patient Visibility)
-            try:
-                log_patient_prediction(
-                    module_name="Diabetes",
-                    form_data=request.form.to_dict(),
-                    raw_prediction=int(prediction),
-                    is_positive=is_pos,
-                    confidence_score=conf_score
-                )
-            except Exception as log_err:
-                app.logger.warning(f"Silent Google Sheets logging failed in diabetes: {log_err}")
-
-            patient_summary = [
-                {'label': 'Gender', 'value': gender},
-                {'label': 'Age', 'value': f"{int(age)} years"},
-                {'label': 'Hypertension History', 'value': 'Yes' if hypertension == 1 else 'No'},
-                {'label': 'Heart Disease History', 'value': 'Yes' if heart_disease == 1 else 'No'},
-                {'label': 'Smoking History', 'value': smoking.capitalize()},
-                {'label': 'Body Mass Index (BMI)', 'value': f"{bmi:.1f} kg/m²"},
-                {'label': 'HbA1c Level', 'value': f"{HbA1c_level:.1f}%"},
-                {'label': 'Blood Glucose Level', 'value': f"{int(blood_glucose_level)} mg/dL"}
-            ]
+            res = predict_diabetes(request.form.to_dict(), diabetes_model, DISEASE_INSIGHTS, is_scanner=False)
             
             session['last_diagnosis'] = to_python_type({
                 'condition': 'Diabetes',
                 'route': '/diabetes',
-                'prediction': result,
-                'is_positive': is_pos,
-                'patient_summary': patient_summary,
-                'specialist': insights.get('specialist'),
-                'urgency_window': insights.get('urgency_window'),
-                'recommended_tests': insights.get('recommended_tests', []),
+                'prediction': res['prediction'],
+                'is_positive': res['is_positive'],
+                'confidence_score': res['confidence_score'],
+                'patient_summary': res['patient_summary'],
+                'report_id': res['report_id'],
+                'specialist': res['insights'].get('specialist'),
+                'urgency_window': res['insights'].get('urgency_window'),
+                'recommended_tests': res['insights'].get('recommended_tests', []),
                 'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             })
             
-            return render_template('diabetes.html', prediction=result, insights=insights, is_positive=is_pos, patient_summary=patient_summary)
+            return render_template(
+                'diabetes.html',
+                prediction=res['prediction'],
+                insights=res['insights'],
+                is_positive=res['is_positive'],
+                confidence_score=res['confidence_score'],
+                patient_summary=res['patient_summary'],
+                report_id=res['report_id'],
+                biomarker_gauges=res['biomarker_gauges'],
+                top_risk_factors=res['top_risk_factors']
+            )
         except Exception as e:
             return render_template('diabetes.html', error=str(e))
     return render_template('diabetes.html')
@@ -1180,71 +1287,36 @@ def diabetes():
 def kidney():
     if request.method == 'POST':
         try:
-            field_keys = ['age', 'bp', 'sg', 'al', 'su', 'rbc', 'pc', 'pcc', 'ba', 'bgr', 
-                          'bu', 'sc', 'sod', 'pot', 'hemo', 'pcv', 'wc', 'rc', 'htn', 'dm', 
-                          'cad', 'appet', 'pe', 'ane']
-            
-            features = [float(request.form[k]) for k in field_keys]
             if kidney_model is None:
                 return render_template('kidney.html', error="Kidney disease diagnostic model is not loaded or missing from server.")
             
-            prediction = kidney_model.predict([features])[0]
-            is_pos = bool(int(prediction) == 1)
-            result = "Positive - Chronic Kidney Disease Indicators" if is_pos else "Negative - Healthy Renal Function"
-            insight_key = 'positive' if is_pos else 'negative'
-            insights = DISEASE_INSIGHTS['kidney_disease'][insight_key]
-
-            # Calculate confidence score
-            conf_score = 95.0
-            try:
-                if hasattr(kidney_model, "predict_proba"):
-                    probs = kidney_model.predict_proba([features])[0]
-                    conf_score = float(probs[1] if is_pos else probs[0]) * 100.0
-            except Exception:
-                pass
-
-            # Silent Background Google Sheets Logging (Zero Patient Visibility)
-            try:
-                log_patient_prediction(
-                    module_name="Kidney_Disease",
-                    form_data=request.form.to_dict(),
-                    raw_prediction=int(prediction),
-                    is_positive=is_pos,
-                    confidence_score=conf_score
-                )
-            except Exception as log_err:
-                app.logger.warning(f"Silent Google Sheets logging failed in kidney: {log_err}")
-
-            patient_summary = [
-                {'label': 'Age', 'value': f"{int(features[0])} years"},
-                {'label': 'Blood Pressure', 'value': f"{int(features[1])} mm Hg"},
-                {'label': 'Specific Gravity', 'value': f"{features[2]:.3f}"},
-                {'label': 'Albumin (Urine)', 'value': f"Grade {int(features[3])}"},
-                {'label': 'Sugar (Urine)', 'value': f"Grade {int(features[4])}"},
-                {'label': 'Red Blood Cells', 'value': 'Normal' if features[5] == 1 else 'Abnormal'},
-                {'label': 'Pus Cells', 'value': 'Normal' if features[6] == 1 else 'Abnormal'},
-                {'label': 'Blood Glucose Random', 'value': f"{int(features[9])} mg/dL"},
-                {'label': 'Blood Urea', 'value': f"{features[10]} mg/dL"},
-                {'label': 'Serum Creatinine', 'value': f"{features[11]} mg/dL"},
-                {'label': 'Hemoglobin', 'value': f"{features[14]} g/dL"},
-                {'label': 'Packed Cell Volume', 'value': f"{int(features[15])}%"},
-                {'label': 'Hypertension', 'value': 'Yes' if features[18] == 1 else 'No'},
-                {'label': 'Diabetes Mellitus', 'value': 'Yes' if features[19] == 1 else 'No'}
-            ]
+            res = predict_kidney(request.form.to_dict(), kidney_model, DISEASE_INSIGHTS, is_scanner=False)
             
             session['last_diagnosis'] = to_python_type({
                 'condition': 'Kidney Disease',
                 'route': '/kidney',
-                'prediction': result,
-                'is_positive': is_pos,
-                'patient_summary': patient_summary,
-                'specialist': insights.get('specialist'),
-                'urgency_window': insights.get('urgency_window'),
-                'recommended_tests': insights.get('recommended_tests', []),
+                'prediction': res['prediction'],
+                'is_positive': res['is_positive'],
+                'confidence_score': res['confidence_score'],
+                'patient_summary': res['patient_summary'],
+                'report_id': res['report_id'],
+                'specialist': res['insights'].get('specialist'),
+                'urgency_window': res['insights'].get('urgency_window'),
+                'recommended_tests': res['insights'].get('recommended_tests', []),
                 'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             })
             
-            return render_template('kidney.html', prediction=result, insights=insights, is_positive=is_pos, patient_summary=patient_summary)
+            return render_template(
+                'kidney.html',
+                prediction=res['prediction'],
+                insights=res['insights'],
+                is_positive=res['is_positive'],
+                confidence_score=res['confidence_score'],
+                patient_summary=res['patient_summary'],
+                report_id=res['report_id'],
+                biomarker_gauges=res['biomarker_gauges'],
+                top_risk_factors=res['top_risk_factors']
+            )
         except Exception as e:
             return render_template('kidney.html', error=str(e))
     return render_template('kidney.html')
@@ -1254,76 +1326,36 @@ def kidney():
 def liver():
     if request.method == 'POST':
         try:
-            gender_val = 1 if request.form['Gender'] == 'Male' else 0
-            features = [
-                float(request.form['Age']),
-                gender_val,
-                float(request.form['Total_Bilirubin']),
-                float(request.form['Direct_Bilirubin']),
-                float(request.form['Alkaline_Phosphotase']),
-                float(request.form['Alamine_Aminotransferase']),
-                float(request.form['Aspartate_Aminotransferase']),
-                float(request.form['Total_Protiens']),
-                float(request.form['Albumin']),
-                float(request.form['Albumin_and_Globulin_Ratio'])
-            ]
-            
             if liver_model is None:
                 return render_template('liver.html', error="Liver disease diagnostic model is not loaded or missing from server.")
             
-            prediction = liver_model.predict([features])[0]
-            is_pos = bool(int(prediction) == 1)
-            result = "High Probability of Liver Disease" if is_pos else "Low Probability of Liver Disease"
-            insight_key = 'positive' if is_pos else 'negative'
-            insights = DISEASE_INSIGHTS['liver_disease'][insight_key]
-
-            # Calculate confidence score
-            conf_score = 95.0
-            try:
-                if hasattr(liver_model, "predict_proba"):
-                    probs = liver_model.predict_proba([features])[0]
-                    conf_score = float(probs[1] if is_pos else probs[0]) * 100.0
-            except Exception:
-                pass
-
-            # Silent Background Google Sheets Logging (Zero Patient Visibility)
-            try:
-                log_patient_prediction(
-                    module_name="Liver_Disease",
-                    form_data=request.form.to_dict(),
-                    raw_prediction=int(prediction),
-                    is_positive=is_pos,
-                    confidence_score=conf_score
-                )
-            except Exception as log_err:
-                app.logger.warning(f"Silent Google Sheets logging failed in liver: {log_err}")
-
-            patient_summary = [
-                {'label': 'Age', 'value': f"{int(features[0])} years"},
-                {'label': 'Gender', 'value': 'Male' if gender_val == 1 else 'Female'},
-                {'label': 'Total Bilirubin', 'value': f"{features[2]:.1f} mg/dL"},
-                {'label': 'Direct Bilirubin', 'value': f"{features[3]:.1f} mg/dL"},
-                {'label': 'Alkaline Phosphatase (ALP)', 'value': f"{int(features[4])} U/L"},
-                {'label': 'Alamine Aminotransferase (ALT)', 'value': f"{int(features[5])} U/L"},
-                {'label': 'Aspartate Aminotransferase (AST)', 'value': f"{int(features[6])} U/L"},
-                {'label': 'Total Proteins', 'value': f"{features[7]:.1f} g/dL"},
-                {'label': 'Albumin', 'value': f"{features[8]:.1f} g/dL"},
-                {'label': 'A/G Ratio', 'value': f"{features[9]:.2f}"}
-            ]
+            res = predict_liver(request.form.to_dict(), liver_model, DISEASE_INSIGHTS, is_scanner=False)
             
             session['last_diagnosis'] = to_python_type({
                 'condition': 'Liver Disease',
                 'route': '/liver',
-                'prediction': result,
-                'is_positive': is_pos,
-                'patient_summary': patient_summary,
-                'specialist': insights.get('specialist'),
-                'urgency_window': insights.get('urgency_window'),
-                'recommended_tests': insights.get('recommended_tests', []),
+                'prediction': res['prediction'],
+                'is_positive': res['is_positive'],
+                'confidence_score': res['confidence_score'],
+                'patient_summary': res['patient_summary'],
+                'report_id': res['report_id'],
+                'specialist': res['insights'].get('specialist'),
+                'urgency_window': res['insights'].get('urgency_window'),
+                'recommended_tests': res['insights'].get('recommended_tests', []),
                 'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             })
             
-            return render_template('liver.html', prediction=result, insights=insights, is_positive=is_pos, patient_summary=patient_summary)
+            return render_template(
+                'liver.html',
+                prediction=res['prediction'],
+                insights=res['insights'],
+                is_positive=res['is_positive'],
+                confidence_score=res['confidence_score'],
+                patient_summary=res['patient_summary'],
+                report_id=res['report_id'],
+                biomarker_gauges=res['biomarker_gauges'],
+                top_risk_factors=res['top_risk_factors']
+            )
         except Exception as e:
             return render_template('liver.html', error=str(e))
     return render_template('liver.html')
@@ -1333,70 +1365,187 @@ def liver():
 def breast_cancer():
     if request.method == 'POST':
         try:
-            features = [
-                float(request.form['mean_radius']),
-                float(request.form['mean_texture']),
-                float(request.form['mean_perimeter']),
-                float(request.form['mean_area']),
-                float(request.form['mean_smoothness'])
-            ]
-            
             if breast_cancer_model is None:
                 return render_template('breast_cancer.html', error="Breast cancer diagnostic model is not loaded or missing from server.")
             
-            prediction = breast_cancer_model.predict([features])[0]
-            # 0 = Malignant, 1 = Benign
-            is_pos = bool(int(prediction) == 0)
-            result = "Malignant Neoplasm Indicators" if is_pos else "Benign Cellular Characteristics"
-            insight_key = 'malignant' if is_pos else 'benign'
-            insights = DISEASE_INSIGHTS['breast_cancer'][insight_key]
-
-            # Calculate confidence score
-            conf_score = 95.0
-            try:
-                if hasattr(breast_cancer_model, "predict_proba"):
-                    probs = breast_cancer_model.predict_proba([features])[0]
-                    cls_idx = list(breast_cancer_model.classes_).index(prediction) if hasattr(breast_cancer_model, 'classes_') else int(prediction)
-                    conf_score = float(probs[cls_idx]) * 100.0
-            except Exception:
-                pass
-
-            # Silent Background Google Sheets Logging (Zero Patient Visibility)
-            try:
-                log_patient_prediction(
-                    module_name="Breast_Cancer",
-                    form_data=request.form.to_dict(),
-                    raw_prediction="Malignant" if is_pos else "Benign",
-                    is_positive=is_pos,
-                    confidence_score=conf_score
-                )
-            except Exception as log_err:
-                app.logger.warning(f"Silent Google Sheets logging failed in breast cancer: {log_err}")
-
-            patient_summary = [
-                {'label': 'Mean Nuclear Radius', 'value': f"{features[0]:.2f} µm"},
-                {'label': 'Mean Texture Variation', 'value': f"{features[1]:.2f}"},
-                {'label': 'Mean Perimeter', 'value': f"{features[2]:.2f} µm"},
-                {'label': 'Mean Area', 'value': f"{features[3]:.1f} µm²"},
-                {'label': 'Mean Smoothness Index', 'value': f"{features[4]:.4f}"}
-            ]
+            res = predict_breast_cancer(request.form.to_dict(), breast_cancer_model, DISEASE_INSIGHTS, is_scanner=False)
             
             session['last_diagnosis'] = to_python_type({
                 'condition': 'Breast Cancer',
                 'route': '/breast_cancer',
-                'prediction': result,
-                'is_positive': is_pos,
-                'patient_summary': patient_summary,
-                'specialist': insights.get('specialist'),
-                'urgency_window': insights.get('urgency_window'),
-                'recommended_tests': insights.get('recommended_tests', []),
+                'prediction': res['prediction'],
+                'is_positive': res['is_positive'],
+                'confidence_score': res['confidence_score'],
+                'patient_summary': res['patient_summary'],
+                'report_id': res['report_id'],
+                'specialist': res['insights'].get('specialist'),
+                'urgency_window': res['insights'].get('urgency_window'),
+                'recommended_tests': res['insights'].get('recommended_tests', []),
                 'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             })
             
-            return render_template('breast_cancer.html', prediction=result, insights=insights, is_positive=is_pos, patient_summary=patient_summary)
+            return render_template(
+                'breast_cancer.html',
+                prediction=res['prediction'],
+                insights=res['insights'],
+                is_positive=res['is_positive'],
+                confidence_score=res['confidence_score'],
+                patient_summary=res['patient_summary'],
+                report_id=res['report_id'],
+                biomarker_gauges=res['biomarker_gauges'],
+                top_risk_factors=res['top_risk_factors']
+            )
         except Exception as e:
             return render_template('breast_cancer.html', error=str(e))
     return render_template('breast_cancer.html')
+
+# ============================================================================
+# SMART MEDICAL LAB REPORT SCANNER & VERIFICATION APIS
+# ============================================================================
+
+@app.route('/api/scan-report/<module_name>', methods=['POST'])
+def scan_report(module_name):
+    """
+    Unified Smart Medical Lab Report Scanner Endpoint.
+    Accepts image/PDF uploads, runs 3-tier extraction, returns structured metadata,
+    and optionally executes validated instant prediction.
+    """
+    if module_name not in SUPPORTED_MODULES:
+        return jsonify({
+            'success': False,
+            'error': f"Unsupported diagnostic module: '{module_name}'. Allowed: {sorted(list(SUPPORTED_MODULES))}"
+        }), 400
+
+    uploaded_file = request.files.get('report_file') or request.files.get('file')
+    if not uploaded_file:
+        return jsonify({'success': False, 'error': "No report file provided in upload request."}), 400
+
+    raw_filename = uploaded_file.filename or ''
+    clean_filename = secure_filename(raw_filename)
+    if not clean_filename:
+        clean_filename = f"report_upload_{uuid.uuid4().hex[:6]}.pdf"
+
+    allowed_exts = {'.jpg', '.jpeg', '.png', '.webp', '.pdf'}
+    _, ext = os.path.splitext(clean_filename.lower())
+    if ext not in allowed_exts:
+        return jsonify({
+            'success': False,
+            'error': f"Unsupported file type '{ext}'. Please upload an image (.jpg, .png, .webp) or PDF report."
+        }), 400
+
+    file_bytes = uploaded_file.read()
+    if not file_bytes:
+        return jsonify({'success': False, 'error': "Uploaded file is empty (0 bytes)."}), 400
+
+    if len(file_bytes) > MAX_FILE_SIZE:
+        max_mb = MAX_FILE_SIZE // (1024 * 1024)
+        return jsonify({'success': False, 'error': f"File size exceeds maximum upload limit of {max_mb} MB."}), 413
+
+    mode = request.form.get('mode', 'autofill').strip().lower()
+
+    # Execute modular extraction pipeline
+    scan_res = process_report_pipeline(
+        file_bytes=file_bytes,
+        filename=clean_filename,
+        module_name=module_name,
+        mime_type=uploaded_file.mimetype or 'application/octet-stream'
+    )
+
+    if not scan_res.get('success'):
+        return jsonify(scan_res), 400
+
+    # If instant predict requested and module input policy permits:
+    if mode == 'instant_predict':
+        if not scan_res.get('can_predict'):
+            return jsonify(scan_res), 200
+
+        model_map = {
+            'heart': (heart_model, predict_heart),
+            'diabetes': (diabetes_model, predict_diabetes),
+            'kidney': (kidney_model, predict_kidney),
+            'liver': (liver_model, predict_liver),
+            'breast_cancer': (breast_cancer_model, predict_breast_cancer)
+        }
+
+        m_inst, p_func = model_map[module_name]
+        if m_inst is None:
+            return jsonify({
+                'success': False,
+                'error': f"Diagnostic model for {module_name} is currently not loaded on server."
+            }), 503
+
+        try:
+            pred_res = p_func(scan_res['values'], m_inst, DISEASE_INSIGHTS, is_scanner=True)
+            scan_res['prediction'] = pred_res['prediction']
+            scan_res['risk_label'] = pred_res.get('risk_label', pred_res['prediction'])
+            scan_res['is_positive'] = pred_res['is_positive']
+            conf_val = pred_res.get("confidence_score") or pred_res.get("confidence") or pred_res.get("percent")
+            scan_res['confidence'] = conf_val
+            scan_res['confidence_score'] = conf_val
+            scan_res['percent'] = conf_val
+            scan_res['probability'] = round(float(conf_val) / 100.0, 4) if conf_val is not None else None
+            scan_res['report_id'] = pred_res['report_id']
+            scan_res['insights'] = pred_res['insights']
+            scan_res['biomarker_gauges'] = pred_res['biomarker_gauges']
+            scan_res['top_risk_factors'] = pred_res['top_risk_factors']
+            scan_res['feature_contributions'] = pred_res.get('feature_contributions', pred_res['top_risk_factors'])
+            scan_res['patient_summary'] = pred_res['patient_summary']
+        except Exception as e:
+            app.logger.error(f"[SCANNER INSTANT PREDICT ERROR] {e}", exc_info=True)
+            scan_res['warnings'].append(f"Instant prediction could not complete: {str(e)}")
+
+    return jsonify(scan_res), 200
+
+
+@app.route('/api/patient-images/preview/<token>', methods=['GET'])
+def patient_image_preview(token):
+    """
+    Protected preview mechanism for patient-uploaded medical images.
+    Enforces session isolation: only the session that uploaded the image can preview it.
+    Tokens expire after 30 minutes.
+    """
+    preview_tokens = session.get('image_preview_tokens', {})
+    if not isinstance(preview_tokens, dict) or token not in preview_tokens:
+        abort(404)
+
+    token_info = preview_tokens[token]
+    filepath = token_info.get('filepath')
+    created_at = token_info.get('created_at', 0)
+
+    # Check 30-minute expiry
+    if time.time() - created_at > 1800:
+        abort(404)
+
+    if not filepath or not os.path.exists(filepath):
+        abort(404)
+
+    return send_file(filepath, mimetype=token_info.get('mimetype', 'image/png'))
+
+
+@app.route('/api/report-qr/<report_id>', methods=['GET'])
+def report_qr_code(report_id):
+    """Dynamically generates high-resolution PNG QR code for verification."""
+    clean_id = secure_filename(report_id)
+    public_base = os.environ.get('PUBLIC_BASE_URL', '').strip()
+    if not public_base:
+        public_base = request.host_url.rstrip('/')
+    qr_png = generate_qr_code_image(clean_id, public_base)
+    from io import BytesIO
+    return send_file(BytesIO(qr_png), mimetype='image/png')
+
+
+@app.route('/verify-report', methods=['GET'])
+@app.route('/verify-report/<report_id>', methods=['GET'])
+def verify_report_page(report_id=None):
+    """Official public verification page for authenticating clinical screening reports."""
+    raw_id = report_id or request.args.get('id') or request.args.get('report_id') or request.args.get('verify') or ''
+    clean_id = secure_filename(raw_id).strip()
+    if not clean_id:
+        return render_template('verify_report.html', verified=False, query_id="None"), 404
+    record = get_verified_report(clean_id)
+    if record:
+        return render_template('verify_report.html', verified=True, report=record)
+    return render_template('verify_report.html', verified=False, query_id=clean_id), 404
 
 # --- Malaria ---
 @app.route('/malaria', methods=['GET', 'POST'])
@@ -1423,12 +1572,10 @@ def malaria():
                 if file.filename == '':
                     return render_template('malaria.html', error="No selected file")
                 
-                clean_name = secure_filename(file.filename)
-                unique_filename = f"{uuid.uuid4().hex[:8]}_{clean_name}"
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-                file.save(filepath)
-                uploaded_url = url_for('static', filename='uploads/' + unique_filename)
-                filename = unique_filename
+                filepath, uploaded_url, val_err = validate_and_save_patient_image(file)
+                if val_err:
+                    return render_template('malaria.html', error=val_err)
+                filename = os.path.basename(filepath)
 
             model = get_malaria_model()
             if model is None:
@@ -1477,12 +1624,26 @@ def malaria():
                 {'label': 'AI Confidence Score', 'value': f"{confidence:.1f}%"}
             ]
 
+            report_id = generate_report_id("MALA")
+            register_report(
+                report_id=report_id,
+                module_name="malaria",
+                condition_title="Malaria Microscopic Vision Screening",
+                prediction_text=result,
+                is_positive=is_pos,
+                confidence_score=confidence,
+                is_scanner_extracted=False,
+                summary_data={"patient_summary": patient_summary}
+            )
+
             session['last_diagnosis'] = to_python_type({
                 'condition': 'Malaria',
                 'route': '/malaria',
                 'prediction': result,
                 'is_positive': is_pos,
+                'confidence_score': confidence,
                 'patient_summary': patient_summary,
+                'report_id': report_id,
                 'specialist': insights.get('specialist'),
                 'urgency_window': insights.get('urgency_window'),
                 'recommended_tests': insights.get('recommended_tests', []),
@@ -1490,7 +1651,7 @@ def malaria():
             })
 
             return render_template('malaria.html', prediction=result, insights=insights, is_positive=is_pos, 
-                                   patient_summary=patient_summary, uploaded_image_url=uploaded_url)
+                                   patient_summary=patient_summary, uploaded_image_url=uploaded_url, report_id=report_id)
         except Exception as e:
             return render_template('malaria.html', error=str(e))
     return render_template('malaria.html')
@@ -1515,12 +1676,10 @@ def pneumonia():
                 if file.filename == '':
                     return render_template('pneumonia.html', error="No selected file")
                 
-                clean_name = secure_filename(file.filename)
-                unique_filename = f"{uuid.uuid4().hex[:8]}_{clean_name}"
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-                file.save(filepath)
-                uploaded_url = url_for('static', filename='uploads/' + unique_filename)
-                filename = unique_filename
+                filepath, uploaded_url, val_err = validate_and_save_patient_image(file)
+                if val_err:
+                    return render_template('pneumonia.html', error=val_err)
+                filename = os.path.basename(filepath)
 
             model = get_pneumonia_model()
             if model is None:
@@ -1569,12 +1728,26 @@ def pneumonia():
                 {'label': 'AI Confidence Level', 'value': f"{confidence:.1f}%"}
             ]
 
+            report_id = generate_report_id("PNEU")
+            register_report(
+                report_id=report_id,
+                module_name="pneumonia",
+                condition_title="Pneumonia Chest Radiography",
+                prediction_text=result,
+                is_positive=is_pos,
+                confidence_score=confidence,
+                is_scanner_extracted=False,
+                summary_data={"patient_summary": patient_summary}
+            )
+
             session['last_diagnosis'] = to_python_type({
                 'condition': 'Pneumonia',
                 'route': '/pneumonia',
                 'prediction': result,
                 'is_positive': is_pos,
+                'confidence_score': confidence,
                 'patient_summary': patient_summary,
+                'report_id': report_id,
                 'specialist': insights.get('specialist'),
                 'urgency_window': insights.get('urgency_window'),
                 'recommended_tests': insights.get('recommended_tests', []),
@@ -1582,7 +1755,7 @@ def pneumonia():
             })
 
             return render_template('pneumonia.html', prediction=result, insights=insights, is_positive=is_pos,
-                                   patient_summary=patient_summary, uploaded_image_url=uploaded_url)
+                                   patient_summary=patient_summary, uploaded_image_url=uploaded_url, report_id=report_id)
         except Exception as e:
             return render_template('pneumonia.html', error=str(e))
     return render_template('pneumonia.html')
@@ -3156,22 +3329,39 @@ def developer_patient_records():
     auth_failure_reason = ""
 
     if auth_method == 'otp' or otp_entered:
-        # OTP verification
-        cached_otp = DEV_OTP_CACHE.get('otp')
-        expires_at = DEV_OTP_CACHE.get('expires_at')
-        if not cached_otp or not expires_at:
-            auth_failure_reason = "No active OTP found. Please click 'Send OTP' to request a new verification code."
-        elif datetime.datetime.now() > expires_at:
-            auth_failure_reason = "OTP has expired. Please request a new 6-digit code."
-        elif otp_entered != cached_otp:
-            auth_failure_reason = "Invalid OTP verification code. Please check your developer inbox or server log."
-        else:
-            authenticated = True
-            DEV_OTP_CACHE['otp'] = None
-            DEV_OTP_CACHE['expires_at'] = None
+        with DEV_OTP_LOCK:
+            cached_otp = DEV_OTP_CACHE.get('otp')
+            expires_at = DEV_OTP_CACHE.get('expires_at')
+            attempts = DEV_OTP_CACHE.get('attempts', 0)
+            max_attempts = DEV_OTP_CACHE.get('max_attempts', 5)
+
+            if attempts >= max_attempts:
+                DEV_OTP_CACHE['otp'] = None
+                DEV_OTP_CACHE['expires_at'] = None
+                auth_failure_reason = "Too many failed attempts. Verification code invalidated. Please request a new OTP."
+            elif not cached_otp or not expires_at:
+                auth_failure_reason = "No active OTP found. Please click 'Send OTP' to request a new verification code."
+            elif datetime.datetime.now() > expires_at:
+                DEV_OTP_CACHE['otp'] = None
+                DEV_OTP_CACHE['expires_at'] = None
+                auth_failure_reason = "OTP has expired. Please request a new 6-digit code."
+            elif not secrets.compare_digest(otp_entered, str(cached_otp)):
+                DEV_OTP_CACHE['attempts'] = attempts + 1
+                if DEV_OTP_CACHE['attempts'] >= max_attempts:
+                    DEV_OTP_CACHE['otp'] = None
+                    DEV_OTP_CACHE['expires_at'] = None
+                    auth_failure_reason = "Too many failed attempts. Verification code invalidated. Please request a new OTP."
+                else:
+                    remaining = max_attempts - (attempts + 1)
+                    auth_failure_reason = f"Invalid OTP verification code. {remaining} attempt(s) remaining."
+            else:
+                authenticated = True
+                DEV_OTP_CACHE['otp'] = None
+                DEV_OTP_CACHE['expires_at'] = None
+                DEV_OTP_CACHE['attempts'] = 0
     else:
-        # Access Key verification
-        if access_key and access_key == DEV_ACCESS_KEY:
+        # Access Key verification with constant-time comparison
+        if access_key and secrets.compare_digest(access_key, DEV_ACCESS_KEY):
             authenticated = True
         else:
             auth_failure_reason = "Invalid Developer Master Access Key."
@@ -3208,19 +3398,26 @@ def developer_request_otp():
         app.logger.warning(f"[SECURITY 403] OTP generation blocked for unauthorized email '{email}' from IP {client_ip}")
         return jsonify({"success": False, "message": "403 Forbidden: Email is not authorized for developer access."}), 403
 
-    # Generate cryptographically secure 6-digit OTP
-    otp_val = f"{secrets.randbelow(900000) + 100000}"
-    DEV_OTP_CACHE['otp'] = otp_val
-    DEV_OTP_CACHE['expires_at'] = datetime.datetime.now() + datetime.timedelta(minutes=10)
-    DEV_OTP_CACHE['email'] = email
+    now_ts = time.time()
+    with DEV_OTP_LOCK:
+        last_req = DEV_OTP_CACHE.get('last_requested_at', 0)
+        cooldown = 60
+        if now_ts - last_req < cooldown:
+            wait_sec = int(cooldown - (now_ts - last_req))
+            return jsonify({
+                "success": False,
+                "message": f"Rate limit reached. Please wait {wait_sec} seconds before requesting a new code."
+            }), 429
 
-    print(f"\n====================================================================")
-    print(f"[DEVELOPER SECURITY GATEWAY] Generated 6-digit OTP: {otp_val}")
-    print(f"Target Developer: {AUTHORIZED_DEV_EMAIL}")
-    print(f"Valid for: 10 minutes (Expires: {DEV_OTP_CACHE['expires_at'].strftime('%H:%M:%S')})")
-    print(f"====================================================================\n")
+        # Generate cryptographically secure 6-digit OTP
+        otp_val = f"{secrets.randbelow(900000) + 100000}"
+        DEV_OTP_CACHE['otp'] = otp_val
+        DEV_OTP_CACHE['expires_at'] = datetime.datetime.now() + datetime.timedelta(minutes=10)
+        DEV_OTP_CACHE['email'] = email
+        DEV_OTP_CACHE['attempts'] = 0
+        DEV_OTP_CACHE['last_requested_at'] = now_ts
 
-    subject = f"[MediNova Developer Core] One-Time Verification Code: {otp_val}"
+    subject = "[MediNova Developer Core] One-Time Verification Code"
     body_html = f"""
     <div style="font-family: Arial, sans-serif; background: #0b1120; color: #f8fafc; padding: 24px; border-radius: 8px;">
         <h2 style="color: #38bdf8; margin-top: 0;">MediNova Developer Security Gate</h2>
@@ -3232,12 +3429,21 @@ def developer_request_otp():
     </div>
     """
     email_sent, email_msg = send_developer_email(subject, body_html)
-    if email_sent:
-        msg = f"OTP successfully sent to {AUTHORIZED_DEV_EMAIL}."
-    else:
-        msg = f"OTP active! (Console log active: {otp_val}. Notice: {email_msg})"
+    if not email_sent:
+        with DEV_OTP_LOCK:
+            DEV_OTP_CACHE['otp'] = None
+            DEV_OTP_CACHE['expires_at'] = None
+        app.logger.error(f"[SECURITY OTP] Failed to send developer OTP via SMTP: {email_msg}")
+        return jsonify({
+            "success": False,
+            "message": "Failed to deliver verification code via SMTP. Please ensure SMTP configuration is active on the server."
+        }), 502
 
-    return jsonify({"success": True, "message": msg})
+    app.logger.info(f"[SECURITY OTP] One-time verification code dispatched to developer email.")
+    return jsonify({
+        "success": True,
+        "message": f"A 6-digit verification code has been dispatched to {AUTHORIZED_DEV_EMAIL}."
+    }), 200
 
 
 @app.route('/developer/logout', methods=['GET'])

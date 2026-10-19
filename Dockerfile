@@ -15,6 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsm6 \
     libxext6 \
     libxrender1 \
+    tesseract-ocr \
+    tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -27,8 +29,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Ensure upload and sample directories exist with write permissions
-RUN mkdir -p static/uploads static/samples && \
-    chmod -R 777 static/uploads static/samples
+RUN mkdir -p static/uploads static/samples private_uploads && \
+    chmod -R 777 static/uploads static/samples private_uploads
 
 EXPOSE 10000
 

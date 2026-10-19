@@ -24,6 +24,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Malaria Detection - MediNova AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/report-scanner.css') }}?v=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
@@ -31,7 +32,7 @@
     <!-- Ambient Background -->
     <div class="animated-bg">
         <div class="gradient-orb orb-1"></div>
-        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
     </div>
     <div class="bg-grid"></div>
 
@@ -51,6 +52,9 @@
             <a href="/" class="nav-link">Home</a>
             <a href="/features" class="nav-link">Diagnostic Suite</a>
             <a href="/contact" class="nav-link">Emergency & Care</a>
+            <button type="button" class="btn btn-sm btn-outline open-health-passport-btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; margin-right: 0.5rem;">
+                <span>📋 Health Passport</span>
+            </button>
             <a href="/contact" class="nav-emergency-btn">
                 <span class="pulse-dot"></span>
                 <span>24/7 Helpline: 112 / 911</span>
@@ -122,10 +126,37 @@
                 </div>
                 {% endif %}
 
+                <!-- Scanner Audit Badge & Integrity Seal -->
+                {% if report_id %}
+                <div class="scanner-integrity-seal-bar" data-report-id="{{ report_id }}" style="margin-top: 1rem; padding: 0.6rem 1rem; background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 8px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="scanner-audit-badge" style="background: #0891b2; color: #ffffff; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 4px;">🔬 Clinical Integrity Verified</span>
+                        <span style="font-family: monospace; font-size: 0.85rem; color: var(--text);">Report ID: <strong>{{ report_id }}</strong></span>
+                    </div>
+                    <div>
+                        <a href="/verify-report/{{ report_id }}" target="_blank" style="color: #06b6d4; font-size: 0.8rem; text-decoration: underline; font-weight: 600;">Verify Cryptographic Seal ↗</a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Multilingual Translation Selector Toolbar -->
+                <div class="language-selector-wrapper" style="margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: rgba(255, 255, 255, 0.04); padding: 0.5rem 1rem; border-radius: 8px;">
+                    <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">🌐 Multilingual Patient Summary:</span>
+                    <div class="language-btn-group" style="display: flex; gap: 0.3rem;">
+                        <button type="button" class="lang-btn active" data-lang="en">English</button>
+                        <button type="button" class="lang-btn" data-lang="ta">தமிழ் (Tamil)</button>
+                        <button type="button" class="lang-btn" data-lang="hi">हिंदी (Hindi)</button>
+                        <button type="button" class="lang-btn" data-lang="es">Español</button>
+                    </div>
+                </div>
+
                 <!-- Action Toolbar -->
                 <div class="result-action-toolbar no-print">
                     <button type="button" onclick="generateMedicalReportPDF()" class="btn btn-primary btn-print-report">
                         <span>📄 Download / Print Medical Report (PDF)</span>
+                    </button>
+                    <button type="button" class="btn btn-outline open-health-passport-btn">
+                        <span>📋 View My Health Passport</span>
                     </button>
                     <button type="button" class="btn btn-copilot-explain" data-condition="Malaria" data-prediction="{{ prediction or '' }}" onclick="askCopilotToExplainResult('Malaria', this.dataset.prediction)">
                         <span>🤖 Ask MediNova AI to Explain This Result</span>
@@ -348,6 +379,7 @@
     <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
     <script src="{{ url_for('static', filename='chatbot.js') }}?v=3"></script>
     <script src="{{ url_for('static', filename='medical_report.js') }}?v=4.0"></script>
+    <script src="{{ url_for('static', filename='js/report-scanner.js') }}?v=1.0"></script>
 </body>
 
 </html>

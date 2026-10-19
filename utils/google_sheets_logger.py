@@ -151,6 +151,98 @@ _last_status = {
     "is_connected": False
 }
 
+OUTBOX_DB_PATH = os.path.join(BASE_DIR, "medinova_appointments.db")
+
+def init_outbox_db():
+    try:
+        import sqlite3
+        conn = sqlite3.connect(OUTBOX_DB_PATH, timeout=10.0)
+        cursor = conn.cursor()
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sheets_outbox (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            record_id TEXT UNIQUE NOT NULL,
+            module_sheet TEXT NOT NULL,
+            module_row_json TEXT NOT NULL,
+            master_row_json TEXT NOT NULL,
+            module_appended INTEGER DEFAULT 0,
+            master_appended INTEGER DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'QUEUED',
+            retries INTEGER DEFAULT 0,
+            last_error TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_outbox_status ON sheets_outbox(status);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_outbox_rec ON sheets_outbox(record_id);")
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Could not initialize sheets_outbox table: {e}")
+
+init_outbox_db()
+
+def _insert_into_outbox(record_id: str, module_sheet: str, module_row: List[Any], master_row: List[Any]):
+    try:
+        import sqlite3
+        conn = sqlite3.connect(OUTBOX_DB_PATH, timeout=10.0)
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT OR IGNORE INTO sheets_outbox (
+                record_id, module_sheet, module_row_json, master_row_json,
+                module_appended, master_appended, status
+            ) VALUES (?, ?, ?, ?, 0, 0, 'QUEUED')
+        """, (record_id, module_sheet, json.dumps(module_row), json.dumps(master_row)))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Failed to insert record {record_id} into outbox: {e}")
+
+def _update_outbox_progress(record_id: str, module_done: Optional[int] = None, master_done: Optional[int] = None, status: Optional[str] = None, error: Optional[str] = None, retries: Optional[int] = None):
+    try:
+        import sqlite3
+        conn = sqlite3.connect(OUTBOX_DB_PATH, timeout=10.0)
+        cursor = conn.cursor()
+        updates = ["updated_at = CURRENT_TIMESTAMP"]
+        params = []
+        if module_done is not None:
+            updates.append("module_appended = ?")
+            params.append(module_done)
+        if master_done is not None:
+            updates.append("master_appended = ?")
+            params.append(master_done)
+        if status is not None:
+            updates.append("status = ?")
+            params.append(status)
+        if error is not None:
+            updates.append("last_error = ?")
+            params.append(str(error))
+        if retries is not None:
+            updates.append("retries = ?")
+            params.append(retries)
+        params.append(record_id)
+        cursor.execute(f"UPDATE sheets_outbox SET {', '.join(updates)} WHERE record_id = ?", tuple(params))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Failed to update outbox for {record_id}: {e}")
+
+def _get_outbox_counts() -> Dict[str, int]:
+    counts = {"QUEUED": 0, "RETRYING": 0, "SYNCHRONIZED": 0, "FAILED": 0}
+    try:
+        import sqlite3
+        conn = sqlite3.connect(OUTBOX_DB_PATH, timeout=5.0)
+        cursor = conn.cursor()
+        cursor.execute("SELECT status, COUNT(*) FROM sheets_outbox GROUP BY status")
+        for row in cursor.fetchall():
+            st = str(row[0]).upper()
+            counts[st] = int(row[1])
+        conn.close()
+    except Exception:
+        pass
+    return counts
+
 
 def _get_credentials():
     """
@@ -332,6 +424,10 @@ def _format_confidence(confidence: Any) -> str:
     """Format confidence score to consistent percentage string."""
     if confidence is None:
         return "N/A"
+    if isinstance(confidence, dict):
+        confidence = confidence.get("percent", confidence.get("confidence_score", confidence.get("confidence", confidence.get("score", 0))))
+    elif hasattr(confidence, "percent"):
+        confidence = getattr(confidence, "percent", 0)
     try:
         val = float(confidence)
         if 0.0 <= val <= 1.0 and val > 0:
@@ -387,12 +483,25 @@ def _map_form_aliases(module_key: str, form_data: Dict[str, Any]) -> Dict[str, A
 
 
 def _clean_cell_value(val: Any) -> Any:
-    """Ensure safe cell value formatting for Google Sheets values API."""
+    """Ensure safe cell value formatting and prevent formula injection in Google Sheets."""
     if val is None:
         return ""
     if isinstance(val, (int, float, bool)):
         return val
-    s = str(val).strip()
+    raw_s = str(val)
+    if not raw_s:
+        return ""
+    if raw_s[0] in ('\t', '\r'):
+        return f"'{raw_s}"
+    s = raw_s.strip()
+    if not s:
+        return ""
+    if s[0] in ('=', '+', '-', '@'):
+        try:
+            float(s)
+            return s
+        except ValueError:
+            return f"'{s}"
     return s
 
 
@@ -438,6 +547,23 @@ def _worker_loop():
             _log_queue.task_done()
             continue
 
+        module_done = False
+        master_done = False
+
+        # Check outbox if previously partially completed
+        try:
+            import sqlite3
+            conn = sqlite3.connect(OUTBOX_DB_PATH, timeout=5.0)
+            cursor = conn.cursor()
+            cursor.execute("SELECT module_appended, master_appended FROM sheets_outbox WHERE record_id = ?", (record_id,))
+            row = cursor.fetchone()
+            if row:
+                module_done = bool(row[0])
+                master_done = bool(row[1])
+            conn.close()
+        except Exception:
+            pass
+
         # Bounded Retries with Exponential Backoff
         max_retries = 3
         success = False
@@ -448,25 +574,31 @@ def _worker_loop():
                 # 1. Ensure sheet tabs and headers exist
                 _ensure_spreadsheet_sheets_and_headers(service, spreadsheet_id)
 
-                # 2. Append to Disease Module Sheet
-                body_mod = {"values": [module_row]}
-                service.spreadsheets().values().append(
-                    spreadsheetId=spreadsheet_id,
-                    range=f"'{module_sheet}'!A1",
-                    valueInputOption="USER_ENTERED",
-                    insertDataOption="INSERT_ROWS",
-                    body=body_mod
-                ).execute()
+                # 2. Append to Disease Module Sheet only if not already appended
+                if not module_done:
+                    body_mod = {"values": [module_row]}
+                    service.spreadsheets().values().append(
+                        spreadsheetId=spreadsheet_id,
+                        range=f"'{module_sheet}'!A1",
+                        valueInputOption="USER_ENTERED",
+                        insertDataOption="INSERT_ROWS",
+                        body=body_mod
+                    ).execute()
+                    module_done = True
+                    _update_outbox_progress(record_id, module_done=1, master_done=int(master_done), status="RETRYING", retries=attempt)
 
-                # 3. Append to Master_Log Sheet
-                body_master = {"values": [master_row]}
-                service.spreadsheets().values().append(
-                    spreadsheetId=spreadsheet_id,
-                    range=f"'{SHEET_MASTER}'!A1",
-                    valueInputOption="USER_ENTERED",
-                    insertDataOption="INSERT_ROWS",
-                    body=body_master
-                ).execute()
+                # 3. Append to Master_Log Sheet only if not already appended
+                if not master_done:
+                    body_master = {"values": [master_row]}
+                    service.spreadsheets().values().append(
+                        spreadsheetId=spreadsheet_id,
+                        range=f"'{SHEET_MASTER}'!A1",
+                        valueInputOption="USER_ENTERED",
+                        insertDataOption="INSERT_ROWS",
+                        body=body_master
+                    ).execute()
+                    master_done = True
+                    _update_outbox_progress(record_id, module_done=1, master_done=1, status="SYNCHRONIZED", retries=attempt)
 
                 success = True
                 _last_status["total_logged"] += 1
@@ -481,6 +613,7 @@ def _worker_loop():
                 last_exc = http_err
                 status_code = http_err.resp.status if hasattr(http_err, "resp") else 0
                 logger.warning(f"[Google Sheets Retry {attempt}/{max_retries}] HTTP {status_code} for record {record_id}: {http_err}")
+                _update_outbox_progress(record_id, module_done=int(module_done), master_done=int(master_done), status="RETRYING", error=str(http_err), retries=attempt)
                 if status_code in [429, 500, 502, 503, 504] and attempt < max_retries:
                     time.sleep(2 ** attempt)
                 else:
@@ -488,6 +621,7 @@ def _worker_loop():
             except Exception as e:
                 last_exc = e
                 logger.warning(f"[Google Sheets Retry {attempt}/{max_retries}] Error logging {record_id}: {e}")
+                _update_outbox_progress(record_id, module_done=int(module_done), master_done=int(master_done), status="RETRYING", error=str(e), retries=attempt)
                 if attempt < max_retries:
                     time.sleep(2 ** attempt)
                 else:
@@ -495,6 +629,7 @@ def _worker_loop():
 
         if not success:
             _last_status["last_error"] = str(last_exc)
+            _update_outbox_progress(record_id, module_done=int(module_done), master_done=int(master_done), status="FAILED", error=str(last_exc), retries=max_retries)
             logger.error(
                 f"[Google Sheets Error] Permanent failure appending record {record_id} "
                 f"after {max_retries} attempts: {last_exc}. (Patient response remained unaffected)."
@@ -575,17 +710,21 @@ def log_patient_prediction(
         }
         master_row = _build_row_values(SHEET_MASTER, master_payload)
 
-        # 3. Enqueue for background worker
+        # 3. Store in durable SQLite outbox
+        _insert_into_outbox(record_id, target_sheet_name, module_row, master_row)
+
+        # 4. Enqueue for background worker
         try:
             _log_queue.put_nowait((target_sheet_name, module_row, master_row, record_id))
             logger.info(f"[Silent Log] Enqueued {target_sheet_name} record {record_id} ({status_str}) for Google Sheets.")
             return True, record_id
         except queue.Full:
+            _update_outbox_progress(record_id, status="FAILED", error="Queue saturated")
             logger.warning(
                 f"[Queue Saturated] Log queue reached capacity ({MAX_QUEUE_SIZE}). "
-                f"Record {record_id} dropped to preserve patient response performance."
+                f"Record {record_id} preserved in durable outbox for recovery."
             )
-            return False, "Queue saturated"
+            return False, "Queue saturated (saved to outbox)"
 
     except Exception as e:
         logger.error(f"[Google Sheets Logger Exception] Failed enqueuing prediction: {e}", exc_info=True)
@@ -612,6 +751,7 @@ def get_sheets_status() -> Dict[str, Any]:
 
     masked_id = f"{sp_id[:6]}...{sp_id[-4:]}" if sp_id and len(sp_id) > 12 else (sp_id or "Not Configured")
     direct_url = f"https://docs.google.com/spreadsheets/d/{sp_id}/edit" if sp_id else None
+    outbox_stats = _get_outbox_counts()
 
     return {
         "spreadsheet_name": SPREADSHEET_NAME,
@@ -625,5 +765,6 @@ def get_sheets_status() -> Dict[str, Any]:
         "last_sync_time": _last_status["last_sync_time"] or "Awaiting First Record",
         "last_error": _last_status["last_error"],
         "is_connected": _last_status["is_connected"],
-        "sheet_tabs": ALL_SHEET_NAMES
+        "sheet_tabs": ALL_SHEET_NAMES,
+        "outbox_counts": outbox_stats
     }

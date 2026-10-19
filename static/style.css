@@ -273,6 +273,8 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 1.1rem 2.5rem;
+    padding-right: 24px;
+    box-sizing: border-box;
     position: fixed;
     top: 0;
     left: 0;
@@ -1530,6 +1532,7 @@ input::placeholder {
     text-decoration: none;
     font-weight: 500;
     font-size: 0.9rem;
+    margin-top: 16px;
     margin-bottom: 1.75rem;
     transition: all 0.2s ease;
 }
@@ -2355,7 +2358,7 @@ input::placeholder {
     border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.input-wrapper {
+.chat-input-bar .input-wrapper {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -2366,7 +2369,7 @@ input::placeholder {
     transition: border-color 0.2s ease;
 }
 
-.input-wrapper:focus-within {
+.chat-input-bar .input-wrapper:focus-within {
     border-color: var(--primary);
     box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
 }
@@ -3647,19 +3650,30 @@ input::placeholder {
 }
 
 .hospital-table th {
-    background: rgba(15, 23, 42, 0.8);
+    background: rgba(15, 23, 42, 0.9);
     color: var(--text-muted);
-    padding: 1rem 1.1rem;
+    padding: 0.9rem 1rem;
     font-weight: 700;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     border-bottom: 1px solid var(--border-glass);
-    white-space: nowrap;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.35;
+    vertical-align: bottom;
 }
 
+.hospital-table th.col-select { width: 50px; min-width: 50px; text-align: center; }
+.hospital-table th.col-facility { min-width: 200px; }
+.hospital-table th.col-specialty { min-width: 220px; }
+.hospital-table th.col-verification { min-width: 175px; }
+.hospital-table th.col-rating { min-width: 125px; }
+.hospital-table th.col-location { min-width: 180px; }
+.hospital-table th.col-actions { min-width: 130px; text-align: center; }
+
 .hospital-table td {
-    padding: 1.1rem;
+    padding: 1rem;
     border-bottom: 1px solid var(--border-glass);
     color: var(--text);
     vertical-align: middle;
@@ -3683,16 +3697,19 @@ input::placeholder {
     border-left: 4px solid var(--primary);
 }
 
-/* Hospital Badges */
+/* Hospital Badges & Verification Tags */
 .hosp-badge {
-    display: inline-block;
-    padding: 0.25rem 0.65rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.22rem 0.6rem;
     border-radius: 6px;
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.03em;
     text-transform: uppercase;
-    white-space: nowrap;
+    white-space: normal;
+    line-height: 1.25;
 }
 
 .hosp-badge.curated {
@@ -3709,14 +3726,36 @@ input::placeholder {
 
 .hosp-badge.spec-verified {
     background: rgba(16, 185, 129, 0.18);
-    border: 1px solid rgba(16, 185, 129, 0.4);
+    border: 1px solid rgba(16, 185, 129, 0.45);
     color: #34d399;
 }
 
-.hosp-badge.spec-unverified {
-    background: rgba(245, 158, 11, 0.18);
-    border: 1px solid rgba(245, 158, 11, 0.4);
-    color: #f59e0b;
+.hosp-badge.badge-nabh {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.5);
+    color: #10b981;
+    font-weight: 700;
+}
+
+.hosp-badge.badge-jci {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    color: #fbbf24;
+    font-weight: 700;
+}
+
+.hosp-badge.badge-govt {
+    background: rgba(59, 130, 246, 0.18);
+    border: 1px solid rgba(59, 130, 246, 0.45);
+    color: #60a5fa;
+    font-weight: 700;
+}
+
+.hosp-badge.badge-registration {
+    background: rgba(148, 163, 184, 0.16);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    color: #cbd5e1;
+    font-weight: 600;
 }
 
 .hosp-badge.telemed-yes {
@@ -3729,6 +3768,91 @@ input::placeholder {
     background: rgba(148, 163, 184, 0.12);
     border: 1px solid rgba(148, 163, 184, 0.25);
     color: #94a3b8;
+}
+
+/* Rating Badge */
+.hosp-rating-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 700;
+    color: #fbbf24;
+    font-size: 0.92rem;
+}
+
+.hosp-review-count {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    display: block;
+    margin-top: 0.15rem;
+}
+
+/* Quick City Suggestion Chips */
+.quick-city-chips-container {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-top: 0.65rem;
+}
+
+.quick-city-chips-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.city-chip {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-glass);
+    border-radius: 20px;
+    padding: 0.3rem 0.85rem;
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.city-chip:hover {
+    background: rgba(6, 182, 212, 0.15);
+    border-color: var(--primary-light);
+    color: var(--primary-light);
+    transform: translateY(-1px);
+}
+
+.city-chip.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Smart Radius Auto-Expansion Banner */
+.expansion-banner {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    border-radius: 10px;
+    padding: 0.9rem 1.25rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    color: #fde68a;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.expansion-banner.no-results {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
 }
 
 /* Selected Hospital Summary Banner */

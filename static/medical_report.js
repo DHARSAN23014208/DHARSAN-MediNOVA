@@ -246,7 +246,7 @@
             patientInfo.clinicalNotes = notesInput.value.trim();
         }
 
-        // 11. Generate Clinical Report ID & Timestamp
+        // 11. Generate / Resolve Clinical Report ID & Timestamp
         var now = new Date();
         var dateFormatted = now.toLocaleDateString('en-US', {
             year: 'numeric',
@@ -259,13 +259,46 @@
             hour12: true
         });
 
+        var existingReportId = window.medinovaReportId;
+        if (!existingReportId) {
+            var reportEl = document.querySelector('[data-report-id]');
+            if (reportEl) existingReportId = reportEl.getAttribute('data-report-id');
+        }
+        if (!existingReportId) {
+            var reportMeta = document.querySelector('meta[name="report-id"]');
+            if (reportMeta) existingReportId = reportMeta.getAttribute('content');
+        }
+        if (!existingReportId) {
+            var sealBar = document.querySelector('.scanner-integrity-seal-bar');
+            if (sealBar) {
+                var match = sealBar.textContent.match(/MNV-[A-Z0-9-]+/i);
+                if (match) existingReportId = match[0].toUpperCase();
+            }
+        }
+        if (!existingReportId) {
+            var verifyLink = document.querySelector('a[href*="/verify-report/"]');
+            if (verifyLink) {
+                var linkMatch = (verifyLink.getAttribute('href') || '').match(/\/verify-report\/([^\/\?#]+)/);
+                if (linkMatch) existingReportId = linkMatch[1].toUpperCase();
+            }
+        }
+
         var randHex = Math.random().toString(16).substring(2, 8).toUpperCase();
-        var reportId = 'MNV-' + conditionKey.substring(0, 4).toUpperCase() + '-' + now.getFullYear() + '-' + randHex;
+        var reportId = existingReportId || ('MNV-' + conditionKey.substring(0, 4).toUpperCase() + '-' + now.getFullYear() + '-' + randHex);
+
+        // Detect if extraction originated from scanner
+        var isScannerExtracted = false;
+        if (window.medinovaIsScanner === true) {
+            isScannerExtracted = true;
+        } else if (document.querySelector('[data-scanner-used="true"]') || document.querySelector('[data-extracted-source="scanner"]')) {
+            isScannerExtracted = true;
+        }
 
         return {
             conditionName: conditionName,
             conditionKey: conditionKey,
             reportId: reportId,
+            isScannerExtracted: isScannerExtracted,
             dateTime: dateFormatted + ' at ' + timeFormatted,
             isPositive: isPositive,
             assessmentTitle: assessmentTitle,
@@ -646,11 +679,22 @@
                 <h1 class="brand-title">MediNova</h1>
             </div>
             <p class="brand-subtitle">Clinical Diagnostic & Consultation Report</p>
+            ${data.isScannerExtracted ? `
+                <div style="display: inline-flex; align-items: center; gap: 4px; background: #ecfeff; border: 1.5px solid #06b6d4; color: #0891b2; font-size: 7.5pt; font-weight: 800; padding: 2px 8px; border-radius: 4px; margin-top: 4px;">
+                    🔬 Extracted via AI Lab Report Scanner
+                </div>
+            ` : ''}
         </div>
-        <div class="meta-box">
-            <div>Report ID: <span class="report-id">${escapeHtml(data.reportId)}</span></div>
-            <div>Generated: <strong>${escapeHtml(data.dateTime)}</strong></div>
-            <div class="accreditation-badge">⭐ NABL / ISO-15189 & HIPAA Aligned Quality Gateway</div>
+        <div class="meta-box" style="display: flex; gap: 12px; align-items: center;">
+            <div style="text-align: right;">
+                <div>Report ID: <span class="report-id">${escapeHtml(data.reportId)}</span></div>
+                <div>Generated: <strong>${escapeHtml(data.dateTime)}</strong></div>
+                <div class="accreditation-badge">⭐ NABL / ISO-15189 & HIPAA Aligned Quality Gateway</div>
+            </div>
+            <div style="text-align: center;">
+                <img src="/api/report-qr/${encodeURIComponent(data.reportId)}" style="width: 65px; height: 65px; object-fit: contain; border: 1px solid #cbd5e1; border-radius: 4px;" alt="Verification QR Code">
+                <div style="font-size: 6pt; color: #64748b; margin-top: 1px;">Scan to Verify</div>
+            </div>
         </div>
     </div>
 
@@ -720,6 +764,7 @@
             </div>
             <div style="text-align: right; font-size: 7.2pt; color: #64748b;">
                 MediNova Intelligent Clinical Core • Verification Seal Active<br>
+                Verification: <strong>/verify-report/${escapeHtml(data.reportId)}</strong><br>
                 Official Patient Copy (A4 Clinical Layout)
             </div>
         </div>

@@ -1,0 +1,201 @@
+<!-- ========================================================================= -->
+<!-- MEDINOVA ENTERPRISE GLASSMORPHIIC SMART MEDICAL LAB REPORT SCANNER         -->
+<!-- ========================================================================= -->
+<div class="medinova-scanner-container glassmorphic-scanner-card rounded-2xl no-print" data-module="{{ scanner_module or 'diabetes' }}">
+    <!-- Top Ambient Glow Line -->
+    <div class="scanner-ambient-glow"></div>
+
+    <!-- Scanner Header Row with Trust Badges -->
+    <div class="scanner-header-wrapper">
+        <div class="scanner-badge-row">
+            <span class="scanner-ai-badge">
+                <span class="scanner-ai-dot"></span>
+                <span>AI Multimodal Lab Vision & Ingestion</span>
+            </span>
+            <span class="scanner-secure-tag">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                HIPAA-Compliant In-Memory OCR
+            </span>
+        </div>
+        <div class="scanner-title-content">
+            <h2 class="scanner-main-title">
+                <span class="scanner-icon-bubble">🔬</span>
+                <span>Smart Medical Lab Report Scanner</span>
+            </h2>
+            <p class="scanner-description">
+                Upload official clinical laboratory report documents (PDF, JPG, PNG, WEBP) or capture directly with your device camera. MediNova parses analytes, identifies units and normal ranges, and auto-populates clinical form fields.
+            </p>
+        </div>
+    </div>
+
+    <!-- Drag & Drop / File Selection Zone -->
+    <div class="scanner-drop-zone">
+        <input type="file" id="scannerFileInput" accept=".jpg,.jpeg,.png,.webp,.pdf" style="display: none;">
+        <input type="file" id="scannerCameraFallbackInput" accept="image/*" capture="environment" style="display: none;">
+
+        <!-- Placeholder State -->
+        <div class="scanner-placeholder-area">
+            <div class="drop-zone-icon-glow">
+                <svg class="drop-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+            </div>
+            <div class="drop-zone-text-group">
+                <p class="drop-zone-title">
+                    <strong>Drag and drop your medical lab report here</strong>, or select an ingestion mode
+                </p>
+                <p class="drop-zone-subtitle">
+                    Supported Formats: PDF (Digital / Scanned), JPG, PNG, WEBP &bull; Maximum 10 MB per report
+                </p>
+            </div>
+
+            <div class="scanner-ingest-controls">
+                <button type="button" class="btn-scanner-browse" id="scannerBrowseBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <span>Browse Lab Report</span>
+                </button>
+                <button type="button" class="btn-scanner-camera" id="scannerCameraBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                    <span>Take Photo with Camera</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- File Selected Preview State -->
+        <div class="scanner-file-preview" style="display: none;">
+            <div class="preview-card-inner">
+                <div class="preview-file-icon-box">
+                    <div class="scanner-file-icon">📄</div>
+                    <img class="scanner-thumbnail-img" style="display: none;" alt="Report Preview">
+                </div>
+                <div class="scanner-preview-info">
+                    <div class="scanner-filename">report.pdf</div>
+                    <div class="scanner-meta-row">
+                        <span class="scanner-filesize">0 KB</span>
+                        <span class="scanner-ready-badge">Ready for AI Extraction</span>
+                    </div>
+                </div>
+                <div class="scanner-preview-actions">
+                    <button type="button" class="btn-remove-file" id="scannerRemoveFileBtn" title="Remove attached file">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <span>Remove File</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Extraction Progress Indicator -->
+    <div class="scanner-progress-box" style="display: none;">
+        <div class="scanner-progress-bar-track">
+            <div class="scanner-progress-bar-fill"></div>
+        </div>
+        <p class="scanner-progress-msg">Extracting clinical biomarkers via AI Pipeline...</p>
+    </div>
+
+    <!-- Extraction Summary & Provenance Card (Populated dynamically) -->
+    <div class="scanner-summary-card" style="display: none;">
+        <div class="scanner-summary-header">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="scanner-summary-dot"></span>
+                <strong>Report Extraction Provenance</strong>
+            </div>
+            <span class="scanner-engine-badge">Local OCR Engine</span>
+        </div>
+        <div class="scanner-stats-row"></div>
+        <div class="scanner-tags-container"></div>
+    </div>
+
+    <!-- Prominent Primary Action Buttons -->
+    <div class="scanner-action-toolbar">
+        <button type="button" class="btn-scanner-action btn-scanner-autofill" id="scannerAutofillBtn" disabled>
+            <span class="btn-icon">✨</span>
+            <span class="btn-label">Auto-Fill Form Fields</span>
+        </button>
+        <button type="button" class="btn-scanner-action btn-scanner-predict" id="scannerInstantPredictBtn" disabled>
+            <span class="btn-icon">⚡</span>
+            <span class="btn-label">Instant Predict from Report</span>
+        </button>
+    </div>
+
+    <!-- Consolidated Clinical Sandbox & Test Automation Toolbar -->
+    <div class="consolidated-sandbox-toolbar">
+        <div class="sandbox-toolbar-header">
+            <div class="sandbox-badge">
+                <span class="sandbox-icon">🧪</span>
+                <span class="sandbox-title">Clinical Testing Sandbox & Automation</span>
+            </div>
+            <button type="button" class="btn-passport-pill open-health-passport-btn">
+                <span>📋 My Health Passport</span>
+            </button>
+        </div>
+        
+        <div class="sandbox-groups-row">
+            <!-- OCR PDF Test Reports Cluster -->
+            <div class="sandbox-group">
+                <span class="sandbox-group-label">OCR Lab Reports (PDF):</span>
+                <div class="sandbox-pill-cluster">
+                    <button type="button" class="btn-sandbox-pill pill-report-pos" id="scannerSamplePosBtn" title="Load synthetic positive PDF report into scanner">
+                        <span>⚠️ Sample Positive PDF</span>
+                    </button>
+                    <button type="button" class="btn-sandbox-pill pill-report-neg" id="scannerSampleNegBtn" title="Load synthetic negative PDF report into scanner">
+                        <span>🛡️ Sample Negative PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="sandbox-v-sep"></div>
+
+            <!-- Instant Form Pre-Fill Cluster -->
+            <div class="sandbox-group">
+                <span class="sandbox-group-label">Manual Form Pre-Fill:</span>
+                <div class="sandbox-pill-cluster">
+                    <button type="button" class="btn-sandbox-pill pill-form-pos" onclick="triggerModuleSample('positive')" title="Pre-fill form fields with high-risk clinical markers">
+                        <span>⚡ High-Risk Values</span>
+                    </button>
+                    <button type="button" class="btn-sandbox-pill pill-form-neg" onclick="triggerModuleSample('negative')" title="Pre-fill form fields with healthy baseline markers">
+                        <span>🛡️ Healthy Values</span>
+                    </button>
+                    <button type="button" class="btn-sandbox-pill pill-form-clear" onclick="triggerModuleReset()" title="Clear form fields">
+                        <span>🧹 Clear</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Camera Viewfinder Modal -->
+<div class="scanner-modal-overlay" id="scannerCameraModal" style="display: none;">
+    <div class="scanner-modal-card camera-modal-card">
+        <div class="scanner-modal-header">
+            <h3 style="margin: 0; font-size: 1.15rem; color: #ffffff;">📷 Document Scanner Camera</h3>
+            <button type="button" class="scanner-modal-close" id="cameraCloseBtn">✕</button>
+        </div>
+        <div class="camera-viewfinder-container">
+            <video id="cameraVideo" autoplay playsinline></video>
+            <canvas id="cameraCanvas" style="display: none;"></canvas>
+            <img id="cameraPreviewImg" style="display: none;" alt="Captured Report">
+            <div class="camera-reticle-overlay">
+                <div class="reticle-corner corner-tl"></div>
+                <div class="reticle-corner corner-tr"></div>
+                <div class="reticle-corner corner-bl"></div>
+                <div class="reticle-corner corner-br"></div>
+                <div class="reticle-guide-text">Align document within the borders</div>
+            </div>
+        </div>
+        <div class="camera-modal-controls">
+            <button type="button" class="btn btn-primary" id="cameraSnapBtn">
+                <span>📸 Capture Lab Report</span>
+            </button>
+            <button type="button" class="btn btn-outline" id="cameraRetakeBtn" style="display: none;">
+                <span>🔄 Retake</span>
+            </button>
+            <button type="button" class="btn btn-cyan" id="cameraUsePhotoBtn" style="display: none;">
+                <span>✓ Use This Photo</span>
+            </button>
+        </div>
+    </div>
+</div>

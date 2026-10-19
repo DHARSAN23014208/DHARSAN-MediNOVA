@@ -24,6 +24,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kidney Disease Diagnostic - MediNova AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/report-scanner.css') }}?v=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
@@ -51,6 +52,9 @@
             <a href="/" class="nav-link">Home</a>
             <a href="/features" class="nav-link">Diagnostic Suite</a>
             <a href="/contact" class="nav-link">Emergency & Care</a>
+            <button type="button" class="btn btn-sm btn-outline open-health-passport-btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; margin-right: 0.5rem;">
+                <span>📋 Health Passport</span>
+            </button>
             <a href="/contact" class="nav-emergency-btn">
                 <span class="pulse-dot"></span>
                 <span>24/7 Helpline: 112 / 911</span>
@@ -109,6 +113,30 @@
                     </div>
                 </div>
 
+                <!-- Scanner Audit Badge & Integrity Seal -->
+                {% if report_id %}
+                <div class="scanner-integrity-seal-bar" data-report-id="{{ report_id }}" style="margin-top: 1rem; padding: 0.6rem 1rem; background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 8px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="scanner-audit-badge" style="background: #0891b2; color: #ffffff; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 4px;">🔬 Clinical Integrity Verified</span>
+                        <span style="font-family: monospace; font-size: 0.85rem; color: var(--text);">Report ID: <strong>{{ report_id }}</strong></span>
+                    </div>
+                    <div>
+                        <a href="/verify-report/{{ report_id }}" target="_blank" style="color: #06b6d4; font-size: 0.8rem; text-decoration: underline; font-weight: 600;">Verify Cryptographic Seal ↗</a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Multilingual Translation Selector Toolbar -->
+                <div class="language-selector-wrapper" style="margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: rgba(255, 255, 255, 0.04); padding: 0.5rem 1rem; border-radius: 8px;">
+                    <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">🌐 Multilingual Patient Summary:</span>
+                    <div class="language-btn-group" style="display: flex; gap: 0.3rem;">
+                        <button type="button" class="lang-btn active" data-lang="en">English</button>
+                        <button type="button" class="lang-btn" data-lang="ta">தமிழ் (Tamil)</button>
+                        <button type="button" class="lang-btn" data-lang="hi">हिंदी (Hindi)</button>
+                        <button type="button" class="lang-btn" data-lang="es">Español</button>
+                    </div>
+                </div>
+
                 <!-- Risk Level Gauge -->
                 <div class="risk-meter-wrapper">
                     <div class="risk-meter-header">
@@ -125,6 +153,9 @@
                     <button type="button" onclick="generateMedicalReportPDF()" class="btn btn-primary btn-print-report">
                         <span>📄 Download / Print Medical Report (PDF)</span>
                     </button>
+                    <button type="button" class="btn btn-outline open-health-passport-btn">
+                        <span>📋 View My Health Passport</span>
+                    </button>
                     <button type="button" class="btn btn-copilot-explain" data-condition="Kidney Disease" data-prediction="{{ prediction or '' }}" onclick="askCopilotToExplainResult('Kidney Disease', this.dataset.prediction)">
                         <span>🤖 Ask MediNova AI to Explain This Result</span>
                     </button>
@@ -135,6 +166,74 @@
                     {% endif %}
                 </div>
             </div>
+
+            {% if biomarker_gauges %}
+            <!-- Biomarker Physiological Range Indicators -->
+            <div class="biomarker-gauges-panel glass-card" style="margin-top: 1.5rem; padding: 1.2rem;">
+                <div class="panel-header" style="margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.5rem;">
+                    <h3 style="font-size: 1.1rem; color: var(--text); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📊</span> Measured Biomarker Physiological Range Indicators
+                    </h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+                        Comparison against standard laboratory physiological intervals. Reference intervals may vary by laboratory methodology and demographic characteristics.
+                    </p>
+                </div>
+                <div class="gauges-list">
+                    {% for g in biomarker_gauges %}
+                    <div class="biomarker-gauge-row">
+                        <div class="gauge-info-col">
+                            <div class="gauge-analyte-name">{{ g.analyte }}</div>
+                            <div class="gauge-analyte-val">
+                                <strong>{{ g.value }}</strong> <span class="gauge-unit">{{ g.unit }}</span>
+                                <span class="gauge-status-badge gauge-{{ g.status }}">{{ g.status | capitalize }}</span>
+                            </div>
+                        </div>
+                        <div class="gauge-bar-col">
+                            <div class="gauge-track">
+                                <div class="gauge-zone zone-optimal" style="left: 20%; width: 50%;"></div>
+                                <div class="gauge-zone zone-elevated" style="left: 70%; width: 30%;"></div>
+                                <div class="gauge-needle gauge-{{ g.status }}" {{ ('style="left: ' ~ ([([g.percent, 3] | max), 97] | min)|string ~ '%;"') | safe }}>
+                                    <div class="gauge-pin"></div>
+                                </div>
+                            </div>
+                            <div class="gauge-labels-row">
+                                <span>Target: {{ g.low }} - {{ g.high }} {{ g.unit }}</span>
+                                <span class="gauge-note">Informational Reference Interval</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if top_risk_factors %}
+            <!-- Model Feature Attribution -->
+            <div class="risk-factors-panel glass-card" style="margin-top: 1.5rem; padding: 1.2rem;">
+                <div class="panel-header" style="margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.5rem;">
+                    <h3 style="font-size: 1.1rem; color: var(--text); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>⚖️</span> Model Feature Weight & Clinical Attribution
+                    </h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+                        Trained Random Forest global feature importance for the active diagnostic model. Reflects model architectural weighting, not arbitrary fabricated percentages.
+                    </p>
+                </div>
+                <div class="factors-list">
+                    {% for f in top_risk_factors %}
+                    <div class="factor-row" style="margin-bottom: 0.8rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 0.3rem;">
+                            <span style="font-weight: 600; color: var(--text);">{{ f.feature_name }}</span>
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">Relative Model Importance: {{ (f.weight * 100) | round | int }}%</span>
+                        </div>
+                        <div style="height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden;">
+                            <div {{ ('style="height: 100%; width: ' ~ ((f.weight * 100) | round | int)|string ~ '%; background: linear-gradient(90deg, #06b6d4, #3b82f6); border-radius: 3px;"') | safe }}></div>
+                        </div>
+                        <p style="font-size: 0.78rem; color: var(--text-subtle); margin: 0.2rem 0 0 0;">{{ f.clinical_context }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Clinical Protocol & Action Grid -->
             <div class="protocol-grid">
@@ -322,92 +421,70 @@
         {% endif %}
 
         <!-- ================================================================= -->
+        <!-- SMART MEDICAL LAB REPORT SCANNER                                  -->
+        <!-- ================================================================= -->
+        {% set scanner_module = 'kidney' %}
+        {% include 'components/scanner_panel.html' %}
+
+        <!-- ================================================================= -->
         <!-- PATIENT INPUT FORM                                                -->
         <!-- ================================================================= -->
-        <div class="form-card no-print" style="max-width: 1050px; margin: 0 auto 4rem;">
-            <!-- One-Click Sample Data Bar -->
-            <div class="sample-bar">
-                <div class="sample-bar-title">
-                    <span>⚡ Quick Test Automation (24 Biomarkers):</span>
+        <div class="form-card rounded-2xl no-print">
+            <div class="form-header-row">
+                <div>
+                    <h2 class="form-section-title">Enter Patient Renal & Urinalysis Parameters</h2>
+                    <p class="form-section-subtitle">Input renal panel laboratory measurements manually or review values auto-filled by the AI Lab Scanner.</p>
                 </div>
-                <div class="sample-btn-group">
-                    <button type="button" class="btn btn-sm btn-sample-pos" onclick="fillKidneySample('positive')">
-                        ⚠️ Fill High-Risk (Positive/CKD) Sample
-                    </button>
-                    <button type="button" class="btn btn-sm btn-sample-neg" onclick="fillKidneySample('negative')">
-                        🛡️ Fill Healthy (Negative) Sample
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('kidneyForm').reset()">
-                        🧹 Clear
-                    </button>
-                </div>
+                <span class="form-badge-count">24 Renal Biomarkers</span>
             </div>
-
-            <h2 style="font-size: 1.4rem; margin-bottom: 1.5rem; color: var(--text);">Enter Patient Renal & Urinalysis Parameters</h2>
             
             <form id="kidneyForm" action="/kidney" method="POST">
-                <div class="form-grid">
-                    <div class="form-group"><div class="form-label-row"><label>Age</label></div><input type="number" id="k_age" name="age" step="1" required placeholder="e.g. 50"></div>
-                    <div class="form-group"><div class="form-label-row"><label>Blood Pressure (bp)</label><span class="field-hint">mm Hg</span></div><input type="number" id="k_bp" name="bp" step="1" required placeholder="e.g. 80"></div>
-                    <div class="form-group"><div class="form-label-row"><label>Specific Gravity (sg)</label><span class="field-hint">1.005-1.030</span></div><input type="number" id="k_sg" name="sg" step="0.001" required placeholder="e.g. 1.020"></div>
-                    <div class="form-group"><div class="form-label-row"><label>Albumin (al)</label><span class="field-hint">0 - 5 scale</span></div><input type="number" id="k_al" name="al" step="1" required placeholder="0-5"></div>
-                    <div class="form-group"><div class="form-label-row"><label>Sugar (su)</label><span class="field-hint">0 - 5 scale</span></div><input type="number" id="k_su" name="su" step="1" required placeholder="0-5"></div>
+                <div class="clinical-3col-grid">
+                    <div class="form-group"><div class="form-label-row"><label for="k_age">Age</label><span class="normal-range-badge">Years</span></div><div class="input-wrapper"><input type="number" id="k_age" name="age" step="1" required placeholder="e.g. 50"></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_bp">Blood Pressure (bp)</label><span class="normal-range-badge badge-highlight">Norm: 80 mm Hg</span></div><div class="input-wrapper"><input type="number" id="k_bp" name="bp" step="1" required placeholder="e.g. 80"><span class="input-unit">mm Hg</span></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_sg">Specific Gravity (sg)</label><span class="normal-range-badge badge-highlight">1.005–1.030</span></div><div class="input-wrapper"><input type="number" id="k_sg" name="sg" step="0.001" required placeholder="e.g. 1.020"></div></div>
                     
-                    <div class="form-group"><div class="form-label-row"><label>Red Blood Cells (rbc)</label></div>
-                        <select id="k_rbc" name="rbc" required><option value="1">Normal</option><option value="0">Abnormal</option></select>
-                    </div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_al">Albumin (al)</label><span class="normal-range-badge">0–5 Scale</span></div><div class="input-wrapper"><input type="number" id="k_al" name="al" step="1" required placeholder="0-5"></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_su">Sugar (su)</label><span class="normal-range-badge">0–5 Scale</span></div><div class="input-wrapper"><input type="number" id="k_su" name="su" step="1" required placeholder="0-5"></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_rbc">Red Blood Cells (rbc)</label><span class="normal-range-badge">Urinalysis</span></div><div class="input-wrapper"><select id="k_rbc" name="rbc" required><option value="1">Normal</option><option value="0">Abnormal</option></select></div></div>
 
-                    <div class="form-group"><div class="form-label-row"><label>Pus Cells (pc)</label></div>
-                        <select id="k_pc" name="pc" required><option value="1">Normal</option><option value="0">Abnormal</option></select>
-                    </div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_pc">Pus Cells (pc)</label><span class="normal-range-badge">Urinalysis</span></div><div class="input-wrapper"><select id="k_pc" name="pc" required><option value="1">Normal</option><option value="0">Abnormal</option></select></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_pcc">Pus Cell Clumps (pcc)</label><span class="normal-range-badge">Microscopy</span></div><div class="input-wrapper"><select id="k_pcc" name="pcc" required><option value="0">Not Present</option><option value="1">Present</option></select></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_ba">Bacteria (ba)</label><span class="normal-range-badge">Microscopy</span></div><div class="input-wrapper"><select id="k_ba" name="ba" required><option value="0">Not Present</option><option value="1">Present</option></select></div></div>
 
-                    <div class="form-group"><div class="form-label-row"><label>Pus Cell Clumps (pcc)</label></div>
-                        <select id="k_pcc" name="pcc" required><option value="0">Not Present</option><option value="1">Present</option></select>
-                    </div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_bgr">Blood Glucose Random (bgr)</label><span class="normal-range-badge badge-highlight">Norm &lt; 140</span></div><div class="input-wrapper"><input type="number" id="k_bgr" name="bgr" step="1" required placeholder="e.g. 120"><span class="input-unit">mg/dL</span></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_bu">Blood Urea (bu)</label><span class="normal-range-badge badge-highlight">Norm: 7–20</span></div><div class="input-wrapper"><input type="number" id="k_bu" name="bu" step="0.1" required placeholder="e.g. 35"><span class="input-unit">mg/dL</span></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_sc">Serum Creatinine (sc)</label><span class="normal-range-badge badge-highlight">Norm: 0.6–1.2</span></div><div class="input-wrapper"><input type="number" id="k_sc" name="sc" step="0.1" required placeholder="e.g. 1.1"><span class="input-unit">mg/dL</span></div></div>
 
-                    <div class="form-group"><div class="form-label-row"><label>Bacteria (ba)</label></div>
-                        <select id="k_ba" name="ba" required><option value="0">Not Present</option><option value="1">Present</option></select>
-                    </div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_sod">Sodium (sod)</label><span class="normal-range-badge badge-highlight">Norm: 135–145</span></div><div class="input-wrapper"><input type="number" id="k_sod" name="sod" step="0.1" required placeholder="e.g. 138"><span class="input-unit">mEq/L</span></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_pot">Potassium (pot)</label><span class="normal-range-badge badge-highlight">Norm: 3.5–5.0</span></div><div class="input-wrapper"><input type="number" id="k_pot" name="pot" step="0.1" required placeholder="e.g. 4.4"><span class="input-unit">mEq/L</span></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_hemo">Hemoglobin (hemo)</label><span class="normal-range-badge badge-highlight">Norm: 13–17</span></div><div class="input-wrapper"><input type="number" id="k_hemo" name="hemo" step="0.1" required placeholder="e.g. 14.5"><span class="input-unit">g/dL</span></div></div>
 
-                    <div class="form-group"><div class="form-label-row"><label>Blood Glucose Random (bgr)</label><span class="field-hint">mg/dL</span></div><input type="number" id="k_bgr" name="bgr" step="1" required placeholder="e.g. 120"></div>
-                    <div class="form-group"><div class="form-label-row"><label>Blood Urea (bu)</label><span class="field-hint">mg/dL</span></div><input type="number" id="k_bu" name="bu" step="0.1" required placeholder="e.g. 40"></div>
-                    <div class="form-group"><div class="form-label-row"><label>Serum Creatinine (sc)</label><span class="field-hint">mg/dL</span></div><input type="number" id="k_sc" name="sc" step="0.1" required placeholder="e.g. 1.2"></div>
-                    <div class="form-group"><div class="form-label-row"><label>Sodium (sod)</label><span class="field-hint">mEq/L</span></div><input type="number" id="k_sod" name="sod" step="0.1" required placeholder="e.g. 138"></div>
-                    <div class="form-group"><div class="form-label-row"><label>Potassium (pot)</label><span class="field-hint">mEq/L</span></div><input type="number" id="k_pot" name="pot" step="0.1" required placeholder="e.g. 4.4"></div>
-                    <div class="form-group"><div class="form-label-row"><label>Hemoglobin (hemo)</label><span class="field-hint">g/dL</span></div><input type="number" id="k_hemo" name="hemo" step="0.1" required placeholder="e.g. 14"></div>
-                    <div class="form-group"><div class="form-label-row"><label>Packed Cell Volume (pcv)</label><span class="field-hint">%</span></div><input type="number" id="k_pcv" name="pcv" step="1" required placeholder="e.g. 40"></div>
-                    <div class="form-group"><div class="form-label-row"><label>White Blood Cell Count (wc)</label><span class="field-hint">cells/cumm</span></div><input type="number" id="k_wc" name="wc" step="1" required placeholder="e.g. 8000"></div>
-                    <div class="form-group"><div class="form-label-row"><label>Red Blood Cell Count (rc)</label><span class="field-hint">millions/cmm</span></div><input type="number" id="k_rc" name="rc" step="0.1" required placeholder="e.g. 5.0"></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_pcv">Packed Cell Volume (pcv)</label><span class="normal-range-badge badge-highlight">Norm: 40–50%</span></div><div class="input-wrapper"><input type="number" id="k_pcv" name="pcv" step="1" required placeholder="e.g. 42"><span class="input-unit">%</span></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_wc">White Blood Cell (wc)</label><span class="normal-range-badge badge-highlight">4k–11k</span></div><div class="input-wrapper"><input type="number" id="k_wc" name="wc" step="1" required placeholder="e.g. 7500"><span class="input-unit">cells/µL</span></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_rc">Red Blood Cell (rc)</label><span class="normal-range-badge badge-highlight">4.5–5.9</span></div><div class="input-wrapper"><input type="number" id="k_rc" name="rc" step="0.1" required placeholder="e.g. 5.1"><span class="input-unit">M/µL</span></div></div>
 
-                    <div class="form-group"><div class="form-label-row"><label>Hypertension (htn)</label></div>
-                        <select id="k_htn" name="htn" required><option value="0">No</option><option value="1">Yes</option></select>
-                    </div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_htn">Hypertension (htn)</label><span class="normal-range-badge">Vascular</span></div><div class="input-wrapper"><select id="k_htn" name="htn" required><option value="0">No</option><option value="1">Yes</option></select></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_dm">Diabetes Mellitus (dm)</label><span class="normal-range-badge">Endocrine</span></div><div class="input-wrapper"><select id="k_dm" name="dm" required><option value="0">No</option><option value="1">Yes</option></select></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_cad">Coronary Artery Disease</label><span class="normal-range-badge">Cardiac</span></div><div class="input-wrapper"><select id="k_cad" name="cad" required><option value="0">No</option><option value="1">Yes</option></select></div></div>
 
-                    <div class="form-group"><div class="form-label-row"><label>Diabetes Mellitus (dm)</label></div>
-                        <select id="k_dm" name="dm" required><option value="0">No</option><option value="1">Yes</option></select>
-                    </div>
-
-                    <div class="form-group"><div class="form-label-row"><label>Coronary Artery Disease (cad)</label></div>
-                        <select id="k_cad" name="cad" required><option value="0">No</option><option value="1">Yes</option></select>
-                    </div>
-
-                    <div class="form-group"><div class="form-label-row"><label>Appetite</label></div>
-                        <select id="k_appet" name="appet" required><option value="0">Good</option><option value="1">Poor</option></select>
-                    </div>
-
-                    <div class="form-group"><div class="form-label-row"><label>Pedal Edema (pe)</label></div>
-                        <select id="k_pe" name="pe" required><option value="0">No</option><option value="1">Yes</option></select>
-                    </div>
-
-                    <div class="form-group"><div class="form-label-row"><label>Anemia (ane)</label></div>
-                        <select id="k_ane" name="ane" required><option value="0">No</option><option value="1">Yes</option></select>
-                    </div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_appet">Appetite Assessment</label><span class="normal-range-badge">Clinical</span></div><div class="input-wrapper"><select id="k_appet" name="appet" required><option value="0">Good</option><option value="1">Poor</option></select></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_pe">Pedal Edema (pe)</label><span class="normal-range-badge">Fluid Retention</span></div><div class="input-wrapper"><select id="k_pe" name="pe" required><option value="0">No</option><option value="1">Yes</option></select></div></div>
+                    <div class="form-group"><div class="form-label-row"><label for="k_ane">Anemia History (ane)</label><span class="normal-range-badge">Hematologic</span></div><div class="input-wrapper"><select id="k_ane" name="ane" required><option value="0">No</option><option value="1">Yes</option></select></div></div>
                 </div>
 
-                <div style="margin-top: 2.5rem; text-align: center;">
-                    <button type="submit" class="btn btn-primary btn-large" style="min-width: 280px;">
-                        <span>🔬 Run AI Kidney Disease Analysis</span>
+                <!-- Prominent Primary Action Button with Clear Elevation -->
+                <div class="form-cta-container">
+                    <button type="submit" class="btn-primary-cta" id="submitKidneyBtn">
+                        <span class="cta-shimmer"></span>
+                        <span class="cta-icon">🔬</span>
+                        <span class="cta-label">Run AI Kidney Disease Analysis</span>
+                        <span class="cta-arrow">→</span>
                     </button>
+                    <p class="cta-security-note">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <span>Automated Random Forest nephrology inference &bull; Patient privacy protected</span>
+                    </p>
                 </div>
             </form>
         </div>
@@ -479,6 +556,7 @@
     <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
     <script src="{{ url_for('static', filename='chatbot.js') }}?v=3"></script>
     <script src="{{ url_for('static', filename='medical_report.js') }}?v=4.0"></script>
+    <script src="{{ url_for('static', filename='js/report-scanner.js') }}?v=1.0"></script>
 </body>
 
 </html>

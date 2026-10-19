@@ -24,7 +24,198 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cardiovascular Diagnostic - MediNova AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/report-scanner.css') }}?v=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* =====================================================================
+           Top-Left Back Button Spacing & Viewport Clearance
+           ===================================================================== */
+        .content-wrapper.container {
+            padding-top: calc(75px + 24px) !important;
+        }
+
+        .back-button {
+            margin-top: 16px !important;
+            margin-bottom: 1.75rem !important;
+            display: inline-flex !important;
+            align-items: center !important;
+        }
+
+        /* =====================================================================
+           Enter Patient Clinical Vitals - Clean Form Inputs & Select Styling
+           ===================================================================== */
+        /* Remove heavy dark/black wrapper background and thick dark borders around the 13 fields */
+        #heartForm .input-wrapper,
+        .form-card .clinical-3col-grid .input-wrapper {
+            background: transparent !important;
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+            position: relative !important;
+            display: flex !important;
+            align-items: center !important;
+            width: 100% !important;
+        }
+
+        #heartForm .input-wrapper:focus-within,
+        .form-card .clinical-3col-grid .input-wrapper:focus-within {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        /* =====================================================================
+           Enter Patient Clinical Vitals - High-Contrast Dark-Mode Form Labels
+           ===================================================================== */
+        #heartForm label,
+        .form-card label,
+        .form-card .clinical-3col-grid label,
+        .form-card .form-label-row label,
+        .form-card .form-label-row > span:first-child,
+        .form-card .clinical-3col-grid .form-label-row > span:not(.normal-range-badge) {
+            color: #f1f5f9 !important;
+            font-weight: 600 !important;
+            font-size: 0.88rem !important;
+            letter-spacing: -0.01em !important;
+        }
+
+        /* Clean white styling with subtle slate border, 8px radius, dark slate text */
+        #heartForm input,
+        #heartForm select,
+        .form-card .clinical-3col-grid input,
+        .form-card .clinical-3col-grid select {
+            width: 100% !important;
+            height: 46px !important;
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            color: #0f172a !important;
+            font-size: 0.95rem !important;
+            font-weight: 500 !important;
+            font-family: inherit !important;
+            padding: 0 1rem !important;
+            box-sizing: border-box !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+        }
+
+        /* Dropdown styling */
+        #heartForm select,
+        .form-card .clinical-3col-grid select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 0.85rem center !important;
+            background-size: 1.1rem !important;
+            padding-right: 2.5rem !important;
+            cursor: pointer !important;
+        }
+
+        #heartForm select option,
+        .form-card .clinical-3col-grid select option {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            padding: 8px 12px !important;
+        }
+
+        /* Clean cyan/blue focus ring */
+        #heartForm input:focus,
+        #heartForm select:focus,
+        .form-card .clinical-3col-grid input:focus,
+        .form-card .clinical-3col-grid select:focus {
+            outline: none !important;
+            border-color: #0284c7 !important;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+            background-color: #ffffff !important;
+        }
+
+        /* Input placeholders */
+        #heartForm input::placeholder,
+        .form-card .clinical-3col-grid input::placeholder {
+            color: #94a3b8 !important;
+            font-size: 0.88rem !important;
+        }
+
+        /* Unit suffix text */
+        .form-card .clinical-3col-grid .input-unit {
+            position: absolute !important;
+            right: 0.95rem !important;
+            font-size: 0.82rem !important;
+            font-weight: 600 !important;
+            color: #64748b !important;
+            pointer-events: none !important;
+        }
+
+        /* Diagnostic info tile in grid */
+        .form-card .form-info-tile {
+            background: rgba(2, 132, 199, 0.05) !important;
+            border: 1px dashed rgba(2, 132, 199, 0.3) !important;
+            border-radius: 8px !important;
+            padding: 0.85rem 1rem !important;
+        }
+
+        .form-card .info-tile-title {
+            color: #f1f5f9 !important;
+            font-weight: 600 !important;
+        }
+
+        .form-card .info-tile-text {
+            color: #cbd5e1 !important;
+            font-size: 0.82rem !important;
+            line-height: 1.4 !important;
+        }
+
+        /* =====================================================================
+           Multilingual Patient Summary Language Buttons Styling
+           ===================================================================== */
+        .language-selector-wrapper {
+            background: rgba(255, 255, 255, 0.04) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 8px !important;
+            padding: 0.6rem 1rem !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            flex-wrap: wrap !important;
+            gap: 0.5rem !important;
+        }
+
+        .lang-btn {
+            background: rgba(255, 255, 255, 0.08) !important;
+            color: #e2e8f0 !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            border-radius: 6px !important;
+            padding: 6px 12px !important;
+            cursor: pointer !important;
+            font-size: 0.82rem !important;
+            font-weight: 500 !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            user-select: none !important;
+            line-height: 1.2 !important;
+        }
+
+        .lang-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.15) !important;
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.3) !important;
+        }
+
+        .lang-btn.active {
+            background: #0ea5e9 !important;
+            color: #ffffff !important;
+            border-color: #38bdf8 !important;
+            box-shadow: 0 0 10px rgba(14, 165, 233, 0.4) !important;
+            font-weight: 600 !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -51,6 +242,9 @@
             <a href="/" class="nav-link">Home</a>
             <a href="/features" class="nav-link">Diagnostic Suite</a>
             <a href="/contact" class="nav-link">Emergency & Care</a>
+            <button type="button" class="btn btn-sm btn-outline open-health-passport-btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; margin-right: 0.5rem;">
+                <span>📋 Health Passport</span>
+            </button>
             <a href="/contact" class="nav-emergency-btn">
                 <span class="pulse-dot"></span>
                 <span>24/7 Helpline: 112 / 911</span>
@@ -59,7 +253,7 @@
     </nav>
 
     <div class="content-wrapper container">
-        <a href="/features" class="back-button no-print">
+        <a href="/features" class="back-button no-print" style="margin-top: 16px;">
             <span>←</span> Back to Diagnostic Suite
         </a>
 
@@ -94,18 +288,42 @@
         <!-- RESULTS & EMERGENCY PROTOCOL SUITE                                -->
         <!-- ================================================================= -->
         <div class="result-section">
-            <div class="{{ 'critical-alert-card' if is_positive else 'safe-alert-card' }}">
+            <div class="{{ 'critical-alert-card' if is_positive else 'safe-alert-card' }}" id="resultAlertCard">
                 <div class="result-hero-row">
                     <div class="result-badge-icon {{ 'danger' if is_positive else 'safe' }}">
                         {{ '🚨' if is_positive else '🛡️' }}
                     </div>
-                    <div class="result-hero-text">
-                        <div class="result-status-tag {{ 'danger' if is_positive else 'safe' }}">
+                    <div class="result-hero-text" id="resultHeroText" data-condition="heart" data-is-positive="{{ 'true' if is_positive else 'false' }}">
+                        <div class="result-status-tag {{ 'danger' if is_positive else 'safe' }}" id="resultStatusTag">
                             {{ insights.badge }}
                         </div>
-                        <h2>{{ insights.title }}</h2>
-                        <p><strong>AI Diagnostic Assessment:</strong> {{ prediction }}</p>
-                        <p style="margin-top: 0.4rem;">{{ insights.description }}</p>
+                        <h2 id="resultMainHeading">{{ insights.title }}</h2>
+                        <p id="resultSubHeading"><strong id="resultAssessmentLabel">AI Diagnostic Assessment:</strong> <span id="resultPredictionText">{{ prediction }}</span></p>
+                        <p id="resultDescription" style="margin-top: 0.4rem;">{{ insights.description }}</p>
+                    </div>
+                </div>
+
+                <!-- Scanner Audit Badge & Integrity Seal -->
+                {% if report_id %}
+                <div class="scanner-integrity-seal-bar" data-report-id="{{ report_id }}" style="margin-top: 1rem; padding: 0.6rem 1rem; background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 8px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="scanner-audit-badge" style="background: #0891b2; color: #ffffff; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 4px;">🔬 Clinical Integrity Verified</span>
+                        <span style="font-family: monospace; font-size: 0.85rem; color: var(--text);">Report ID: <strong>{{ report_id }}</strong></span>
+                    </div>
+                    <div>
+                        <a href="/verify-report/{{ report_id }}" target="_blank" style="color: #06b6d4; font-size: 0.8rem; text-decoration: underline; font-weight: 600;">Verify Cryptographic Seal ↗</a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Multilingual Translation Selector Toolbar -->
+                <div class="language-selector-wrapper" style="margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: rgba(255, 255, 255, 0.04); padding: 0.5rem 1rem; border-radius: 8px;">
+                    <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">🌐 Multilingual Patient Summary:</span>
+                    <div class="language-btn-group" style="display: flex; gap: 0.3rem;">
+                        <button type="button" class="lang-btn active" data-lang="en">English</button>
+                        <button type="button" class="lang-btn" data-lang="ta">தமிழ் (Tamil)</button>
+                        <button type="button" class="lang-btn" data-lang="hi">हिंदी (Hindi)</button>
+                        <button type="button" class="lang-btn" data-lang="es">Español</button>
                     </div>
                 </div>
 
@@ -125,6 +343,9 @@
                     <button type="button" onclick="generateMedicalReportPDF()" class="btn btn-primary btn-print-report">
                         <span>📄 Download / Print Medical Report (PDF)</span>
                     </button>
+                    <button type="button" class="btn btn-outline open-health-passport-btn">
+                        <span>📋 View My Health Passport</span>
+                    </button>
                     <button type="button" class="btn btn-copilot-explain" data-condition="Heart Disease" data-prediction="{{ prediction or '' }}" onclick="askCopilotToExplainResult('Heart Disease', this.dataset.prediction)">
                         <span>🤖 Ask MediNova AI to Explain This Result</span>
                     </button>
@@ -135,6 +356,74 @@
                     {% endif %}
                 </div>
             </div>
+
+            {% if biomarker_gauges %}
+            <!-- Biomarker Physiological Range Indicators -->
+            <div class="biomarker-gauges-panel glass-card" style="margin-top: 1.5rem; padding: 1.2rem;">
+                <div class="panel-header" style="margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.5rem;">
+                    <h3 style="font-size: 1.1rem; color: var(--text); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📊</span> Measured Biomarker Physiological Range Indicators
+                    </h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+                        Comparison against standard laboratory physiological intervals. Reference intervals may vary by laboratory methodology and demographic characteristics.
+                    </p>
+                </div>
+                <div class="gauges-list">
+                    {% for g in biomarker_gauges %}
+                    <div class="biomarker-gauge-row">
+                        <div class="gauge-info-col">
+                            <div class="gauge-analyte-name">{{ g.analyte or g.name }}</div>
+                            <div class="gauge-analyte-val">
+                                <strong>{{ g.value }}</strong> <span class="gauge-unit">{{ g.unit }}</span>
+                                <span class="gauge-status-badge gauge-{{ g.status }}">{{ g.status | capitalize }}</span>
+                            </div>
+                        </div>
+                        <div class="gauge-bar-col">
+                            <div class="gauge-track">
+                                <div class="gauge-zone zone-optimal" style="left: 20%; width: 50%;"></div>
+                                <div class="gauge-zone zone-elevated" style="left: 70%; width: 30%;"></div>
+                                <div class="gauge-needle gauge-{{ g.status }}" {{ ('style="left: ' ~ ([([(g.percent if g.percent is defined else (g.position_pct if g.position_pct is defined else 50)), 3] | max), 97] | min)|string ~ '%;"') | safe }}>
+                                    <div class="gauge-pin"></div>
+                                </div>
+                            </div>
+                            <div class="gauge-labels-row">
+                                <span>Target: {{ g.low }} - {{ g.high }} {{ g.unit }}</span>
+                                <span class="gauge-note">Informational Reference Interval</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if top_risk_factors %}
+            <!-- Model Feature Attribution -->
+            <div class="risk-factors-panel glass-card" style="margin-top: 1.5rem; padding: 1.2rem;">
+                <div class="panel-header" style="margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.5rem;">
+                    <h3 style="font-size: 1.1rem; color: var(--text); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>⚖️</span> Model Feature Weight & Clinical Attribution
+                    </h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+                        Trained Random Forest global feature importance for the active diagnostic model. Reflects model architectural weighting, not arbitrary fabricated percentages.
+                    </p>
+                </div>
+                <div class="factors-list">
+                    {% for f in top_risk_factors %}
+                    <div class="factor-row" style="margin-bottom: 0.8rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 0.3rem;">
+                            <span style="font-weight: 600; color: var(--text);">{{ f.feature_name or f.label or f.feature or 'Clinical Biomarker' }}</span>
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">Relative Model Importance: {{ f.percent | round | int if f.percent is defined else (((f.weight * 100) | round | int) if f.weight is defined else 0) }}%</span>
+                        </div>
+                        <div style="height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden;">
+                            <div {{ ('style="height: 100%; width: ' ~ (f.percent | round | int if f.percent is defined else (((f.weight * 100) | round | int) if f.weight is defined else 10))|string ~ '%; background: linear-gradient(90deg, #06b6d4, #3b82f6); border-radius: 3px;"') | safe }}></div>
+                        </div>
+                        <p style="font-size: 0.78rem; color: var(--text-subtle); margin: 0.2rem 0 0 0;">{{ f.clinical_context or f.benchmark or '' }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Clinical Protocol & Action Grid -->
             <div class="protocol-grid">
@@ -329,165 +618,228 @@
         {% endif %}
 
         <!-- ================================================================= -->
-        <!-- PATIENT INPUT FORM                                                -->
+        <!-- SMART MEDICAL LAB REPORT SCANNER                                  -->
         <!-- ================================================================= -->
-        <div class="form-card no-print" style="max-width: 950px; margin: 0 auto 4rem;">
-            <!-- One-Click Sample Data Bar -->
-            <div class="sample-bar">
-                <div class="sample-bar-title">
-                    <span>⚡ Quick Test Automation:</span>
-                </div>
-                <div class="sample-btn-group">
-                    <button type="button" class="btn btn-sm btn-sample-pos" onclick="fillHeartSample('positive')">
-                        ⚠️ Fill High-Risk (Positive) Sample
-                    </button>
-                    <button type="button" class="btn btn-sm btn-sample-neg" onclick="fillHeartSample('negative')">
-                        🛡️ Fill Healthy (Negative) Sample
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('heartForm').reset()">
-                        🧹 Clear
-                    </button>
-                </div>
-            </div>
+        {% set scanner_module = 'heart' %}
+        {% include 'components/scanner_panel.html' %}
 
-            <h2 style="font-size: 1.4rem; margin-bottom: 1.5rem; color: var(--text);">Enter Patient Clinical Vitals</h2>
+        <!-- ================================================================= -->
+        <!-- PATIENT CLINICAL VITALS FORM (ENTERPRISE 3-COL GRID)              -->
+        <!-- ================================================================= -->
+        <div class="form-card rounded-2xl no-print">
+            <div class="form-header-row">
+                <div>
+                    <h2 class="form-section-title">Enter Patient Clinical Vitals</h2>
+                    <p class="form-section-subtitle">Input cardiovascular clinical measurements manually or review values auto-filled by the AI Lab Scanner.</p>
+                </div>
+                <span class="form-badge-count">13 Clinical Vitals</span>
+            </div>
             
             <form id="heartForm" action="/heart" method="POST">
-                <div class="form-grid">
+                <div class="clinical-3col-grid">
+                    <!-- 1. Age -->
                     <div class="form-group">
                         <div class="form-label-row">
-                            <label>Age (years)</label>
-                            <span class="field-hint">Adult 18-120</span>
+                            <label for="age">Age (years)</label>
+                            <span class="normal-range-badge">Adult 18–120</span>
                         </div>
-                        <input type="number" id="age" name="age" required min="1" max="120" placeholder="e.g. 55">
+                        <div class="input-wrapper">
+                            <input type="number" id="age" name="age" required min="1" max="120" placeholder="e.g. 55">
+                        </div>
                     </div>
 
+                    <!-- 2. Sex -->
                     <div class="form-group">
                         <div class="form-label-row">
-                            <label>Biological Sex</label>
+                            <label for="sex">Biological Sex</label>
+                            <span class="normal-range-badge">Demographic</span>
                         </div>
-                        <select id="sex" name="sex" required>
-                            <option value="1">Male</option>
-                            <option value="0">Female</option>
-                        </select>
+                        <div class="input-wrapper">
+                            <select id="sex" name="sex" required>
+                                <option value="1">Male</option>
+                                <option value="0">Female</option>
+                            </select>
+                        </div>
                     </div>
 
+                    <!-- 3. Chest Pain Type -->
                     <div class="form-group">
                         <div class="form-label-row">
-                            <label>Chest Pain Type</label>
+                            <label for="cp">Chest Pain Type</label>
+                            <span class="normal-range-badge">Angina Class</span>
                         </div>
-                        <select id="cp" name="cp" required>
-                            <option value="0">Typical Angina (Grade 0)</option>
-                            <option value="1">Atypical Angina (Grade 1)</option>
-                            <option value="2">Non-anginal Pain (Grade 2)</option>
-                            <option value="3">Asymptomatic (Grade 3)</option>
-                        </select>
+                        <div class="input-wrapper">
+                            <select id="cp" name="cp" required>
+                                <option value="0">Typical Angina (Grade 0)</option>
+                                <option value="1">Atypical Angina (Grade 1)</option>
+                                <option value="2">Non-anginal Pain (Grade 2)</option>
+                                <option value="3">Asymptomatic (Grade 3)</option>
+                            </select>
+                        </div>
                     </div>
 
+                    <!-- 4. Resting Blood Pressure -->
                     <div class="form-group">
                         <div class="form-label-row">
-                            <label>Resting Blood Pressure</label>
-                            <span class="field-hint">mm Hg (Norm: 120)</span>
+                            <label for="bp">Resting Blood Pressure</label>
+                            <span class="normal-range-badge badge-highlight">Norm &lt; 120 mm Hg</span>
                         </div>
-                        <input type="number" id="bp" name="bp" required step="1" placeholder="e.g. 130">
+                        <div class="input-wrapper">
+                            <input type="number" id="bp" name="bp" required step="1" placeholder="e.g. 125">
+                            <span class="input-unit">mm Hg</span>
+                        </div>
                     </div>
 
+                    <!-- 5. Serum Cholesterol -->
                     <div class="form-group">
                         <div class="form-label-row">
-                            <label>Serum Cholesterol</label>
-                            <span class="field-hint">mg/dL (Norm &lt; 200)</span>
+                            <label for="chol">Serum Cholesterol</label>
+                            <span class="normal-range-badge badge-highlight">Norm &lt; 200 mg/dL</span>
                         </div>
-                        <input type="number" id="chol" name="chol" required step="1" placeholder="e.g. 210">
+                        <div class="input-wrapper">
+                            <input type="number" id="chol" name="chol" required step="1" placeholder="e.g. 195">
+                            <span class="input-unit">mg/dL</span>
+                        </div>
                     </div>
 
+                    <!-- 6. Fasting Blood Sugar -->
                     <div class="form-group">
                         <div class="form-label-row">
-                            <label>Fasting Blood Sugar &gt; 120 mg/dL</label>
+                            <label for="fbs">Fasting Blood Sugar &gt; 120</label>
+                            <span class="normal-range-badge">Glycemic Flag</span>
                         </div>
-                        <select id="fbs" name="fbs" required>
-                            <option value="0">No (&lt;= 120 mg/dL)</option>
-                            <option value="1">Yes (&gt; 120 mg/dL)</option>
-                        </select>
+                        <div class="input-wrapper">
+                            <select id="fbs" name="fbs" required>
+                                <option value="0">No (&le; 120 mg/dL)</option>
+                                <option value="1">Yes (&gt; 120 mg/dL)</option>
+                            </select>
+                        </div>
                     </div>
 
+                    <!-- 7. Resting ECG -->
                     <div class="form-group">
                         <div class="form-label-row">
-                            <label>Resting ECG Results</label>
+                            <label for="ekg">Resting ECG Results</label>
+                            <span class="normal-range-badge">Electrophysiology</span>
                         </div>
-                        <select id="ekg" name="ekg" required>
-                            <option value="0">Normal</option>
-                            <option value="1">ST-T Wave Abnormality</option>
-                            <option value="2">Left Ventricular Hypertrophy</option>
-                        </select>
+                        <div class="input-wrapper">
+                            <select id="ekg" name="ekg" required>
+                                <option value="0">Normal Sinus Rhythm</option>
+                                <option value="1">ST-T Wave Abnormality</option>
+                                <option value="2">Left Ventricular Hypertrophy</option>
+                            </select>
+                        </div>
                     </div>
 
+                    <!-- 8. Max Heart Rate -->
                     <div class="form-group">
                         <div class="form-label-row">
-                            <label>Max Heart Rate Achieved</label>
-                            <span class="field-hint">bpm</span>
+                            <label for="max_hr">Max Heart Rate (Thalach)</label>
+                            <span class="normal-range-badge badge-highlight">Target: 220–Age</span>
                         </div>
-                        <input type="number" id="max_hr" name="max_hr" required step="1" placeholder="e.g. 150">
+                        <div class="input-wrapper">
+                            <input type="number" id="max_hr" name="max_hr" required step="1" placeholder="e.g. 150">
+                            <span class="input-unit">bpm</span>
+                        </div>
                     </div>
 
+                    <!-- 9. Exercise Induced Angina -->
                     <div class="form-group">
                         <div class="form-label-row">
-                            <label>Exercise Induced Angina</label>
+                            <label for="exang">Exercise Induced Angina</label>
+                            <span class="normal-range-badge">Stress Symptom</span>
                         </div>
-                        <select id="exang" name="exang" required>
-                            <option value="0">No</option>
-                            <option value="1">Yes</option>
-                        </select>
+                        <div class="input-wrapper">
+                            <select id="exang" name="exang" required>
+                                <option value="0">No Angina on Exertion</option>
+                                <option value="1">Yes (Exertional Ischemia)</option>
+                            </select>
+                        </div>
                     </div>
 
+                    <!-- 10. ST Depression (Oldpeak) -->
                     <div class="form-group">
                         <div class="form-label-row">
-                            <label>ST Depression (Oldpeak)</label>
-                            <span class="field-hint">Norm: 0.0 - 1.0</span>
+                            <label for="oldpeak">ST Depression (Oldpeak)</label>
+                            <span class="normal-range-badge badge-highlight">Norm: 0.0–1.0 mm</span>
                         </div>
-                        <input type="number" id="oldpeak" name="oldpeak" required step="0.1" placeholder="e.g. 1.2">
+                        <div class="input-wrapper">
+                            <input type="number" id="oldpeak" name="oldpeak" required step="0.1" placeholder="e.g. 0.8">
+                            <span class="input-unit">mm</span>
+                        </div>
                     </div>
 
+                    <!-- 11. Slope of Peak ST -->
                     <div class="form-group">
                         <div class="form-label-row">
-                            <label>Slope of Peak Exercise ST</label>
+                            <label for="slope">Slope of Peak Exercise ST</label>
+                            <span class="normal-range-badge">ECG Vector</span>
                         </div>
-                        <select id="slope" name="slope" required>
-                            <option value="0">Upsloping</option>
-                            <option value="1">Flat</option>
-                            <option value="2">Downsloping</option>
-                        </select>
+                        <div class="input-wrapper">
+                            <select id="slope" name="slope" required>
+                                <option value="0">Upsloping (Normal)</option>
+                                <option value="1">Flat (Borderline)</option>
+                                <option value="2">Downsloping (High Risk)</option>
+                            </select>
+                        </div>
                     </div>
 
+                    <!-- 12. Major Fluoroscopy Vessels -->
                     <div class="form-group">
                         <div class="form-label-row">
-                            <label>Major Vessels by Fluoroscopy</label>
-                            <span class="field-hint">0 to 3 vessels</span>
+                            <label for="ca">Fluoroscopy Major Vessels</label>
+                            <span class="normal-range-badge">Range: 0–3</span>
                         </div>
-                        <input type="number" id="ca" name="ca" required min="0" max="3" placeholder="0-3">
+                        <div class="input-wrapper">
+                            <input type="number" id="ca" name="ca" required min="0" max="3" placeholder="0 to 3 vessels">
+                        </div>
                     </div>
 
+                    <!-- 13. Thallium Stress Test -->
                     <div class="form-group">
                         <div class="form-label-row">
-                            <label>Thallium Stress Test</label>
+                            <label for="thal">Thallium Scintigraphy</label>
+                            <span class="normal-range-badge">Nuclear Scan</span>
                         </div>
-                        <select id="thal" name="thal" required>
-                            <option value="3">Normal</option>
-                            <option value="6">Fixed Defect</option>
-                            <option value="7">Reversible Defect</option>
-                        </select>
+                        <div class="input-wrapper">
+                            <select id="thal" name="thal" required>
+                                <option value="3">Normal Perfusion (3)</option>
+                                <option value="6">Fixed Defect (Infarction) (6)</option>
+                                <option value="7">Reversible Defect (Ischemia) (7)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 14. Diagnostic Info Tile -->
+                    <div class="form-group form-info-tile" style="grid-column: span 2;">
+                        <div class="info-tile-header">
+                            <span class="info-tile-icon">💡</span>
+                            <span class="info-tile-title">Cardiovascular Risk Architecture</span>
+                        </div>
+                        <p class="info-tile-text">
+                            Evaluated via Random Forest ensemble calibrated on coronary angiographic findings. Resting BP &ge; 140 mm Hg or Total Cholesterol &ge; 240 mg/dL represent elevated clinical risk boundaries (AHA/ACC guidelines).
+                        </p>
                     </div>
                 </div>
 
-                <div style="margin-top: 2.5rem; text-align: center;">
-                    <button type="submit" class="btn btn-primary btn-large" style="min-width: 280px;">
-                        <span>🔬 Run AI Cardiovascular Analysis</span>
+                <!-- Prominent Primary Action Button with Clear Elevation -->
+                <div class="form-cta-container">
+                    <button type="submit" class="btn-primary-cta" id="submitHeartBtn">
+                        <span class="cta-shimmer"></span>
+                        <span class="cta-icon">🔬</span>
+                        <span class="cta-label">Run AI Cardiovascular Analysis</span>
+                        <span class="cta-arrow">→</span>
                     </button>
+                    <p class="cta-security-note">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <span>Automated Random Forest coronary inference &bull; Patient privacy protected</span>
+                    </p>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Client-side script for One-Click Sample Filling & Print Timestamp -->
+    <!-- Client-side script for One-Click Sample Filling, Print Timestamp & Multilingual Patient Summary -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const timeEl = document.getElementById('printTimestamp');
@@ -527,10 +879,168 @@
                 document.getElementById('thal').value = 3;
             }
         }
+
+        // =====================================================================
+        // Multilingual Patient Summary Translation Dictionary & Engine
+        // =====================================================================
+        window.RESULT_TRANSLATIONS = window.RESULT_TRANSLATIONS || {
+            heart: {
+                positive: {
+                    heading: {
+                        en: "Cardiovascular Risk Indicators Detected",
+                        ta: "இதய நாள ஆபத்து அறிகுறிகள் கண்டறியப்பட்டுள்ளன",
+                        hi: "हृदय संबंधी जोखिम संकेतक पाए गए",
+                        es: "Indicadores de Riesgo Cardiovascular Detectados"
+                    },
+                    assessment_label: {
+                        en: "AI Diagnostic Assessment",
+                        ta: "AI கண்டறியும் மதிப்பீடு",
+                        hi: "एआई नैदानिक मूल्यांकन",
+                        es: "Evaluación Diagnóstica con IA"
+                    },
+                    prediction: {
+                        en: "Presence of Cardiovascular Risk",
+                        ta: "இதய நாள ஆபத்து இருப்பது கண்டறியப்பட்டது",
+                        hi: "हृदय संबंधी जोखिम की उपस्थिति",
+                        es: "Presencia de Riesgo Cardiovascular"
+                    },
+                    description: {
+                        en: "AI algorithmic analysis identified significant cardiovascular markers (such as elevated ST depression, atypical chest pressure parameters, or abnormal resting ECG markers) that correlate with coronary artery disease risk.",
+                        ta: "AI வழிமுறை பகுப்பாய்வு மூலம் இதய தமனி நோய் அபாயத்துடன் தொடர்புடைய குறிப்பிடத்தக்க இதயக் குறிப்பான்கள் (அதிகரித்த ST அழுத்தம், அசாதாரண மார்பு அழுத்தம் அல்லது அசாதாரண ECG போன்றவை) கண்டறியப்பட்டுள்ளன.",
+                        hi: "एआई एल्गोरिथम विश्लेषण ने महत्वपूर्ण हृदय संबंधी मार्करों (जैसे बढ़े हुए एसटी डिप्रेशन, असामान्य सीने के दबाव पैरामीटर, या असामान्य ईसीजी मार्कर) की पहचान की है जो कोरोनरी धमनी रोग के जोखिम से संबंधित हैं।",
+                        es: "El análisis algorítmico de IA identificó marcadores cardiovasculares significativos (como infradesnivel del ST elevado, parámetros atípicos de presión torácica o marcadores anormales de ECG en reposo) que se correlacionan con el riesgo de enfermedad de las arterias coronarias."
+                    },
+                    badge: {
+                        en: "ATTENTION REQUIRED",
+                        ta: "கவனம் தேவை",
+                        hi: "ध्यान देने की आवश्यकता है",
+                        es: "ATENCIÓN REQUERIDA"
+                    }
+                },
+                negative: {
+                    heading: {
+                        en: "Cardiovascular Profile Within Normal Limits",
+                        ta: "இதய நாள சுயவிவரம் இயல்பான வரம்புகளுக்குள் உள்ளது",
+                        hi: "हृदय संबंधी प्रोफ़ाइल सामान्य सीमाओं के भीतर है",
+                        es: "Perfil Cardiovascular Dentro de los Límites Normales"
+                    },
+                    assessment_label: {
+                        en: "AI Diagnostic Assessment",
+                        ta: "AI கண்டறியும் மதிப்பீடு",
+                        hi: "एआई नैदानिक मूल्यांकन",
+                        es: "Evaluación Diagnóstica con IA"
+                    },
+                    prediction: {
+                        en: "Absence of Significant Risk",
+                        ta: "குறிப்பிடத்தக்க ஆபத்து இல்லை",
+                        hi: "महत्वपूर्ण जोखिम की अनुपस्थिति",
+                        es: "Ausencia de Riesgo Significativo"
+                    },
+                    description: {
+                        en: "AI assessment detected no statistically significant risk factors for coronary artery disease based on the submitted clinical parameters.",
+                        ta: "சமர்ப்பிக்கப்பட்ட மருத்துவ அளவுருக்களின் அடிப்படையில் இதய தமனி நோய்க்கான புள்ளிவிவர ரீதியாக குறிப்பிடத்தக்க ஆபத்து காரணிகள் எதுவும் AI மதிப்பீட்டில் கண்டறியப்படவில்லை.",
+                        hi: "प्रस्तुत नैदानिक मापदंडों के आधार पर कोरोनरी धमनी रोग के लिए सांख्यिकीय रूप से महत्वपूर्ण जोखिम कारकों का एआई मूल्यांकन में पता नहीं चला।",
+                        es: "La evaluación de la IA no detectó factores de riesgo estadísticamente significativos para la enfermedad coronaria según los parámetros clínicos enviados."
+                    },
+                    badge: {
+                        en: "OPTIMAL HEALTH",
+                        ta: "உகந்த ஆரோக்கியம்",
+                        hi: "இष्टतम स्वास्थ्य",
+                        es: "SALUD ÓPTIMA"
+                    }
+                }
+            }
+        };
+
+        function switchResultLanguage(lang) {
+            if (!lang) return;
+            window.currentLanguage = lang;
+
+            // Highlight active button
+            document.querySelectorAll('.lang-btn').forEach(function(b) {
+                if (b.getAttribute('data-lang') === lang) {
+                    b.classList.add('active');
+                } else {
+                    b.classList.remove('active');
+                }
+            });
+
+            // Translate data-i18n items
+            if (typeof TRANSLATIONS !== 'undefined' && TRANSLATIONS[lang]) {
+                document.querySelectorAll('[data-i18n]').forEach(function(el) {
+                    var key = el.getAttribute('data-i18n');
+                    var dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
+                    if (dict && dict[key]) {
+                        el.textContent = dict[key];
+                    }
+                });
+            }
+
+            // Translate Result Cards (both server-rendered and dynamic scanner output)
+            var resultSections = document.querySelectorAll('.result-section, .critical-alert-card, .safe-alert-card');
+            resultSections.forEach(function(section) {
+                var heroText = section.querySelector('.result-hero-text') || section;
+                var condition = heroText.getAttribute('data-condition') || 'heart';
+
+                var isPositive = false;
+                if (heroText.getAttribute('data-is-positive') !== null) {
+                    isPositive = (heroText.getAttribute('data-is-positive') === 'true');
+                } else if (section.classList.contains('critical-alert-card') || section.querySelector('.critical-alert-card') || section.querySelector('.result-badge-icon.danger')) {
+                    isPositive = true;
+                }
+
+                var stateKey = isPositive ? 'positive' : 'negative';
+                var translations = window.RESULT_TRANSLATIONS || {};
+                var conditionDict = translations[condition] || translations.heart;
+                var trans = conditionDict ? conditionDict[stateKey] : null;
+                if (!trans) return;
+
+                // 1. Main Heading
+                var mainHeading = section.querySelector('#resultMainHeading') || heroText.querySelector('h2');
+                if (mainHeading && trans.heading && trans.heading[lang]) {
+                    mainHeading.textContent = trans.heading[lang];
+                }
+
+                // 2. Subheading (AI Diagnostic Assessment + Prediction)
+                var subHeading = section.querySelector('#resultSubHeading') || heroText.querySelector('p:not(#resultDescription)');
+                var assessmentLabel = (trans.assessment_label && trans.assessment_label[lang]) || "AI Diagnostic Assessment";
+                var predictionText = (trans.prediction && trans.prediction[lang]) || (trans.prediction && trans.prediction.en) || "";
+                if (subHeading) {
+                    subHeading.innerHTML = '<strong id="resultAssessmentLabel">' + assessmentLabel + ':</strong> <span id="resultPredictionText">' + predictionText + '</span>';
+                }
+
+                // 3. Clinical explanation paragraph
+                var descriptionEl = section.querySelector('#resultDescription') || heroText.querySelectorAll('p')[1];
+                if (descriptionEl && trans.description && trans.description[lang]) {
+                    descriptionEl.textContent = trans.description[lang];
+                }
+
+                // 4. Status badge tag
+                var statusBadge = section.querySelector('#resultStatusTag') || heroText.querySelector('.result-status-tag');
+                if (statusBadge && trans.badge && trans.badge[lang]) {
+                    statusBadge.textContent = trans.badge[lang];
+                }
+            });
+        }
+
+        // Expose globally
+        window.switchResultLanguage = switchResultLanguage;
+
+        // Event delegation on document: ensures dynamically injected result cards always respond immediately to language clicks
+        document.addEventListener('click', function(e) {
+            var langBtn = e.target.closest('.lang-btn');
+            if (!langBtn) return;
+            e.preventDefault();
+            var lang = langBtn.getAttribute('data-lang');
+            if (lang) {
+                switchResultLanguage(lang);
+            }
+        });
     </script>
     <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
     <script src="{{ url_for('static', filename='chatbot.js') }}?v=3"></script>
     <script src="{{ url_for('static', filename='medical_report.js') }}?v=4.0"></script>
+    <script src="{{ url_for('static', filename='js/report-scanner.js') }}?v=1.0"></script>
 </body>
 
 </html>

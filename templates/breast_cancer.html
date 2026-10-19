@@ -24,6 +24,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Breast Oncology Screening - MediNova AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/report-scanner.css') }}?v=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
@@ -51,6 +52,9 @@
             <a href="/" class="nav-link">Home</a>
             <a href="/features" class="nav-link">Diagnostic Suite</a>
             <a href="/contact" class="nav-link">Emergency & Care</a>
+            <button type="button" class="btn btn-sm btn-outline open-health-passport-btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; margin-right: 0.5rem;">
+                <span>📋 Health Passport</span>
+            </button>
             <a href="/contact" class="nav-emergency-btn">
                 <span class="pulse-dot"></span>
                 <span>24/7 Helpline: 112 / 911</span>
@@ -109,6 +113,30 @@
                     </div>
                 </div>
 
+                <!-- Scanner Audit Badge & Integrity Seal -->
+                {% if report_id %}
+                <div class="scanner-integrity-seal-bar" data-report-id="{{ report_id }}" style="margin-top: 1rem; padding: 0.6rem 1rem; background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 8px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="scanner-audit-badge" style="background: #0891b2; color: #ffffff; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 4px;">🔬 Clinical Integrity Verified</span>
+                        <span style="font-family: monospace; font-size: 0.85rem; color: var(--text);">Report ID: <strong>{{ report_id }}</strong></span>
+                    </div>
+                    <div>
+                        <a href="/verify-report/{{ report_id }}" target="_blank" style="color: #06b6d4; font-size: 0.8rem; text-decoration: underline; font-weight: 600;">Verify Cryptographic Seal ↗</a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Multilingual Translation Selector Toolbar -->
+                <div class="language-selector-wrapper" style="margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: rgba(255, 255, 255, 0.04); padding: 0.5rem 1rem; border-radius: 8px;">
+                    <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">🌐 Multilingual Patient Summary:</span>
+                    <div class="language-btn-group" style="display: flex; gap: 0.3rem;">
+                        <button type="button" class="lang-btn active" data-lang="en">English</button>
+                        <button type="button" class="lang-btn" data-lang="ta">தமிழ் (Tamil)</button>
+                        <button type="button" class="lang-btn" data-lang="hi">हिंदी (Hindi)</button>
+                        <button type="button" class="lang-btn" data-lang="es">Español</button>
+                    </div>
+                </div>
+
                 <!-- Risk Level Gauge -->
                 <div class="risk-meter-wrapper">
                     <div class="risk-meter-header">
@@ -125,6 +153,9 @@
                     <button type="button" onclick="generateMedicalReportPDF()" class="btn btn-primary btn-print-report">
                         <span>📄 Download / Print Medical Report (PDF)</span>
                     </button>
+                    <button type="button" class="btn btn-outline open-health-passport-btn">
+                        <span>📋 View My Health Passport</span>
+                    </button>
                     <button type="button" class="btn btn-copilot-explain" data-condition="Breast Cancer" data-prediction="{{ prediction or '' }}" onclick="askCopilotToExplainResult('Breast Cancer', this.dataset.prediction)">
                         <span>🤖 Ask MediNova AI to Explain This Result</span>
                     </button>
@@ -135,6 +166,74 @@
                     {% endif %}
                 </div>
             </div>
+
+            {% if biomarker_gauges %}
+            <!-- Biomarker Physiological Range Indicators -->
+            <div class="biomarker-gauges-panel glass-card" style="margin-top: 1.5rem; padding: 1.2rem;">
+                <div class="panel-header" style="margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.5rem;">
+                    <h3 style="font-size: 1.1rem; color: var(--text); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📊</span> Measured Cytological Morphology Range Indicators
+                    </h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+                        Comparison against standard cytopathological reference limits from fine-needle aspirate (FNA) digitized imagery.
+                    </p>
+                </div>
+                <div class="gauges-list">
+                    {% for g in biomarker_gauges %}
+                    <div class="biomarker-gauge-row">
+                        <div class="gauge-info-col">
+                            <div class="gauge-analyte-name">{{ g.analyte }}</div>
+                            <div class="gauge-analyte-val">
+                                <strong>{{ g.value }}</strong> <span class="gauge-unit">{{ g.unit }}</span>
+                                <span class="gauge-status-badge gauge-{{ g.status }}">{{ g.status | capitalize }}</span>
+                            </div>
+                        </div>
+                        <div class="gauge-bar-col">
+                            <div class="gauge-track">
+                                <div class="gauge-zone zone-optimal" style="left: 20%; width: 50%;"></div>
+                                <div class="gauge-zone zone-elevated" style="left: 70%; width: 30%;"></div>
+                                <div class="gauge-needle gauge-{{ g.status }}" {{ ('style="left: ' ~ ([([g.percent, 3] | max), 97] | min)|string ~ '%;"') | safe }}>
+                                    <div class="gauge-pin"></div>
+                                </div>
+                            </div>
+                            <div class="gauge-labels-row">
+                                <span>Target: {{ g.low }} - {{ g.high }} {{ g.unit }}</span>
+                                <span class="gauge-note">Informational Reference Interval</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if top_risk_factors %}
+            <!-- Model Feature Attribution -->
+            <div class="risk-factors-panel glass-card" style="margin-top: 1.5rem; padding: 1.2rem;">
+                <div class="panel-header" style="margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.5rem;">
+                    <h3 style="font-size: 1.1rem; color: var(--text); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>⚖️</span> Model Feature Weight & Clinical Attribution
+                    </h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+                        Trained Random Forest global feature importance for the active diagnostic model. Reflects model architectural weighting, not arbitrary fabricated percentages.
+                    </p>
+                </div>
+                <div class="factors-list">
+                    {% for f in top_risk_factors %}
+                    <div class="factor-row" style="margin-bottom: 0.8rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 0.3rem;">
+                            <span style="font-weight: 600; color: var(--text);">{{ f.feature_name }}</span>
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">Relative Model Importance: {{ (f.weight * 100) | round | int }}%</span>
+                        </div>
+                        <div style="height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden;">
+                            <div {{ ('style="height: 100%; width: ' ~ ((f.weight * 100) | round | int)|string ~ '%; background: linear-gradient(90deg, #06b6d4, #3b82f6); border-radius: 3px;"') | safe }}></div>
+                        </div>
+                        <p style="font-size: 0.78rem; color: var(--text-subtle); margin: 0.2rem 0 0 0;">{{ f.clinical_context }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Clinical Protocol & Action Grid -->
             <div class="protocol-grid">
@@ -320,61 +419,77 @@
         {% endif %}
 
         <!-- ================================================================= -->
+        <!-- SMART MEDICAL LAB REPORT SCANNER                                  -->
+        <!-- ================================================================= -->
+        {% set scanner_module = 'breast_cancer' %}
+        {% include 'components/scanner_panel.html' %}
+
+        <!-- ================================================================= -->
         <!-- PATIENT INPUT FORM                                                -->
         <!-- ================================================================= -->
-        <div class="form-card no-print" style="max-width: 800px; margin: 0 auto 4rem;">
-            <!-- One-Click Sample Data Bar -->
-            <div class="sample-bar">
-                <div class="sample-bar-title">
-                    <span>⚡ Quick Test Automation:</span>
+        <!-- ================================================================= -->
+        <!-- PATIENT CYTOPATHOLOGY FORM (ENTERPRISE 3-COL GRID)                -->
+        <!-- ================================================================= -->
+        <div class="form-card rounded-2xl no-print">
+            <div class="form-header-row">
+                <div>
+                    <h2 class="form-section-title">Enter Cell Nucleus Measurements</h2>
+                    <p class="form-section-subtitle">Input fine-needle aspiration (FNA) cellular morphometry manually or review values auto-filled by the AI Lab Scanner.</p>
                 </div>
-                <div class="sample-btn-group">
-                    <button type="button" class="btn btn-sm btn-sample-pos" onclick="fillCancerSample('positive')">
-                        ⚠️ Fill Malignant (High Risk) Sample
-                    </button>
-                    <button type="button" class="btn btn-sm btn-sample-neg" onclick="fillCancerSample('negative')">
-                        🛡️ Fill Benign (Low Risk) Sample
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('cancerForm').reset()">
-                        🧹 Clear
-                    </button>
-                </div>
+                <span class="form-badge-count">5 Nuclear Biomarkers</span>
             </div>
-
-            <h2 style="font-size: 1.4rem; margin-bottom: 1.5rem; color: var(--text);">Enter Cell Nucleus Measurements</h2>
             
             <form id="cancerForm" action="/breast_cancer" method="POST">
-                <div class="form-grid">
+                <div class="clinical-3col-grid">
                     <div class="form-group">
-                        <div class="form-label-row"><label>Mean Radius (µm)</label><span class="field-hint">e.g. 14.0</span></div>
-                        <input type="number" id="bc_radius" name="mean_radius" step="0.01" required placeholder="e.g. 14.0">
+                        <div class="form-label-row"><label for="bc_radius">Mean Radius</label><span class="normal-range-badge badge-highlight">Norm: 10–15 µm</span></div>
+                        <div class="input-wrapper"><input type="number" id="bc_radius" name="mean_radius" step="0.01" required placeholder="e.g. 14.0"><span class="input-unit">µm</span></div>
                     </div>
 
                     <div class="form-group">
-                        <div class="form-label-row"><label>Mean Texture</label><span class="field-hint">e.g. 19.0</span></div>
-                        <input type="number" id="bc_texture" name="mean_texture" step="0.01" required placeholder="e.g. 19.0">
+                        <div class="form-label-row"><label for="bc_texture">Mean Texture</label><span class="normal-range-badge badge-highlight">Norm: 12–20</span></div>
+                        <div class="input-wrapper"><input type="number" id="bc_texture" name="mean_texture" step="0.01" required placeholder="e.g. 19.0"></div>
                     </div>
 
                     <div class="form-group">
-                        <div class="form-label-row"><label>Mean Perimeter (µm)</label><span class="field-hint">e.g. 90.0</span></div>
-                        <input type="number" id="bc_perimeter" name="mean_perimeter" step="0.01" required placeholder="e.g. 90.0">
+                        <div class="form-label-row"><label for="bc_perimeter">Mean Perimeter</label><span class="normal-range-badge badge-highlight">Norm: 65–95 µm</span></div>
+                        <div class="input-wrapper"><input type="number" id="bc_perimeter" name="mean_perimeter" step="0.01" required placeholder="e.g. 90.0"><span class="input-unit">µm</span></div>
                     </div>
 
                     <div class="form-group">
-                        <div class="form-label-row"><label>Mean Area (µm²)</label><span class="field-hint">e.g. 600.0</span></div>
-                        <input type="number" id="bc_area" name="mean_area" step="0.1" required placeholder="e.g. 600.0">
+                        <div class="form-label-row"><label for="bc_area">Mean Area</label><span class="normal-range-badge badge-highlight">Norm: 350–650 µm²</span></div>
+                        <div class="input-wrapper"><input type="number" id="bc_area" name="mean_area" step="0.1" required placeholder="e.g. 600.0"><span class="input-unit">µm²</span></div>
                     </div>
 
                     <div class="form-group">
-                        <div class="form-label-row"><label>Mean Smoothness</label><span class="field-hint">e.g. 0.095</span></div>
-                        <input type="number" id="bc_smoothness" name="mean_smoothness" step="0.0001" required placeholder="e.g. 0.095">
+                        <div class="form-label-row"><label for="bc_smoothness">Mean Smoothness</label><span class="normal-range-badge badge-highlight">Norm: 0.07–0.11</span></div>
+                        <div class="input-wrapper"><input type="number" id="bc_smoothness" name="mean_smoothness" step="0.0001" required placeholder="e.g. 0.095"></div>
+                    </div>
+
+                    <!-- Diagnostic Reference Tile to Complete 2x3 Grid -->
+                    <div class="form-group form-info-tile">
+                        <div class="info-tile-header">
+                            <span class="info-tile-icon">💡</span>
+                            <span class="info-tile-title">FNA Cytopathology Guidelines</span>
+                        </div>
+                        <p class="info-tile-text">
+                            Extracted from fine-needle aspirate (FNA) digital imaging. Evaluated via Random Forest classifier for nuclear pleomorphism and contour irregularity.
+                        </p>
                     </div>
                 </div>
 
-                <div style="margin-top: 2.5rem; text-align: center;">
-                    <button type="submit" class="btn btn-primary btn-large" style="min-width: 280px;">
-                        <span>🔬 Run AI Morphometry Analysis</span>
+                <!-- Prominent Primary Action Button with Clear Elevation -->
+                <div class="form-cta-container">
+                    <button type="submit" class="btn-primary-cta" id="submitCancerBtn">
+                        <span class="cta-shimmer"></span>
+                        <span class="cta-icon">🔬</span>
+                        <span class="cta-label">Run AI Morphometry Analysis</span>
+                        <span class="cta-arrow">→</span>
                     </button>
+                    <p class="cta-security-note">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <span>Automated Random Forest cytological inference &bull; Patient privacy protected</span>
+                    </p>
                 </div>
             </form>
         </div>
@@ -404,10 +519,12 @@
                 document.getElementById('bc_smoothness').value = 0.08;
             }
         }
+        window.fillBreastCancerSample = fillCancerSample;
     </script>
     <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
     <script src="{{ url_for('static', filename='chatbot.js') }}?v=3"></script>
     <script src="{{ url_for('static', filename='medical_report.js') }}?v=4.0"></script>
+    <script src="{{ url_for('static', filename='js/report-scanner.js') }}?v=1.0"></script>
 </body>
 
 </html>

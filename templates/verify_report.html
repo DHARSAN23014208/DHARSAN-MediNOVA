@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('medinova_theme');
+                if (stored === 'light' || stored === 'dark') {
+                    document.documentElement.setAttribute('data-theme', stored);
+                    return;
+                }
+            } catch (e) {}
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official Report Verification - MediNova Clinical AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/report-scanner.css') }}?v=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        .navbar {
+            padding-right: 24px !important;
+            box-sizing: border-box !important;
+        }
+        .verify-card {
+            max-width: 760px;
+            margin: 3rem auto;
+            background: #0f172a !important; /* Force high-contrast dark card container */
+            border: 1px solid #334155 !important;
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+            color: #f8fafc;
+        }
+        .verify-badge-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid #334155;
+        }
+        .verify-seal-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+            color: #ffffff;
+            flex-shrink: 0;
+        }
+        .verify-main-heading {
+            color: #f8fafc !important;
+            font-weight: 700 !important;
+            font-size: 1.6rem;
+            margin: 0;
+            line-height: 1.3;
+        }
+        .verify-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+            margin: 1.5rem 0;
+        }
+        .verify-field {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .verify-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8 !important;
+            margin-bottom: 0.35rem;
+            display: block;
+            font-weight: 600;
+        }
+        .verify-value {
+            font-size: 1.05rem;
+            font-weight: 600 !important;
+            color: #f1f5f9 !important;
+            word-break: break-all;
+        }
+        .mono-val {
+            font-family: 'JetBrains Mono', monospace;
+            color: #06b6d4 !important;
+        }
+        .audit-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.85rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+        .tag-scanner {
+            background: rgba(6, 182, 212, 0.15);
+            color: #06b6d4;
+            border: 1px solid rgba(6, 182, 212, 0.4);
+        }
+        .tag-direct {
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.4);
+        }
+        .verify-audit-box {
+            margin-top: 2rem;
+            padding: 1rem 1.25rem;
+            background: rgba(14, 165, 233, 0.08);
+            border-left: 4px solid #0284c7;
+            border-radius: 4px;
+        }
+        .verify-audit-text {
+            font-size: 0.82rem;
+            color: #cbd5e1 !important;
+            line-height: 1.45;
+            margin: 0;
+        }
+        .verify-top-actions {
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        .btn-back-suite {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #94a3b8;
+            font-size: 0.88rem;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 0.45rem 0.9rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .btn-back-suite:hover {
+            color: #f8fafc;
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateX(-2px);
+        }
+        .verify-bottom-actions {
+            margin-top: 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .btn-return-dashboard {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.65rem 1.4rem;
+            font-weight: 600;
+            border-radius: 8px;
+            color: #f8fafc !important;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-return-dashboard:hover {
+            background: rgba(255, 255, 255, 0.16);
+            border-color: rgba(255, 255, 255, 0.35);
+            color: #ffffff !important;
+        }
+        @media (max-width: 640px) {
+            .verify-grid {
+                grid-template-columns: 1fr;
+            }
+            .verify-card {
+                padding: 1.5rem;
+                margin: 1.5rem auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-bg">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+    </div>
+    <div class="bg-grid"></div>
+
+    <nav class="navbar" id="topNavbar" style="padding-right: 24px; box-sizing: border-box;">
+        <a href="/" class="nav-brand">
+            <div class="brand-icon-wrapper">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </div>
+            <span class="brand-gradient">MediNova</span>
+            <span class="brand-tag">Verification</span>
+        </a>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="/features" class="nav-link">Diagnostic Suite</a>
+            <a href="/contact" class="nav-link">Care Network</a>
+        </div>
+    </nav>
+
+    <div class="content-wrapper container">
+        <div class="verify-card glass-panel" id="verificationView">
+            {% if verified %}
+                <div class="verify-top-actions">
+                    <a href="/features" id="backToSuiteBtn" class="btn-back-suite">
+                        <span>← Back to Diagnostic Suite</span>
+                    </a>
+                </div>
+
+                <div class="verify-badge-header">
+                    <div class="verify-seal-icon">✓</div>
+                    <div>
+                        <span style="display: block; color: #10b981; font-weight: 800; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase;">
+                            Cryptographically Verified Authentic
+                        </span>
+                        <h1 class="verify-main-heading" style="font-size: 1.6rem; margin: 0; color: #f8fafc; font-weight: 700;">Official Medical Report Certification</h1>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    {% if report.is_scanner_extracted %}
+                    <span class="audit-tag tag-scanner">
+                        <span>🔬</span> Extracted via AI Lab Report Scanner
+                    </span>
+                    {% else %}
+                    <span class="audit-tag tag-direct">
+                        <span>📝</span> Clinical Portal Direct Submission
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="verify-grid">
+                    <div class="verify-field">
+                        <span class="verify-label" style="color: #94a3b8;">Report Verification ID</span>
+                        <span class="verify-value mono-val">{{ report.report_id }}</span>
+                    </div>
+
+                    <div class="verify-field">
+                        <span class="verify-label" style="color: #94a3b8;">Generation Timestamp</span>
+                        <span class="verify-value" style="color: #f1f5f9; font-weight: 600;">{{ report.created_at }}</span>
+                    </div>
+
+                    <div class="verify-field">
+                        <span class="verify-label" style="color: #94a3b8;">Diagnostic Modality</span>
+                        <span class="verify-value" style="color: #f1f5f9; font-weight: 600;">{{ report.condition_title }}</span>
+                    </div>
+
+                    <div class="verify-field">
+                        <span class="verify-label" style="color: #94a3b8;">Screening Assessment Result</span>
+                        {% if report.is_positive %}
+                        <span class="verify-value" style="color: #f43f5e; font-weight: 700;">{{ report.prediction_text }}</span>
+                        {% else %}
+                        <span class="verify-value" style="color: #10b981; font-weight: 700;">{{ report.prediction_text }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="verify-field">
+                        <span class="verify-label" style="color: #94a3b8;">Model Confidence / Risk Stratification</span>
+                        <span class="verify-value" style="color: #f1f5f9; font-weight: 600;">{{ ("%.1f"|format(report.confidence_score|float) ~ "%") if (report.confidence_score is not none and report.confidence_score != "") else "Not Stated (Categorical Assessment)" }}</span>
+                    </div>
+
+                    <div class="verify-field">
+                        <span class="verify-label" style="color: #94a3b8;">Digital Cryptographic Seal (HMAC-SHA256)</span>
+                        <span class="verify-value mono-val" style="font-size: 0.85rem;">{{ report.verification_hash }}</span>
+                    </div>
+                </div>
+
+                <div class="verify-audit-box">
+                    <p class="verify-audit-text" style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.45; margin: 0;">
+                        <strong style="color: #f8fafc;">CLINICAL AUDIT NOTICE:</strong> This verification confirmation guarantees that the associated screening document was generated through the verified MediNova Clinical Intelligence Core. Results represent automated machine learning risk stratification and must be correlated in person with a certified medical practitioner.
+                    </p>
+                </div>
+
+                <div class="verify-bottom-actions">
+                    <a href="/" id="returnDashboardBtn" class="btn btn-return-dashboard">
+                        <span>Return to Dashboard</span>
+                    </a>
+                    <a href="/features" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.4rem; font-weight: 600; border-radius: 8px; text-decoration: none;">
+                        <span>Diagnostic Suite</span>
+                    </a>
+                </div>
+            {% else %}
+                <div class="verify-top-actions">
+                    <a href="/features" id="backToSuiteBtnUnverified" class="btn-back-suite">
+                        <span>← Back to Diagnostic Suite</span>
+                    </a>
+                </div>
+
+                <div class="verify-badge-header">
+                    <div class="verify-seal-icon" style="background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);">✕</div>
+                    <div>
+                        <span style="display: block; color: #f43f5e; font-weight: 800; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase;">
+                            Verification Status: Unverified / Not Found
+                        </span>
+                        <h1 class="verify-main-heading" style="font-size: 1.6rem; margin: 0; color: #f8fafc; font-weight: 700;">Report Record Not Located</h1>
+                    </div>
+                </div>
+
+                <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.5; margin: 1.5rem 0;">
+                    The provided Report ID <strong style="color: #f8fafc;">{{ query_id }}</strong> does not match an active record in the MediNova verification registry. The report may have been generated locally without database persistence, or the identifier is incorrect.
+                </p>
+
+                <div class="verify-bottom-actions">
+                    <a href="/" id="returnDashboardBtnUnverified" class="btn btn-return-dashboard">
+                        <span>Return to Dashboard</span>
+                    </a>
+                    <a href="/features" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.4rem; font-weight: 600; border-radius: 8px; text-decoration: none;">
+                        <span>Return to Diagnostic Suite</span>
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Navigation Trap Prevention & Verification Lifecycle Handler -->
+    <script>
+        (function() {
+            'use strict';
+
+            function exitVerification(destinationUrl) {
+                // 1. Clear any verification URL parameters or query strings
+                try {
+                    if (window.location.search || window.location.pathname.includes('/verify-report')) {
+                        window.history.pushState({}, '', window.location.pathname);
+                    }
+                } catch (e) {
+                    console.warn('History pushState error:', e);
+                }
+
+                // 2. Hide / unmount the verification view
+                var verifyCard = document.getElementById('verificationView') || document.querySelector('.verify-card');
+                if (verifyCard) {
+                    verifyCard.style.display = 'none';
+                }
+
+                // 3. Restore main application view without getting stuck
+                if (destinationUrl) {
+                    window.location.href = destinationUrl;
+                } else {
+                    if (window.history.length > 1 && document.referrer && document.referrer.indexOf(window.location.host) !== -1) {
+                        window.history.back();
+                    } else {
+                        window.location.href = '/features';
+                    }
+                }
+            }
+
+            // Ensure popstate fires cleanly on browser Back button
+            try {
+                if (!window.history.state || !window.history.state.verificationActive) {
+                    window.history.replaceState({ verificationActive: true }, '', window.location.href);
+                }
+            } catch (e) {}
+
+            window.addEventListener('popstate', function(e) {
+                exitVerification('/features');
+            });
+
+            document.addEventListener('DOMContentLoaded', function() {
+                // Back to Diagnostic Suite buttons
+                var backBtns = document.querySelectorAll('#backToSuiteBtn, #backToSuiteBtnUnverified, .btn-back-suite');
+                backBtns.forEach(function(btn) {
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        exitVerification('/features');
+                    });
+                });
+
+                // Return to Dashboard buttons
+                var dashBtns = document.querySelectorAll('#returnDashboardBtn, #returnDashboardBtnUnverified, .btn-return-dashboard');
+                dashBtns.forEach(function(btn) {
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        exitVerification('/');
+                    });
+                });
+
+                // Navbar links: Home, Diagnostic Suite, Care Network
+                var navLinks = document.querySelectorAll('.navbar .nav-link, .nav-brand');
+                navLinks.forEach(function(link) {
+                    link.addEventListener('click', function(e) {
+                        var target = link.getAttribute('href');
+                        if (target) {
+                            e.preventDefault();
+                            exitVerification(target);
+                        }
+                    });
+                });
+            });
+
+            // Expose globally for automated tests and external lifecycle callers
+            window.exitVerification = exitVerification;
+        })();
+    </script>
+    <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
+</body>
+</html>

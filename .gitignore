@@ -15,9 +15,11 @@ ENV/
 .env.*
 !.env.example
 
-# User uploads (keep directory via .gitkeep)
+# User and patient uploads
 static/uploads/*
 !static/uploads/.gitkeep
+private_uploads/
+instance/
 
 # Sensitive patient database, credentials, and local exports
 service_account.json
@@ -27,6 +29,7 @@ data/
 *.csv
 *.db
 *.sqlite3
+*.log
 
 # OS / Editor files
 .DS_Store

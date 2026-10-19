@@ -37,6 +37,16 @@ VALID_STATUSES = [
     "Rejected"
 ]
 
+PERMITTED_TRANSITIONS: Dict[str, List[str]] = {
+    "Request Submitted": ["Awaiting Hospital Confirmation", "Cancelled", "Rejected"],
+    "Awaiting Hospital Confirmation": ["Confirmed by Hospital", "Rescheduling Required", "Cancelled", "Rejected"],
+    "Confirmed by Hospital": ["Completed", "Rescheduling Required", "Cancelled"],
+    "Rescheduling Required": ["Confirmed by Hospital", "Awaiting Hospital Confirmation", "Cancelled"],
+    "Cancelled": [],    # Terminal state
+    "Completed": [],    # Terminal state
+    "Rejected": []      # Terminal state
+}
+
 
 def get_db_connection() -> sqlite3.Connection:
     """Create a thread-safe connection to the SQLite database."""
@@ -148,6 +158,36 @@ def create_appointment(data: Dict[str, Any]) -> Tuple[bool, Dict[str, Any], Opti
     if not data.get("consent_given", True):
         return False, {}, "Patient consent is required to process appointment request."
 
+    # Validate condition
+    cond_id = str(data.get("condition_id", "")).strip().lower()
+    from utils.hospital_service import get_specialty_mapping
+    spec_map = get_specialty_mapping(cond_id)
+    if spec_map.get("is_unmapped_condition"):
+        return False, {}, f"Invalid or unsupported clinical condition '{cond_id}'."
+    cond_name = spec_map.get("canonical_name", str(data.get("condition_name", "")).strip())
+
+    # Authoritative hospital verification and fallback handling
+    h_id = str(data.get("hospital_id", "")).strip()
+    hospital_name = str(data.get("hospital_name", "")).strip()
+    hospital_address = str(data.get("hospital_address", "")).strip()
+    facility_type = str(data.get("facility_type", "Healthcare Facility")).strip()
+    hospital_website = str(data.get("hospital_website", "")).strip()
+    directions_url = str(data.get("directions_url", "")).strip()
+    specialty_label = str(data.get("specialty_label", spec_map.get("primary_specialty", "Specialty Matched"))).strip()
+
+    if h_id:
+        try:
+            from utils.verified_hospital_registry import VERIFIED_HOSPITAL_REGISTRY
+            matched_hosp = next((h for h in VERIFIED_HOSPITAL_REGISTRY if h.get("id") == h_id), None)
+            if matched_hosp:
+                hospital_name = matched_hosp.get("name", hospital_name)
+                hospital_address = matched_hosp.get("address", hospital_address)
+                facility_type = matched_hosp.get("facility_type", facility_type)
+                hospital_website = matched_hosp.get("website", hospital_website)
+                specialty_label = spec_map.get("primary_specialty", specialty_label)
+        except Exception:
+            pass
+
     ref_id = generate_reference_id()
     access_token = secrets.token_urlsafe(24)
     now_iso = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -187,17 +227,17 @@ def create_appointment(data: Dict[str, Any]) -> Tuple[bool, Dict[str, Any], Opti
             data["patient_name"].strip(),
             phone,
             email,
-            data["condition_id"].strip().lower(),
-            data["condition_name"].strip(),
+            cond_id,
+            cond_name,
             data.get("clinical_notes", "").strip(),
-            data.get("hospital_id", ""),
-            data["hospital_name"].strip(),
-            data.get("facility_type", "Healthcare Facility"),
-            data["hospital_address"].strip(),
-            data.get("hospital_website", "").strip(),
-            data.get("directions_url", "").strip(),
+            h_id,
+            hospital_name,
+            facility_type,
+            hospital_address,
+            hospital_website,
+            directions_url,
             data.get("distance_km"),
-            data.get("specialty_label", "Specialty Matched"),
+            specialty_label,
             mode,
             pref_date_str,
             data["preferred_time_slot"].strip(),
@@ -219,14 +259,14 @@ def create_appointment(data: Dict[str, Any]) -> Tuple[bool, Dict[str, Any], Opti
             "patient_name": data["patient_name"].strip(),
             "phone": phone,
             "email": email,
-            "condition_id": data["condition_id"].strip().lower(),
-            "condition_name": data["condition_name"].strip(),
+            "condition_id": cond_id,
+            "condition_name": cond_name,
             "clinical_notes": data.get("clinical_notes", "").strip(),
-            "hospital_name": data["hospital_name"].strip(),
-            "facility_type": data.get("facility_type", "Healthcare Facility"),
-            "hospital_address": data["hospital_address"].strip(),
-            "hospital_website": data.get("hospital_website", "").strip(),
-            "directions_url": data.get("directions_url", "").strip(),
+            "hospital_name": hospital_name,
+            "facility_type": facility_type,
+            "hospital_address": hospital_address,
+            "hospital_website": hospital_website,
+            "directions_url": directions_url,
             "distance_km": data.get("distance_km"),
             "specialty_label": data.get("specialty_label", "Specialty Matched"),
             "consultation_mode": mode,
@@ -366,6 +406,12 @@ def update_appointment_status(
             return False, f"Appointment reference '{reference_id}' not found."
 
         old_status = row["status"]
+        if old_status in ["Cancelled", "Completed", "Rejected"]:
+            return False, f"Cannot transition appointment from terminal state '{old_status}'."
+
+        if new_status != old_status and new_status not in PERMITTED_TRANSITIONS.get(old_status, []):
+            return False, f"Illegal status transition: cannot transition from '{old_status}' to '{new_status}'."
+
         history_str = row["status_history"] or "[]"
         try:
             history = json.loads(history_str)
