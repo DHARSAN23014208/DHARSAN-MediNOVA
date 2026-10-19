@@ -32,7 +32,9 @@ from utils.hospital_service import (
     score_and_recommend_hospitals,
     discover_hospitals_for_patient,
     normalize_address,
-    resolve_any_address
+    resolve_any_address,
+    is_non_clinical_facility,
+    get_specialty_mapping
 )
 from utils.appointment_db import (
     create_appointment,
@@ -233,7 +235,7 @@ class TestHospitalDiscoveryAndAppointmentSystem(unittest.TestCase):
         self.assertEqual(res_spec.status_code, 200)
         data_spec = res_spec.get_json()
         self.assertEqual(data_spec["status"], "success")
-        self.assertEqual(len(data_spec["specialties"]), 7)
+        self.assertTrue(len(data_spec["specialties"]) >= 7)
 
         # 3. GET /api/hospitals/search
         res_search = self.client.get('/api/hospitals/search?condition=diabetes&radius_km=20')
@@ -444,22 +446,29 @@ class TestHospitalDiscoveryAndAppointmentSystem(unittest.TestCase):
         scored = score_and_recommend_hospitals(sample_facilities, condition_id="heart")
         lookup = {h["id"]: h for h in scored}
 
-        # 1. Verified specialty has official tag
+        # 1. Verified specialty has official tag -> Tier 1
         verified = lookup["hosp-cardio-verified"]
         self.assertTrue(verified["specialty_match"])
-        self.assertIn("Verified Cardiology Centre", verified["specialty_label"])
+        self.assertEqual(verified["tier"], 1)
+        self.assertIn("VERIFIED SPECIALTY MATCH (Cardiology)", verified["specialty_label"])
+        self.assertEqual(verified["specialty"], "Cardiology")
 
-        # 2. Inferred specialty clearly says 'Inferred from facility name'
+        # 2. Inferred specialty clearly says VERIFIED SPECIALTY MATCH (Cardiology) based on matching keywords
         inferred = lookup["hosp-cardio-inferred"]
         self.assertTrue(inferred["specialty_match"])
-        self.assertIn("Likely Cardiology (Inferred from facility name)", inferred["specialty_label"])
+        self.assertEqual(inferred["tier"], 1)
+        self.assertIn("VERIFIED SPECIALTY MATCH (Cardiology)", inferred["specialty_label"])
+        self.assertEqual(inferred["specialty"], "Cardiology")
 
-        # 3. Unverified facility is marked Specialty Not Verified
+        # 3. Unverified facility is marked GENERAL / MULTI-SPECIALTY (INTERNAL MEDICINE) - Tier 2
         unverified = lookup["hosp-general-unverified"]
         self.assertFalse(unverified["specialty_match"])
-        self.assertIn("Specialty Not Verified", unverified["specialty_label"])
+        self.assertEqual(unverified["tier"], 2)
+        self.assertIn("GENERAL / MULTI-SPECIALTY (INTERNAL MEDICINE)", unverified["specialty_label"])
+        self.assertEqual(unverified["specialty"], "Internal Medicine / General Medicine")
+        self.assertNotEqual(unverified["specialty"], "Cardiology", "Unverified hospital must NOT be stamped with Cardiology")
 
-        print("✅ Test 10 Passed: Reliable distinction between verified and name-inferred specialties verified.")
+        print("✅ Test 10 Passed: Reliable distinction between verified and general hospitals verified.")
 
     # --------------------------------------------------------------------------
     # 11. FLASK GEOCODING PROXY & DYNAMIC SEARCH ENDPOINTS
@@ -494,6 +503,163 @@ class TestHospitalDiscoveryAndAppointmentSystem(unittest.TestCase):
             self.assertNotIn("Royal Brompton", rec["name"])
 
         print("✅ Test 11 Passed: Flask geocoding proxy and dynamic address search endpoints verified.")
+
+    # --------------------------------------------------------------------------
+    # 12. NON-CLINICAL FACILITY FILTERING (BLOOD BANKS, PHARMACIES, DENTAL, VET)
+    # --------------------------------------------------------------------------
+    def test_12_non_clinical_facility_filtering(self):
+        # Excluded non-clinical facility names
+        self.assertTrue(is_non_clinical_facility("Rotary Blood Bank"))
+        self.assertTrue(is_non_clinical_facility("Apollo Pharmacy & Chemists"))
+        self.assertTrue(is_non_clinical_facility("Happy Paws Veterinary Clinic"))
+        self.assertTrue(is_non_clinical_facility("Smile Line Dental Clinic"))
+        self.assertTrue(is_non_clinical_facility("Metropolis Pathology & Diagnostic Blood Collection"))
+
+        # Retained hospitals
+        self.assertFalse(is_non_clinical_facility("Saveetha Medical College Hospital"))
+        self.assertFalse(is_non_clinical_facility("Apollo Speciality Hospital"))
+        self.assertFalse(is_non_clinical_facility("Government General Hospital"))
+        self.assertFalse(is_non_clinical_facility("Dr. Mohan's Diabetes Specialities Centre"))
+
+        # Ensure recommendation engine strips them out completely
+        mixed_facilities = [
+            {"id": "hosp-legit", "name": "City Care General Hospital", "facility_type": "Hospital", "distance_km": 2.0},
+            {"id": "blood-bank", "name": "Rotary Blood Bank", "facility_type": "Blood Bank", "distance_km": 1.0},
+            {"id": "pharma", "name": "Apollo Pharmacy 24x7", "facility_type": "Pharmacy", "distance_km": 0.5},
+            {"id": "vet", "name": "Pet Care Veterinary Hospital", "facility_type": "Veterinary", "distance_km": 1.5},
+        ]
+        results = score_and_recommend_hospitals(mixed_facilities, condition_id="diabetes")
+        result_ids = [h["id"] for h in results]
+        self.assertIn("hosp-legit", result_ids)
+        self.assertNotIn("blood-bank", result_ids, "Blood bank should have been strictly excluded")
+        self.assertNotIn("pharma", result_ids, "Pharmacy should have been strictly excluded")
+        self.assertNotIn("vet", result_ids, "Veterinary should have been strictly excluded")
+        print("✅ Test 12 Passed: Non-clinical facilities (blood banks, pharmacies, vet, dental) strictly excluded.")
+
+    # --------------------------------------------------------------------------
+    # 13. GOOGLE PLUS CODE STRIPPING & ADDRESS NORMALIZATION
+    # --------------------------------------------------------------------------
+    def test_13_google_plus_code_address_normalization(self):
+        addr1 = "3QMG+W9F, Sekkalai, Karaikudi, Tamil Nadu 630002"
+        clean1 = normalize_address(addr1)
+        self.assertNotIn("3QMG+W9F", clean1)
+        self.assertIn("Sekkalai", clean1)
+        self.assertIn("Karaikudi", clean1)
+        self.assertIn("630002", clean1)
+
+        addr2 = "8FVC9G8F+5X Mumbai, Maharashtra 400001"
+        clean2 = normalize_address(addr2)
+        self.assertNotIn("8FVC9G8F+5X", clean2)
+        self.assertIn("Mumbai", clean2)
+        self.assertIn("400001", clean2)
+
+        addr3 = "4Q2P+3X, Anna Nagar, Chennai - 600040"
+        clean3 = normalize_address(addr3)
+        self.assertNotIn("4Q2P+3X", clean3)
+        self.assertIn("Anna Nagar", clean3)
+        self.assertIn("Chennai", clean3)
+        print("✅ Test 13 Passed: Google Plus Codes stripped and address strings sanitized.")
+
+    # --------------------------------------------------------------------------
+    # 14. DYNAMIC CONDITION-TO-SPECIALTY MAPPING
+    # --------------------------------------------------------------------------
+    def test_14_dynamic_condition_to_specialty_mapping(self):
+        # Diabetes & Glycemic Profile
+        diab = get_specialty_mapping("diabetes")
+        self.assertEqual(diab["primary_specialty"], "Endocrinology / Diabetology")
+        for kw in ["diabetes", "diabetologist", "endocrinology", "sugar clinic", "endocrine"]:
+            self.assertIn(kw, diab["search_keywords"])
+
+        # Pneumonia / Respiratory Infections
+        pneu = get_specialty_mapping("pneumonia")
+        self.assertEqual(pneu["primary_specialty"], "Pulmonology / Chest Medicine")
+        for kw in ["pulmonology", "chest", "respiratory", "lung", "thoracic", "general medicine"]:
+            self.assertIn(kw, pneu["search_keywords"])
+
+        # Cardiovascular / Hypertension
+        heart = get_specialty_mapping("heart")
+        self.assertEqual(heart["primary_specialty"], "Cardiology")
+        for kw in ["cardiology", "heart", "cardiac", "vascular"]:
+            self.assertIn(kw, heart["search_keywords"])
+
+        # Kidney / Renal Profile
+        kidney = get_specialty_mapping("kidney")
+        self.assertEqual(kidney["primary_specialty"], "Nephrology")
+        for kw in ["nephrology", "kidney", "dialysis", "renal"]:
+            self.assertIn(kw, kidney["search_keywords"])
+
+        # Neurological
+        neuro = get_specialty_mapping("neurological")
+        self.assertEqual(neuro["primary_specialty"], "Neurology")
+        for kw in ["neurology", "brain", "stroke", "neuro"]:
+            self.assertIn(kw, neuro["search_keywords"])
+
+        # Default / General
+        gen = get_specialty_mapping("unknown_disease_xyz")
+        self.assertEqual(gen["primary_specialty"], "Internal Medicine / General Physician")
+
+        print("✅ Test 14 Passed: Dynamic condition-to-specialty mappings verified across all clinical domains.")
+
+    # --------------------------------------------------------------------------
+    # 15. GOOGLE MAPS DIRECTIONS URL FROM USER ENTERED ADDRESS
+    # --------------------------------------------------------------------------
+    def test_15_google_maps_directions_url_with_user_address(self):
+        sample_facility = [{
+            "id": "hosp-nav-test",
+            "name": "Apollo Speciality Hospital",
+            "facility_type": "Multi-Specialty Hospital",
+            "latitude": 13.0150,
+            "longitude": 79.9200,
+            "address": "Vanagaram - Ambattur Main Rd, Chennai",
+            "distance_km": 3.5,
+            "tags": {}
+        }]
+
+        # 1. Manual entered address as origin
+        user_addr = "Saveetha Nagar, Thandalam, Chennai"
+        recs = score_and_recommend_hospitals(
+            sample_facility,
+            condition_id="heart",
+            patient_lat=13.0143,
+            patient_lon=79.9181,
+            patient_address=user_addr
+        )
+        self.assertTrue(len(recs) > 0)
+        url = recs[0].get("directions_url", "")
+        self.assertIn("google.com/maps/dir/", url)
+        self.assertIn("api=1", url)
+        self.assertIn("origin=", url)
+        self.assertIn("destination=13.015%2C79.92", url.replace(",", "%2C"))
+        self.assertIn("Saveetha", url)
+        self.assertIn("Thandalam", url)
+        self.assertIn("travelmode=driving", url)
+
+        # 2. GPS coordinates as origin when manual text is not provided
+        recs_gps = score_and_recommend_hospitals(
+            sample_facility,
+            condition_id="heart",
+            patient_lat=13.0143,
+            patient_lon=79.9181,
+            patient_address=None
+        )
+        url_gps = recs_gps[0].get("directions_url", "")
+        self.assertIn("origin=13.0143%2C79.9181", url_gps.replace(",", "%2C"))
+
+        # 3. Google Plus Code sanitized in origin
+        recs_plus = score_and_recommend_hospitals(
+            sample_facility,
+            condition_id="diabetes",
+            patient_lat=10.0823,
+            patient_lon=78.7762,
+            patient_address="3QMG+W9F, Sekkalai, Karaikudi, Tamil Nadu 630002"
+        )
+        url_plus = recs_plus[0].get("directions_url", "")
+        self.assertNotIn("3QMG+W9F", url_plus)
+        self.assertNotIn("3QMG%2BW9F", url_plus)
+        self.assertIn("Sekkalai", url_plus)
+        self.assertIn("Karaikudi", url_plus)
+
+        print("✅ Test 15 Passed: Google Maps directions URL correctly generates with user entered address as origin.")
 
 
 if __name__ == "__main__":

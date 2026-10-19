@@ -40,12 +40,12 @@ CACHE_TTL_SECONDS = 1800  # 30 minutes
 DISEASE_SPECIALTY_MAP: Dict[str, Dict[str, Any]] = {
     "heart": {
         "id": "heart",
-        "canonical_name": "Cardiovascular / Heart Disease",
+        "canonical_name": "Cardiovascular / Hypertension",
         "primary_specialty": "Cardiology",
-        "sub_specialties": ["Interventional Cardiology", "Electrophysiology", "Cardiothoracic Surgery", "Heart Failure Care"],
+        "sub_specialties": ["Interventional Cardiology", "Electrophysiology", "Cardiothoracic Surgery", "Heart Failure Care", "Hypertension Clinic"],
         "specialist_types": ["Cardiologist", "Interventional Cardiologist", "Cardiothoracic Surgeon"],
         "relevant_departments": ["Department of Cardiology", "Cardiovascular Care Unit (CCU)", "Cardiac Catheterization Lab"],
-        "search_keywords": ["cardiology", "cardiac", "heart", "cardiovascular", "coronary", "cardiothoracic"],
+        "search_keywords": ["cardiology", "heart", "cardiac", "vascular", "coronary", "cardiothoracic"],
         "requires_urgent_assessment": True,
         "urgent_warning": "Acute crushing chest pain, dyspnea, left arm/jaw pain, or sudden dizziness requires IMMEDIATE emergency care (Call 112 / 911 / 108).",
         "telemedicine_eligible": True,
@@ -54,28 +54,54 @@ DISEASE_SPECIALTY_MAP: Dict[str, Dict[str, Any]] = {
     "diabetes": {
         "id": "diabetes",
         "canonical_name": "Diabetes & Glycemic Profile",
-        "primary_specialty": "Endocrinology",
+        "primary_specialty": "Endocrinology / Diabetology",
         "sub_specialties": ["Diabetology", "Metabolic Medicine", "Podiatry", "Diabetic Nephropathy / Retinopathy Care"],
         "specialist_types": ["Endocrinologist", "Diabetologist", "Diabetes Care Educator"],
-        "relevant_departments": ["Department of Endocrinology", "Diabetes & Metabolism Center", "Endocrine Clinic"],
-        "search_keywords": ["endocrinology", "diabetes", "diabetic", "metabolic", "endocrine"],
+        "relevant_departments": ["Department of Endocrinology & Diabetology", "Diabetes & Metabolism Center", "Endocrine Clinic"],
+        "search_keywords": ["diabetes", "diabetologist", "endocrinology", "sugar clinic", "endocrine"],
         "requires_urgent_assessment": False,
         "urgent_warning": "Suspected diabetic ketoacidosis (DKA) with severe nausea, confusion, fruity breath odor, or extreme dehydration requires emergency admission.",
         "telemedicine_eligible": True,
         "telemedicine_notes": "Comprehensive continuous glucose review, HbA1c titration, and dietary management are highly suitable for telemedicine."
     },
+    "pneumonia": {
+        "id": "pneumonia",
+        "canonical_name": "Pneumonia / Respiratory Infections",
+        "primary_specialty": "Pulmonology / Chest Medicine",
+        "sub_specialties": ["Respiratory Care", "Critical Care Medicine", "Thoracic Medicine", "Infectious Respiratory Care"],
+        "specialist_types": ["Pulmonologist", "Chest Physician", "Respiratory Specialist", "Intensivist"],
+        "relevant_departments": ["Department of Pulmonology & Chest Medicine", "Respiratory Intensive Care Unit (RICU)", "Chest Clinic"],
+        "search_keywords": ["pulmonology", "chest", "respiratory", "lung", "thoracic", "general medicine"],
+        "requires_urgent_assessment": True,
+        "urgent_warning": "Severe breathlessness, oxygen saturation (SpO2) < 92%, cyanosis (blue lips), or confusion requires immediate hospital emergency room evaluation.",
+        "telemedicine_eligible": True,
+        "telemedicine_notes": "Post-discharge recovery checkups and chest X-ray second reviews can be done via telemedicine; acute respiratory distress requires in-person hospitalization."
+    },
     "kidney": {
         "id": "kidney",
-        "canonical_name": "Chronic Kidney Disease",
+        "canonical_name": "Kidney / Renal Profile",
         "primary_specialty": "Nephrology",
         "sub_specialties": ["Renal Medicine", "Hemodialysis Care", "Kidney Transplantation", "Hypertension & Renal Pathology"],
         "specialist_types": ["Nephrologist", "Renal Transplant Surgeon", "Dialysis Specialist"],
         "relevant_departments": ["Department of Nephrology", "Renal Dialysis Unit", "Kidney Care Center"],
-        "search_keywords": ["nephrology", "kidney", "renal", "dialysis"],
+        "search_keywords": ["nephrology", "kidney", "dialysis", "renal"],
         "requires_urgent_assessment": True,
         "urgent_warning": "Sudden anuria (no urine), severe fluid retention with pulmonary edema, or electrolyte crisis (hyperkalemia) requires urgent hospital care.",
         "telemedicine_eligible": True,
         "telemedicine_notes": "Early CKD monitoring, eGFR and serum creatinine tracking, and dietary adjustments are supported via telemedicine."
+    },
+    "neurological": {
+        "id": "neurological",
+        "canonical_name": "Neurological & Stroke Care",
+        "primary_specialty": "Neurology",
+        "sub_specialties": ["Clinical Neurology", "Stroke Medicine", "Neuro-Critical Care", "Epileptology"],
+        "specialist_types": ["Neurologist", "Neurosurgeon", "Stroke Specialist"],
+        "relevant_departments": ["Department of Neurology", "Comprehensive Stroke Care Unit", "Neuroscience Centre"],
+        "search_keywords": ["neurology", "brain", "stroke", "neuro"],
+        "requires_urgent_assessment": True,
+        "urgent_warning": "Sudden facial droop, arm weakness, speech difficulty (F.A.S.T.), or sudden severe headache requires IMMEDIATE emergency medical care.",
+        "telemedicine_eligible": True,
+        "telemedicine_notes": "Follow-up consultations for chronic migraine, epilepsy review, and neuroprevention are eligible for telemedicine."
     },
     "liver": {
         "id": "liver",
@@ -116,20 +142,44 @@ DISEASE_SPECIALTY_MAP: Dict[str, Dict[str, Any]] = {
         "telemedicine_eligible": False,
         "telemedicine_notes": "Malaria requires confirmatory peripheral blood smear/rapid antigen testing and immediate administration of oral or IV antimalarial therapy. In-person visit is mandatory."
     },
-    "pneumonia": {
-        "id": "pneumonia",
-        "canonical_name": "Pneumonia Chest Radiograph",
-        "primary_specialty": "Pulmonology & Respiratory Medicine",
-        "sub_specialties": ["Respiratory Care", "Critical Care Medicine", "Thoracic Medicine", "Infectious Respiratory Care"],
-        "specialist_types": ["Pulmonologist", "Respiratory Physician", "Intensivist / Critical Care Specialist"],
-        "relevant_departments": ["Department of Pulmonology", "Respiratory Intensive Care Unit (RICU)", "Chest Clinic"],
-        "search_keywords": ["pulmonology", "pulmonary", "respiratory", "chest", "lung", "thoracic"],
-        "requires_urgent_assessment": True,
-        "urgent_warning": "Severe breathlessness, oxygen saturation (SpO2) < 92%, cyanosis (blue lips), or confusion requires immediate hospital emergency room evaluation.",
+    "general": {
+        "id": "general",
+        "canonical_name": "Internal Medicine & General Care",
+        "primary_specialty": "Internal Medicine / General Physician",
+        "sub_specialties": ["Internal Medicine", "General Practice", "Family Medicine", "Preventive Healthcare"],
+        "specialist_types": ["General Physician", "Internal Medicine Specialist", "Consultant Physician"],
+        "relevant_departments": ["Department of Internal Medicine", "Outpatient Consultation (OPD)", "General Healthcare Clinic"],
+        "search_keywords": ["internal medicine", "general physician", "physician", "general hospital", "general medicine", "family doctor", "consultant physician"],
+        "requires_urgent_assessment": False,
+        "urgent_warning": "Acute severe shortness of breath, loss of consciousness, uncontrolled bleeding, or sudden paralysis requires emergency services.",
         "telemedicine_eligible": True,
-        "telemedicine_notes": "Post-discharge recovery checkups and chest X-ray second reviews can be done via telemedicine; acute respiratory distress requires in-person hospitalization."
+        "telemedicine_notes": "General clinical assessments, lab review, and initial triage consultations are supported via telemedicine."
     }
 }
+
+DEFAULT_SPECIALTY: Dict[str, Any] = DISEASE_SPECIALTY_MAP["general"]
+
+def get_specialty_mapping(condition_id: Optional[str]) -> Dict[str, Any]:
+    """Retrieve specialty mapping with alias support and default general fallback."""
+    if not condition_id:
+        return DEFAULT_SPECIALTY
+    c_lower = str(condition_id).strip().lower()
+    if c_lower in DISEASE_SPECIALTY_MAP:
+        return DISEASE_SPECIALTY_MAP[c_lower]
+    # Check aliases
+    if c_lower in ("neuro", "neurology", "stroke", "brain"):
+        return DISEASE_SPECIALTY_MAP["neurological"]
+    if c_lower in ("general", "default", "internal_medicine", "general_physician"):
+        return DISEASE_SPECIALTY_MAP["general"]
+    if c_lower in ("respiratory", "lungs", "chest"):
+        return DISEASE_SPECIALTY_MAP["pneumonia"]
+    if c_lower in ("cardio", "hypertension", "cardiovascular"):
+        return DISEASE_SPECIALTY_MAP["heart"]
+    if c_lower in ("renal", "ckd"):
+        return DISEASE_SPECIALTY_MAP["kidney"]
+    if c_lower in ("sugar", "diabetic", "endocrinology"):
+        return DISEASE_SPECIALTY_MAP["diabetes"]
+    return DEFAULT_SPECIALTY
 
 
 # ==============================================================================
@@ -467,16 +517,20 @@ def calculate_haversine_distance(lat1: float, lon1: float, lat2: float, lon2: fl
 
 def normalize_address(raw_input: str) -> str:
     """
-    Step A — Normalize the input:
-    - Trim leading and trailing whitespace.
-    - Replace en dashes, em dashes, and hyphen separators with spaces when appropriate.
+    Step 1 (Sanitize):
+    - Strip out Google Plus Codes using regex:
+      e.g. '3QMG+W9F', '3QMG+W9F, Sekkalai, Karaikudi', '8FVC9G88+M4'
+    - Replace en dashes, em dashes, and hyphens with spaces.
     - Collapse duplicate whitespace and repeated commas.
-    - Preserve meaningful address components, building numbers, and postal codes.
-    - Reject empty input with a clear validation message.
+    - Normalize whitespace.
     """
     if not raw_input or not isinstance(raw_input, str):
         return ""
     text = raw_input.strip()
+    # Strip leading Google Plus Codes (e.g., "3QMG+W9F", "3QMG+W9F, ")
+    text = re.sub(r'^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},?\s*', '', text, flags=re.IGNORECASE)
+    # Strip any standalone Plus Code tokens
+    text = re.sub(r'\b[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}\b,?\s*', '', text, flags=re.IGNORECASE)
     # Replace en dashes (–), em dashes (—), and hyphens with spaces
     text = text.replace("\u2013", " ").replace("\u2014", " ").replace(" - ", " ")
     text = re.sub(r"\s*[-–—]\s*", " ", text)
@@ -486,8 +540,8 @@ def normalize_address(raw_input: str) -> str:
     return text.strip(", ")
 
 
-def _try_nominatim_query(query: str) -> Optional[Dict[str, Any]]:
-    """Helper to query OpenStreetMap Nominatim with validation of finite coordinates."""
+def _try_nominatim_query(query: str, countrycodes: Optional[str] = "in") -> Optional[Dict[str, Any]]:
+    """Helper to query OpenStreetMap Nominatim with optional country code bias and coordinate validation."""
     url = "https://nominatim.openstreetmap.org/search"
     params = {
         "q": query,
@@ -495,6 +549,8 @@ def _try_nominatim_query(query: str) -> Optional[Dict[str, Any]]:
         "limit": 1,
         "addressdetails": 1
     }
+    if countrycodes:
+        params["countrycodes"] = countrycodes
     headers = {"User-Agent": USER_AGENT, "Accept-Language": "en"}
     try:
         resp = requests.get(url, params=params, headers=headers, timeout=REQUEST_TIMEOUT)
@@ -570,66 +626,101 @@ def _try_photon_query(query: str) -> Optional[Dict[str, Any]]:
 
 def resolve_any_address(raw_input: str) -> Optional[Dict[str, Any]]:
     """
-    Universal Address Geocoding Engine implementing:
-    - Step A: Input Normalization.
-    - Step B: Progressive Nominatim geocoding (removing leading hyper-specific segments).
-    - Step C: Boundary-aware Postal Code fallback with locality context.
-    - Step D: Photon backup geocoder.
-    - Step E: Validation of finite geographic ranges (-90..90, -180..180).
+    Robust Multi-Stage Address Normalization & Geocoding Pipeline:
+    - Step 1 (Sanitize): Strip out Google Plus Codes and normalize whitespace/commas.
+    - Step 2 (Exact Cleaned Search): Query geocoding API with cleaned string + country code bias (countrycodes=in).
+    - Step 3 (Locality + City + Pincode Fallback): If Step 2 returns 0 results, extract the 6-digit Indian PIN code
+      and city/locality segments, and query <Locality>, <City>, <State>, <Pincode>.
+    - Step 4 (Pincode + City Fallback): Query using 6-digit PIN code and city/state so it always centers accurately
+      on the user's immediate town/postal zone rather than defaulting to a stale or random coordinate.
+    - Step D: Photon backup geocoder for fallback resilience.
     """
-    normalized = normalize_address(raw_input)
-    if not normalized or len(normalized) < 2:
+    # Step 1: Sanitize
+    cleaned = normalize_address(raw_input)
+    if not cleaned or len(cleaned) < 2:
         return None
 
-    cache_key = f"resolve_address:{normalized.lower()}"
+    cache_key = f"resolve_address:{cleaned.lower()}"
     now = time.time()
     if cache_key in _GEO_CACHE:
         cached_time, cached_val = _GEO_CACHE[cache_key]
         if now - cached_time < CACHE_TTL_SECONDS:
             return cached_val
 
-    # Step B: Progressive Nominatim Geocoding
-    segments = [s.strip() for s in normalized.split(",") if s.strip()]
-    candidate_queries = [normalized]
-    for i in range(1, len(segments)):
-        sub = ", ".join(segments[i:])
-        if sub and sub not in candidate_queries and len(sub) >= 3:
-            candidate_queries.append(sub)
+    # Step 2: Exact Cleaned Search with country code bias (countrycodes=in)
+    res = _try_nominatim_query(cleaned, countrycodes="in")
+    if not res:
+        res = _try_nominatim_query(cleaned, countrycodes=None)
+    if res:
+        _GEO_CACHE[cache_key] = (now, res)
+        return res
 
-    for q in candidate_queries:
-        res = _try_nominatim_query(q)
-        if res:
-            _GEO_CACHE[cache_key] = (now, res)
-            return res
-        time.sleep(0.1)
+    # Extract segments and PIN code
+    segments = [s.strip() for s in cleaned.split(",") if s.strip()]
+    pincode_match = re.search(r"\b(\d{6})\b", cleaned)
+    pincode = pincode_match.group(1) if pincode_match else None
 
-    # Step C: Postal Code Fallback
-    postcode_match = re.search(r"\b(\d{5,6})\b", normalized)
-    if postcode_match:
-        postcode = postcode_match.group(1)
-        context_parts = [s for s in segments if not re.search(r"\b\d{5,6}\b", s)]
-        if context_parts:
-            pq = f"{postcode}, {', '.join(context_parts[-2:])}"
-            res = _try_nominatim_query(pq)
+    # Step 3: Locality + City + Pincode Fallback
+    # 3a. Drop hyper-specific leading segments (e.g., street name, shop name, house number)
+    if len(segments) > 1:
+        candidate_queries = []
+        for i in range(1, len(segments)):
+            sub = ", ".join(segments[i:])
+            if sub and len(sub) >= 3 and sub not in candidate_queries:
+                candidate_queries.append(sub)
+
+        for q in candidate_queries:
+            res = _try_nominatim_query(q, countrycodes="in")
+            if not res:
+                res = _try_nominatim_query(q, countrycodes=None)
             if res:
-                res["display_name"] = f"Postal Code {postcode} Area ({res['display_name']})"
+                _GEO_CACHE[cache_key] = (now, res)
+                return res
+            time.sleep(0.05)
+
+    # 3b. Query with extracted Locality/City and PIN code
+    if pincode:
+        non_pin_segments = [s for s in segments if not re.search(r"\b\d{6}\b", s)]
+        if non_pin_segments:
+            loc_pin_query = f"{', '.join(non_pin_segments[-2:])}, {pincode}"
+            res = _try_nominatim_query(loc_pin_query, countrycodes="in")
+            if res:
+                res["display_name"] = f"PIN {pincode} ({res['display_name']})"
+                _GEO_CACHE[cache_key] = (now, res)
+                return res
+
+    # Step 4: Pincode + City / Postal Zone Fallback
+    if pincode:
+        non_pin_segments = [s for s in segments if not re.search(r"\b\d{6}\b", s)]
+        city_candidate = non_pin_segments[-1] if non_pin_segments else "India"
+        pin_queries = [
+            f"{pincode}, {city_candidate}",
+            f"{pincode}, Tamil Nadu, India" if "tamil nadu" in cleaned.lower() else f"{pincode}, India",
+            f"{pincode}, India",
+            pincode
+        ]
+        for pq in pin_queries:
+            res = _try_nominatim_query(pq, countrycodes="in")
+            if res:
+                res["display_name"] = f"PIN {pincode} Area ({res['display_name']})"
                 res["is_approximate_postal"] = True
                 _GEO_CACHE[cache_key] = (now, res)
                 return res
-        res = _try_nominatim_query(postcode)
-        if res:
-            res["display_name"] = f"Postal Code {postcode} Area ({res['display_name']})"
-            res["is_approximate_postal"] = True
-            _GEO_CACHE[cache_key] = (now, res)
-            return res
+            time.sleep(0.05)
 
     # Step D: Photon Backup Geocoder
-    for q in candidate_queries[:3]:
+    photon_queries = [cleaned]
+    if len(segments) > 1:
+        photon_queries.append(", ".join(segments[1:]))
+    if pincode:
+        photon_queries.append(f"{pincode}, India")
+
+    for q in photon_queries[:3]:
         res = _try_photon_query(q)
         if res:
             _GEO_CACHE[cache_key] = (now, res)
             return res
-        time.sleep(0.1)
+        time.sleep(0.05)
 
     return None
 
@@ -678,10 +769,107 @@ def reverse_geocode_coords(latitude: float, longitude: float) -> Optional[str]:
 
 
 # ==============================================================================
-# 5. OVERPASS API NEARBY HEALTHCARE FACILITIES DISCOVERY
+# 5. STRICT FACILITY FILTERING & NON-CLINICAL EXCLUSIONS
 # ==============================================================================
 
-def _query_photon_nearby_hospitals(latitude: float, longitude: float, radius_km: int) -> List[Dict[str, Any]]:
+NON_CLINICAL_NAME_PATTERNS = [
+    # Blood banks and donation centres
+    r"\bblood\s*bank\b",
+    r"\bblood\s*transfusion\b",
+    r"\bblood\s*donation\b",
+    r"\brotary\s+blood\b",
+    r"\bred\s+cross\s+blood\b",
+    r"\blions\s+blood\b",
+    r"\bblood\s*cent(?:re|er)\b",
+    # Veterinary and animal care
+    r"\bveterinary\b",
+    r"\banimal\s+hospital\b",
+    r"\bpet\s+clinic\b",
+    r"\banimal\s+clinic\b",
+    r"\bvet\s+clinic\b",
+    r"\bpet\s+care\b",
+    r"\bcanine\b",
+    # Pharmacies / Chemists / Medical stores
+    r"\bpharmacy\b",
+    r"\bchemist\b",
+    r"\bdruggist\b",
+    r"\bmedical\s+store\b",
+    r"\bmedicals\b",
+    r"\bapotheke\b",
+    # Standalone diagnostic labs without consultation
+    r"\bpathology\s+lab\b",
+    r"\bpathology\b",
+    r"\bdiagnostic\s+lab\b",
+    r"\bdiagnostic\s+cent(?:re|er)\b",
+    r"\bblood\s+collection\b",
+    r"\bcollection\s+cent(?:re|er)\b",
+    r"\bscan\s+cent(?:re|er)\b",
+    r"\bclinical\s+laboratory\b",
+    r"\bimaging\s+cent(?:re|er)\b",
+    r"\bx-?ray\s+clinic\b",
+    # Dental clinics (unless dental condition is requested)
+    r"\bdental\b",
+    r"\bdentist\b",
+    r"\bdentistry\b",
+    r"\bteeth\b",
+    r"\borthodontic\b",
+    r"\bdental\s+care\b",
+    r"\bdental\s+clinic\b"
+]
+
+NON_CLINICAL_TAG_VALUES = {
+    "amenity": {"blood_bank", "pharmacy", "veterinary", "dentist"},
+    "healthcare": {"blood_bank", "blood_donation", "pharmacy", "veterinary", "dentist", "laboratory"},
+    "healthcare:speciality": {"blood_bank", "dentist", "dental", "orthodontics", "veterinary"},
+    "shop": {"pharmacy", "chemist", "medical_supply"}
+}
+
+
+def is_non_clinical_facility(name: str, tags: Optional[Dict[str, Any]] = None, condition_id: str = "general") -> bool:
+    """
+    Strictly filters out non-clinical facilities:
+    - Blood banks (e.g., Rotary Blood Bank, Red Cross)
+    - Standalone diagnostic labs without doctor consultation
+    - Pharmacies, chemists, and medical stores
+    - Veterinary clinics and animal hospitals
+    - Dental clinics (unless dental condition is requested)
+    """
+    name_clean = (name or "").strip().lower()
+    if not name_clean:
+        return True  # Exclude unnamed nodes
+
+    tags = tags or {}
+    cond_lower = (condition_id or "general").lower()
+
+    # Check OSM tags
+    for key, bad_values in NON_CLINICAL_TAG_VALUES.items():
+        val = str(tags.get(key, "")).strip().lower()
+        if val in bad_values:
+            if val in {"dentist", "dental", "orthodontics"} and "dental" in cond_lower:
+                continue
+            return True
+
+    if tags.get("blood_bank") == "yes":
+        return True
+
+    # Check name for non-clinical patterns
+    for pat in NON_CLINICAL_NAME_PATTERNS:
+        if ("dental" in pat or "dentist" in pat or "teeth" in pat or "orthodontic" in pat) and "dental" in cond_lower:
+            continue
+        if re.search(pat, name_clean):
+            # If facility is a full multi-specialty hospital that also has a lab/imaging department
+            if ("hospital" in name_clean or "medical college" in name_clean) and ("diagnostic" in pat or "scan" in pat or "pathology" in pat):
+                continue
+            return True
+
+    return False
+
+
+# ==============================================================================
+# 6. OVERPASS API & PHOTON NEARBY HEALTHCARE FACILITIES DISCOVERY
+# ==============================================================================
+
+def _query_photon_nearby_hospitals(latitude: float, longitude: float, radius_km: int, condition_id: str = "general") -> List[Dict[str, Any]]:
     """Backup facility discovery using Photon if Overpass endpoints are unavailable."""
     url = "https://photon.komoot.io/api/"
     params = {"q": "hospital", "lat": latitude, "lon": longitude, "limit": 40}
@@ -697,6 +885,11 @@ def _query_photon_nearby_hospitals(latitude: float, longitude: float, radius_km:
                 name = props.get("name")
                 if not name or name.strip().lower() in seen_names:
                     continue
+
+                # Strict non-clinical exclusion (blood banks, pharmacies, vet, dental)
+                if is_non_clinical_facility(name, props, condition_id):
+                    continue
+
                 coords = feat.get("geometry", {}).get("coordinates", [])
                 if len(coords) < 2:
                     continue
@@ -725,7 +918,7 @@ def _query_photon_nearby_hospitals(latitude: float, longitude: float, radius_km:
                     "phone": "Contact via reception",
                     "website_url": "",
                     "referral_url": "",
-                    "directions_url": f"https://www.google.com/maps/dir/?api=1&destination={item_lat},{item_lon}",
+                    "directions_url": f"https://www.google.com/maps/dir/?api=1&origin={latitude},{longitude}&destination={item_lat},{item_lon}&travelmode=driving",
                     "osm_specialty": "",
                     "tags": props,
                     "telemedicine_available": False,
@@ -739,17 +932,18 @@ def _query_photon_nearby_hospitals(latitude: float, longitude: float, radius_km:
     return hospitals
 
 
-def query_nearby_overpass_hospitals(latitude: float, longitude: float, radius_km: int = 20) -> List[Dict[str, Any]]:
+def query_nearby_overpass_hospitals(latitude: float, longitude: float, radius_km: int = 20, condition_id: str = "general") -> List[Dict[str, Any]]:
     """
     Discover nearby hospitals and clinical centers using OpenStreetMap Overpass API.
     Normalizes coordinates, addresses, and healthcare metadata into a consistent structure.
+    Strictly filters out non-clinical facilities (blood banks, pharmacies, veterinary, dental).
     Strictly filters out facilities exceeding the selected radius (distanceKm <= radius_km).
     Supports radius options from 5 km up to 50 km.
     """
     radius_km = max(5, min(int(radius_km), 50))
     radius_meters = radius_km * 1000
 
-    cache_key = f"overpass:{round(latitude, 2)},{round(longitude, 2)}:r{radius_km}"
+    cache_key = f"overpass:{round(latitude, 2)},{round(longitude, 2)}:r{radius_km}:{condition_id}"
     now = time.time()
     if cache_key in _GEO_CACHE:
         cached_time, cached_val = _GEO_CACHE[cache_key]
@@ -757,7 +951,7 @@ def query_nearby_overpass_hospitals(latitude: float, longitude: float, radius_km
             return cached_val
 
     # Overpass QL query: search hospitals, clinics, and healthcare centres within radius
-    overpass_query = f"""[out:json][timeout:12];
+    overpass_query = f"""[out:json][timeout:10];
 (
   node["amenity"="hospital"](around:{radius_meters},{latitude},{longitude});
   way["amenity"="hospital"](around:{radius_meters},{latitude},{longitude});
@@ -773,11 +967,9 @@ out center tags 50;
 """
 
     overpass_endpoints = [
-        "https://overpass.private.coffee/api/interpreter",
+        "https://overpass-api.de/api/interpreter",
         "https://overpass.kumi.systems/api/interpreter",
-        "https://overpass.osm.ch/api/interpreter",
-        "https://lz4.overpass-api.de/api/interpreter",
-        "https://overpass-api.de/api/interpreter"
+        "https://overpass.private.coffee/api/interpreter"
     ]
 
     hospitals: List[Dict[str, Any]] = []
@@ -786,7 +978,7 @@ out center tags 50;
 
     for endpoint in overpass_endpoints:
         try:
-            resp = requests.post(endpoint, data={"data": overpass_query}, headers=headers, timeout=8)
+            resp = requests.post(endpoint, data={"data": overpass_query}, headers=headers, timeout=5)
             if resp.status_code == 200:
                 data = resp.json()
                 elements = data.get("elements", [])
@@ -795,10 +987,14 @@ out center tags 50;
                     tags = elem.get("tags", {})
                     name = tags.get("name") or tags.get("name:en") or tags.get("official_name")
                     if not name:
-                        continue  # Skip unnamed nodes to prevent spam
+                        continue  # Skip unnamed nodes
 
                     clean_name_key = name.strip().lower()
                     if clean_name_key in seen_names:
+                        continue
+
+                    # Strict Non-Clinical Exclusion: filter out blood banks, pharmacies, vet, dental, standalone scan labs
+                    if is_non_clinical_facility(name, tags, condition_id):
                         continue
 
                     # Extract coordinates (node has lat/lon; way/relation has center)
@@ -833,8 +1029,8 @@ out center tags 50;
                     website = tags.get("website") or tags.get("contact:website") or ""
                     osm_specialty = tags.get("healthcare:speciality") or tags.get("speciality") or ""
 
-                    # Directions URL
-                    directions_url = f"https://www.google.com/maps/dir/?api=1&destination={item_lat},{item_lon}"
+                    # Directions URL with explicit origin
+                    directions_url = f"https://www.google.com/maps/dir/?api=1&origin={latitude},{longitude}&destination={item_lat},{item_lon}&travelmode=driving"
 
                     hospitals.append({
                         "id": f"osm-{elem.get('id')}",
@@ -869,7 +1065,7 @@ out center tags 50;
     # Fallback to Photon if Overpass returned 0 records or endpoints timed out
     if not hospitals:
         logger.info(f"[NEARBY FALLBACK] Querying Photon backup for ({latitude}, {longitude}) radius {radius_km} km")
-        hospitals = _query_photon_nearby_hospitals(latitude, longitude, radius_km)
+        hospitals = _query_photon_nearby_hospitals(latitude, longitude, radius_km, condition_id)
 
     # Sort strictly by distance
     hospitals.sort(key=lambda h: h["distance_km"])
@@ -878,7 +1074,7 @@ out center tags 50;
 
 
 # ==============================================================================
-# 6. INTELLIGENT RECOMMENDATION & COMPATIBILITY MATCHING ENGINE
+# 7. TIERED RECOMMENDATION & HONEST SPECIALTY LABELING ENGINE
 # ==============================================================================
 
 def score_and_recommend_hospitals(
@@ -886,32 +1082,39 @@ def score_and_recommend_hospitals(
     condition_id: str,
     patient_lat: Optional[float] = None,
     patient_lon: Optional[float] = None,
-    preferred_mode: str = "all"  # 'all', 'in_person', 'telemedicine'
+    preferred_mode: str = "all",  # 'all', 'in_person', 'telemedicine'
+    patient_address: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
-    Evaluates and scores facilities against the selected diagnostic condition:
-    1. Specialty match (keywords, departments, verified condition_ids).
-    2. Straight-line distance from patient location.
-    3. Consultation mode suitability.
-    4. Verified referral/contact information.
-    Attaches a human-readable transparent rationale to each entry.
+    Tiered Recommendation Engine with Strict Facility Filtering & Honest Specialty Labeling:
+    - Exclude Non-Clinical Facilities: blood banks, pharmacies, veterinary, dental, standalone labs.
+    - Tier 1 — Verified Specialty Match: Facilities whose name, healthcare specialty tags,
+      or category explicitly match the condition's specialty keywords.
+      Badge: 'VERIFIED SPECIALTY MATCH (<Specialty Name>)'
+      Display Specialty: Exact specialty name.
+    - Tier 2 — Established Multi-Specialty / General Hospitals: Recognised multi-specialty
+      and government hospitals capable of treating the condition via Internal Medicine.
+      Badge: 'GENERAL / MULTI-SPECIALTY (INTERNAL MEDICINE)'
+      Display Specialty: 'Internal Medicine / General Medicine' (NEVER stamp unverified specialty).
+    - Sort results by Tier (Tier 1 first, then Tier 2) and then by ascending Haversine distance (km).
     """
-    mapping = DISEASE_SPECIALTY_MAP.get(condition_id, {})
+    mapping = get_specialty_mapping(condition_id)
     canonical_disease = mapping.get("canonical_name", condition_id.capitalize())
-    primary_spec = mapping.get("primary_specialty", "General Medicine")
+    primary_spec = mapping.get("primary_specialty", "Internal Medicine / General Physician")
     keywords = [kw.lower() for kw in mapping.get("search_keywords", [])]
 
     scored_list = []
 
     for hosp in hospitals:
+        # Exclude non-clinical facilities
+        if is_non_clinical_facility(hosp.get("name", ""), hosp.get("tags"), condition_id):
+            continue
+
         is_curated = hosp.get("category") == "global" or hosp.get("id", "").startswith("centre-")
         hosp_copy = dict(hosp)
         hosp_copy["is_curated"] = is_curated
 
-        score = 0
-        reasons = []
-
-        # Distance calculation if not already present
+        # Haversine distance calculation
         if patient_lat is not None and patient_lon is not None and hosp.get("latitude") and hosp.get("longitude"):
             if "distance_km" not in hosp_copy or hosp_copy["distance_km"] == 0.0:
                 hosp_copy["distance_km"] = calculate_haversine_distance(
@@ -920,108 +1123,108 @@ def score_and_recommend_hospitals(
 
         dist = hosp_copy.get("distance_km")
 
-        # 1. Check Condition & Specialty Compatibility
-        specialty_match = False
-        specialty_label = "Specialty Not Verified"
+        # Determine Tier 1 vs Tier 2
+        name_lower = (hosp.get("name") or "").lower()
+        tags = hosp.get("tags") or {}
+        osm_spec = str(
+            hosp.get("osm_specialty") or
+            tags.get("healthcare:speciality") or
+            tags.get("healthcare:specialty") or
+            ""
+        ).lower()
+        tags_str = json.dumps(tags).lower()
 
+        is_tier_1 = False
         if is_curated:
             matched_conditions = hosp.get("condition_ids", [])
             if condition_id in matched_conditions:
-                specialty_match = True
-                score += 45
-                specialty_label = f"Verified {primary_spec} Centre"
-                reasons.append(f"Official accredited referral centre for {primary_spec}")
+                is_tier_1 = True
         else:
-            # Check OSM name, tags, and specialty
-            name_lower = hosp.get("name", "").lower()
-            tags = hosp.get("tags") or {}
-            osm_spec = str(
-                hosp.get("osm_specialty") or
-                tags.get("healthcare:speciality") or
-                tags.get("healthcare:specialty") or
-                ""
-            ).lower()
-            tags_str = json.dumps(tags).lower()
-
-            matches = [kw for kw in keywords if (kw in name_lower or kw in osm_spec or kw in tags_str)]
+            # Check official OSM healthcare specialty tag
             if osm_spec and any(kw in osm_spec for kw in keywords):
-                specialty_match = True
-                score += 40
-                specialty_label = f"Verified {primary_spec} Centre"
-                reasons.append(f"Official registry verification for {primary_spec}")
-            elif matches:
-                specialty_match = True
-                score += 25
-                specialty_label = f"Likely {primary_spec} (Inferred from facility name)"
-                reasons.append(f"Facility name references {', '.join(matches[:2])}")
-            elif "hospital" in name_lower or hosp.get("facility_type") == "Multi-Specialty Hospital":
-                score += 15
-                specialty_label = "Multi-Specialty Facility (Unverified)"
-                reasons.append(f"General multi-specialty hospital; {primary_spec} department unverified")
+                is_tier_1 = True
             else:
-                score += 5
-                specialty_label = "Specialty Not Verified"
-                reasons.append("Healthcare provider without verified departmental records")
+                # Check if facility name explicitly matches specialty keywords
+                # (e.g. dedicated Diabetes Centre for Diabetes, Chest Hospital for Pneumonia, Heart Institute for Heart)
+                name_matches = [kw for kw in keywords if kw in name_lower]
+                if name_matches:
+                    is_tier_1 = True
 
-        # 2. Distance scoring (nearby facilities scored higher for proximity)
-        if dist is not None:
-            if dist <= 5.0:
-                score += 30
-                reasons.append(f"Located only ~{dist:.1f} km away")
-            elif dist <= 12.0:
-                score += 20
-                reasons.append(f"Located ~{dist:.1f} km away")
-            elif dist <= 25.0:
-                score += 10
-                reasons.append(f"Located ~{dist:.1f} km away")
-            else:
-                reasons.append(f"Located ~{dist:.1f} km away")
+        dist_str = f"~{dist:.1f} km away" if dist is not None else "Location approximate"
 
-        # 3. Mode compatibility
+        if is_tier_1:
+            tier = 1
+            specialty_match = True
+            badge_label = f"VERIFIED SPECIALTY MATCH ({primary_spec})"
+            display_specialty = primary_spec
+            rationale = f"Nearby verified specialty facility · {dist_str} · Matched {primary_spec}"
+            score = 1000 - int(min(dist or 0, 100) * 5)
+        else:
+            tier = 2
+            specialty_match = False
+            badge_label = "GENERAL / MULTI-SPECIALTY (INTERNAL MEDICINE)"
+            # Honest labeling: DO NOT stamp condition's specialty name onto unverified hospitals
+            display_specialty = "Internal Medicine / General Medicine"
+            rationale = f"Nearby established hospital · {dist_str} · General / Multi-Specialty (Internal Medicine)"
+            score = 500 - int(min(dist or 0, 100) * 5)
+
+        # Consultation mode adjustments
         telemedicine_supported = bool(hosp.get("telemedicine_available", False))
         hosp_copy["telemedicine_supported"] = telemedicine_supported
         if preferred_mode == "telemedicine":
             if telemedicine_supported:
-                score += 20
-                reasons.append("Verified telemedicine consultations available")
+                score += 30
             else:
-                score -= 40
-                reasons.append("Telemedicine unverified for this provider")
+                score -= 60
         elif preferred_mode == "in_person":
             score += 10
 
-        # 4. Verified credentials & contact
-        if hosp.get("website_url"):
-            score += 5
-        if is_curated:
-            score += 10
-
-        # Format transparent human-readable explanation
-        dist_str = f"~{dist:.1f} km away" if dist is not None else "Location approximate"
-        if specialty_match:
-            explanation = f"Nearby facility · {dist_str} · {specialty_label}"
-        elif "Multi-Specialty" in specialty_label:
-            explanation = f"Nearby facility · {dist_str} · Multi-specialty hospital (in-person triage)"
-        else:
-            explanation = f"Nearby facility · {dist_str} · Healthcare provider"
-
-        hosp_copy["recommendation_score"] = score
+        hosp_copy["tier"] = tier
         hosp_copy["specialty_match"] = specialty_match
-        hosp_copy["specialty_label"] = specialty_label
-        hosp_copy["recommendation_rationale"] = explanation
+        hosp_copy["specialty_badge_label"] = badge_label
+        hosp_copy["specialty_label"] = badge_label
+        hosp_copy["specialty"] = display_specialty
+        hosp_copy["display_specialty"] = display_specialty
+        hosp_copy["primary_specialty"] = primary_spec
+        hosp_copy["recommendation_rationale"] = rationale
+        hosp_copy["recommendation_score"] = score
         hosp_copy["condition_id"] = condition_id
         hosp_copy["canonical_disease"] = canonical_disease
-        hosp_copy["primary_specialty"] = primary_spec
+
+        # Construct precise Google Maps directions URL with From (Origin) and To (Destination)
+        origin_str = ""
+        if patient_address and patient_address.strip() and patient_address != "Location Not Provided":
+            clean_origin = normalize_address(patient_address)
+            origin_str = urllib.parse.quote_plus(clean_origin or patient_address.strip())
+        elif patient_lat is not None and patient_lon is not None:
+            origin_str = f"{patient_lat},{patient_lon}"
+
+        dest_str = ""
+        if hosp.get("latitude") and hosp.get("longitude"):
+            dest_str = f"{hosp['latitude']},{hosp['longitude']}"
+        elif hosp.get("address"):
+            dest_str = urllib.parse.quote_plus(f"{hosp.get('name', '')}, {hosp['address']}")
+        else:
+            dest_str = urllib.parse.quote_plus(hosp.get("name", "Hospital"))
+
+        if origin_str and dest_str:
+            hosp_copy["directions_url"] = f"https://www.google.com/maps/dir/?api=1&origin={origin_str}&destination={dest_str}&travelmode=driving"
+        elif dest_str:
+            hosp_copy["directions_url"] = f"https://www.google.com/maps/dir/?api=1&destination={dest_str}&travelmode=driving"
 
         scored_list.append(hosp_copy)
 
-    # Sort by recommendation score descending
-    scored_list.sort(key=lambda x: x["recommendation_score"], reverse=True)
+    # Sort results by Tier (Tier 1 first, then Tier 2) and then by ascending Haversine distance (km)
+    scored_list.sort(key=lambda h: (
+        h.get("tier", 2),
+        h.get("distance_km") if h.get("distance_km") is not None else 99999.0
+    ))
+
     return scored_list
 
 
 # ==============================================================================
-# 7. MAIN DISCOVERY CONTROLLER ENTRYPOINT
+# 8. MAIN DISCOVERY CONTROLLER ENTRYPOINT
 # ==============================================================================
 
 def discover_hospitals_for_patient(
@@ -1037,15 +1240,13 @@ def discover_hospitals_for_patient(
     Main orchestration function for hospital discovery:
     1. Resolves patient coordinates via progressive address geocoding.
     2. Fetches real nearby hospitals via Overpass API with Photon backup.
-    3. Strictly enforces distanceKm <= radius_km for all returned facilities.
-    4. Never substitutes distant global hospitals into nearby search results.
-    5. Returns normalized response with location metadata and transparent rationales.
+    3. Strictly filters out non-clinical facilities (blood banks, pharmacies, vet, dental).
+    4. Strictly enforces distanceKm <= radius_km for all returned facilities.
+    5. Never substitutes distant global hospitals into nearby search results.
+    6. Returns tiered recommendations sorted by Tier then distance.
     """
-    condition_id = (condition_id or "heart").strip().lower()
-    if condition_id not in DISEASE_SPECIALTY_MAP:
-        condition_id = "heart"
-
-    mapping = DISEASE_SPECIALTY_MAP[condition_id]
+    mapping = get_specialty_mapping(condition_id)
+    canonical_cond_id = mapping.get("id", condition_id)
     location_label = "Location Not Provided"
     geocoded_origin = None
 
@@ -1068,7 +1269,7 @@ def discover_hospitals_for_patient(
 
     if has_coords:
         try:
-            nearby_facilities = query_nearby_overpass_hospitals(patient_lat, patient_lon, radius_km)
+            nearby_facilities = query_nearby_overpass_hospitals(patient_lat, patient_lon, radius_km, canonical_cond_id)
         except Exception as e:
             logger.error(f"Error querying Overpass API: {e}")
             overpass_error = str(e)
@@ -1080,7 +1281,7 @@ def discover_hospitals_for_patient(
         eligible_curated: List[Dict[str, Any]] = []
         if include_global:
             for centre in CURATED_GLOBAL_CENTRES:
-                if condition_id in centre.get("condition_ids", []):
+                if canonical_cond_id in centre.get("condition_ids", []):
                     dist = calculate_haversine_distance(
                         patient_lat, patient_lon, centre["latitude"], centre["longitude"]
                     )
@@ -1098,7 +1299,7 @@ def discover_hospitals_for_patient(
         all_facilities = []
         if include_global:
             for centre in CURATED_GLOBAL_CENTRES:
-                if condition_id in centre.get("condition_ids", []):
+                if canonical_cond_id in centre.get("condition_ids", []):
                     centre_entry = dict(centre)
                     centre_entry["category"] = "global"
                     centre_entry["distance_km"] = None
@@ -1107,10 +1308,11 @@ def discover_hospitals_for_patient(
     # Run recommendation & scoring engine
     scored_recommendations = score_and_recommend_hospitals(
         all_facilities,
-        condition_id=condition_id,
+        condition_id=canonical_cond_id,
         patient_lat=patient_lat,
         patient_lon=patient_lon,
-        preferred_mode=preferred_mode
+        preferred_mode=preferred_mode,
+        patient_address=manual_query or (location_label if location_label != "Location Not Provided" else None)
     )
 
     return {

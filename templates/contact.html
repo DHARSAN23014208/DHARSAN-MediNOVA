@@ -161,13 +161,15 @@
                             <label for="conditionSelect">Diagnostic Condition Tested <span style="color: var(--danger);">*</span></label>
                             <select id="conditionSelect" required onchange="handleConditionChange(this.value)">
                                 <option value="">Select Tested Diagnostic Condition...</option>
-                                <option value="heart" {% if prefill_condition == 'heart' %}selected{% endif %}>Cardiovascular / Heart Disease</option>
+                                <option value="heart" {% if prefill_condition == 'heart' %}selected{% endif %}>Cardiovascular / Hypertension</option>
                                 <option value="diabetes" {% if prefill_condition == 'diabetes' %}selected{% endif %}>Diabetes & Glycemic Profile</option>
-                                <option value="kidney" {% if prefill_condition == 'kidney' %}selected{% endif %}>Chronic Kidney Disease</option>
+                                <option value="pneumonia" {% if prefill_condition == 'pneumonia' %}selected{% endif %}>Pneumonia / Respiratory Infections</option>
+                                <option value="kidney" {% if prefill_condition == 'kidney' %}selected{% endif %}>Kidney / Renal Profile</option>
+                                <option value="neurological" {% if prefill_condition == 'neurological' %}selected{% endif %}>Neurological & Stroke Care</option>
                                 <option value="liver" {% if prefill_condition == 'liver' %}selected{% endif %}>Liver Disease & Hepatic Panel</option>
                                 <option value="cancer" {% if prefill_condition == 'cancer' %}selected{% endif %}>Breast Oncology Morphology</option>
                                 <option value="malaria" {% if prefill_condition == 'malaria' %}selected{% endif %}>Malaria Blood Smear</option>
-                                <option value="pneumonia" {% if prefill_condition == 'pneumonia' %}selected{% endif %}>Pneumonia Chest Radiograph</option>
+                                <option value="general" {% if prefill_condition == 'general' %}selected{% endif %}>Internal Medicine / General Physician</option>
                             </select>
                         </div>
 
@@ -325,7 +327,10 @@
                             <p id="selHospAddress">9500 Euclid Ave, Cleveland, OH 44195, USA</p>
                             <p id="selHospRationale" style="margin-top: 0.4rem; font-size: 0.84rem; color: var(--primary-light);"></p>
                         </div>
-                        <div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                            <button type="button" id="selHospDirectionsBtn" class="btn btn-primary btn-sm" onclick="openDirectionsForHospital(CURRENT_SELECTED_HOSPITAL ? CURRENT_SELECTED_HOSPITAL.id : null, event)" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                                🗺️ Navigate from My Address
+                            </button>
                             <button type="button" class="btn btn-outline btn-sm" onclick="showHospitalDetailsModal(CURRENT_SELECTED_HOSPITAL)">
                                 View Full Credentials
                             </button>
@@ -527,6 +532,10 @@
                     <span>Hide clinical notes on printed slip</span>
                 </label>
 
+                <a id="btnReceiptDirections" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    🗺️ Navigate to Hospital
+                </a>
+
                 <a id="btnReceiptGoogleCalendar" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm">
                     📅 Add to Google Calendar
                 </a>
@@ -562,6 +571,10 @@
 
             <table class="receipt-table" style="margin: 0 0 1.5rem 0;">
                 <tr>
+                    <td>Route Starting Point</td>
+                    <td id="modalHospFromAddress" style="color: var(--primary-light); font-weight: 500;">-</td>
+                </tr>
+                <tr>
                     <td>Full Address</td>
                     <td id="modalHospAddress">-</td>
                 </tr>
@@ -588,13 +601,13 @@
             </table>
 
             <div style="display: flex; gap: 0.75rem; justify-content: flex-end; flex-wrap: wrap;">
-                <a id="modalHospDirectionsBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm">
+                <a id="modalHospDirectionsBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" onclick="openDirectionsForHospital(CURRENT_MODAL_HOSPITAL ? CURRENT_MODAL_HOSPITAL.id : null, event)">
                     🗺️ Open Map Directions
                 </a>
                 <a id="modalHospWebsiteBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm">
                     🌐 Official Hospital Portal
                 </a>
-                <button type="button" class="btn btn-primary btn-sm" onclick="selectHospitalFromModal()">
+                <button type="button" class="btn btn-outline btn-sm" onclick="selectHospitalFromModal()">
                     ✓ Select This Hospital
                 </button>
             </div>
@@ -717,33 +730,29 @@
         let CURRENT_SEARCH_REQUEST_ID = 0;
 
         // =====================================================================
-        // UNIVERSAL ADDRESS GEOCODER (NOMINATIM PROGRESSIVE + PHOTON + BACKEND)
+        // ROBUST MULTI-STAGE ADDRESS GEOCODER (STEP 1 - STEP 4 + BACKEND/PHOTON)
         // =====================================================================
         async function resolveAnyAddress(rawInput) {
             if (!rawInput || typeof rawInput !== 'string') return null;
 
-            // Step A: Normalize
-            let normalized = rawInput.trim();
-            normalized = normalized.replace(/\u2013/g, ' ').replace(/\u2014/g, ' ').replace(/\s*[-–—]\s*/g, ' ');
-            normalized = normalized.replace(/,\s*,+/g, ',');
-            normalized = normalized.replace(/\s+/g, ' ').trim().replace(/^,+|,+$/g, '');
+            // Step 1 (Sanitize):
+            // Strip out Google Plus Codes using regex: /^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},?\s*/i and embedded plus codes
+            let cleaned = rawInput.trim();
+            cleaned = cleaned.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},?\s*/i, '');
+            cleaned = cleaned.replace(/\b[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}\b,?\s*/i, '');
+            cleaned = cleaned.replace(/\u2013/g, ' ').replace(/\u2014/g, ' ').replace(/\s*[-–—]\s*/g, ' ');
+            cleaned = cleaned.replace(/,\s*,+/g, ',');
+            cleaned = cleaned.replace(/\s+/g, ' ').trim().replace(/^,+|,+$/g, '');
 
-            if (!normalized || normalized.length < 2) return null;
+            if (!cleaned || cleaned.length < 2) return null;
 
-            // Step B: Progressive Nominatim Geocoding
-            const segments = normalized.split(',').map(s => s.trim()).filter(Boolean);
-            const candidateQueries = [normalized];
-            for (let i = 1; i < segments.length; i++) {
-                const sub = segments.slice(i).join(', ').trim();
-                if (sub && !candidateQueries.includes(sub) && sub.length >= 3) {
-                    candidateQueries.push(sub);
-                }
-            }
-
-            // Try Nominatim progressively
-            for (const q of candidateQueries) {
+            // Helper to execute Nominatim search
+            async function tryNominatim(q, biasIndia = true) {
                 try {
-                    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&q=${encodeURIComponent(q)}`;
+                    let url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&q=${encodeURIComponent(q)}`;
+                    if (biasIndia) {
+                        url += '&countrycodes=in';
+                    }
                     const resp = await fetch(url, { headers: { 'Accept-Language': 'en' } });
                     if (resp.ok) {
                         const results = await resp.json();
@@ -772,48 +781,86 @@
                         }
                     }
                 } catch (e) {
-                    console.debug('Nominatim client attempt:', e);
+                    console.debug('Nominatim client attempt failed:', e);
+                }
+                return null;
+            }
+
+            // Step 2 (Exact Cleaned Search): Query geocoding API with cleaned string + country code bias (countrycodes=in)
+            let res = await tryNominatim(cleaned, true);
+            if (!res) {
+                // If biased search had no result, try global search
+                res = await tryNominatim(cleaned, false);
+            }
+            if (res) return res;
+
+            // Extract segments and PIN code
+            const segments = cleaned.split(',').map(s => s.trim()).filter(Boolean);
+            const pincodeMatch = cleaned.match(/\b(\d{6})\b/);
+            const pincode = pincodeMatch ? pincodeMatch[1] : null;
+
+            // Step 3 (Locality + City + Pincode Fallback):
+            // If Step 2 returns 0 results, extract 6-digit PIN and locality/city segments, query <Locality>, <City>, <State>, <Pincode>
+            if (segments.length > 1) {
+                for (let i = 1; i < segments.length; i++) {
+                    const sub = segments.slice(i).join(', ').trim();
+                    if (sub && sub.length >= 3) {
+                        res = await tryNominatim(sub, true);
+                        if (res) return res;
+                    }
                 }
             }
 
-            // Step C: Boundary-aware Postal Code Fallback
-            const postcodeMatch = normalized.match(/\b(\d{5,6})\b/);
-            if (postcodeMatch) {
-                const postcode = postcodeMatch[1];
-                const contextParts = segments.filter(s => !s.match(/\b\d{5,6}\b/));
-                const postQueries = [];
-                if (contextParts.length > 0) {
-                    postQueries.push(`${postcode}, ${contextParts.slice(-2).join(', ')}`);
-                }
-                postQueries.push(postcode);
-
-                for (const pq of postQueries) {
-                    try {
-                        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&q=${encodeURIComponent(pq)}`;
-                        const resp = await fetch(url, { headers: { 'Accept-Language': 'en' } });
-                        if (resp.ok) {
-                            const results = await resp.json();
-                            if (Array.isArray(results) && results.length > 0) {
-                                const item = results[0];
-                                const lat = parseFloat(item.lat);
-                                const lon = parseFloat(item.lon);
-                                if (!isNaN(lat) && !isNaN(lon) && isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
-                                    return {
-                                        latitude: lat,
-                                        longitude: lon,
-                                        display_name: `Postal Area ${postcode} (${item.display_name || pq})`,
-                                        full_display_name: item.display_name || pq,
-                                        source: 'OpenStreetMap Nominatim (Postal Code)'
-                                    };
-                                }
-                            }
-                        }
-                    } catch (e) {}
+            if (pincode) {
+                const nonPinSegments = segments.filter(s => !s.match(/\b\d{6}\b/));
+                if (nonPinSegments.length > 0) {
+                    const locPinQuery = `${nonPinSegments.slice(-2).join(', ')}, ${pincode}`;
+                    res = await tryNominatim(locPinQuery, true);
+                    if (res) {
+                        res.display_name = `PIN ${pincode} (${res.display_name})`;
+                        return res;
+                    }
                 }
             }
 
-            // Step D: Photon Backup Geocoder
-            for (const q of candidateQueries.slice(0, 3)) {
+            // Step 4 (Pincode + City Fallback):
+            // Query using the 6-digit PIN code and city/state so it always centers accurately on the user's immediate town/postal zone
+            if (pincode) {
+                const nonPinSegments = segments.filter(s => !s.match(/\b\d{6}\b/));
+                const cityCandidate = nonPinSegments.length > 0 ? nonPinSegments[nonPinSegments.length - 1] : 'India';
+                const pinQueries = [
+                    `${pincode}, ${cityCandidate}`,
+                    `${pincode}, India`,
+                    pincode
+                ];
+                for (const pq of pinQueries) {
+                    res = await tryNominatim(pq, true);
+                    if (res) {
+                        res.display_name = `PIN ${pincode} Area (${res.display_name})`;
+                        return res;
+                    }
+                }
+            }
+
+            // Backend Geocoder Proxy (Runs 4-stage pipeline server-side; handles CORS / adblock blocks)
+            try {
+                const resp = await fetch(`/api/hospitals/geocode?query=${encodeURIComponent(cleaned)}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.status === 'success' && data.location) {
+                        return data.location;
+                    }
+                }
+            } catch (e) {
+                console.debug('Backend geocoder proxy attempt:', e);
+            }
+
+            // Photon Backup Geocoder
+            const photonCandidates = [cleaned];
+            if (segments.length > 1) photonCandidates.push(segments.slice(1).join(', '));
+            if (pincode) photonCandidates.push(`${pincode}, India`);
+
+            for (const q of photonCandidates.slice(0, 3)) {
                 try {
                     const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=1`;
                     const resp = await fetch(url);
@@ -853,17 +900,6 @@
                 }
             }
 
-            // Step D2: Backend Proxy Geocoder (Handles CORS/Adblock restrictions)
-            try {
-                const resp = await fetch(`/api/hospitals/geocode?query=${encodeURIComponent(normalized)}`);
-                if (resp.ok) {
-                    const data = await resp.json();
-                    if (data.status === 'success' && data.location) {
-                        return data.location;
-                    }
-                }
-            } catch (e) {}
-
             return null;
         }
 
@@ -888,9 +924,10 @@
         // GEOLOCATION & MANUAL SEARCH TRIGGERS
         // =====================================================================
 
-        // 3. Geolocation API Integration
+        // 3. Accurate Geolocation API Integration
         function requestBrowserGeolocation() {
             const btn = document.getElementById('btnUseGeolocation');
+            const manualInput = document.getElementById('manualLocationInput');
             if (!navigator.geolocation) {
                 alert('Geolocation is not supported by your browser. Please search manually by address or city.');
                 return;
@@ -899,8 +936,13 @@
             const thisReqId = ++CURRENT_SEARCH_REQUEST_ID;
             btn.disabled = true;
             btn.innerHTML = '<span>⏳ Requesting GPS...</span>';
-            updateLocationPill('⏳ Acquiring GPS coordinates...', false);
+            updateLocationPill('⏳ Acquiring live GPS coordinates...', false);
             renderSearchingState('Detecting your live geographic position...');
+
+            // Clear any stale text in manual address input
+            if (manualInput) {
+                manualInput.value = '';
+            }
 
             navigator.geolocation.getCurrentPosition(
                 async function(position) {
@@ -908,21 +950,29 @@
 
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
+
+                    // Set the Active Location coordinates directly to the GPS (lat, lng)
                     PATIENT_COORDS.lat = lat;
                     PATIENT_COORDS.lon = lon;
+                    PATIENT_COORDS.label = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
 
                     btn.disabled = false;
                     btn.innerHTML = '<span>📍 Location Detected ✓</span>';
                     btn.style.background = '#10b981';
 
-                    // Reverse geocode to get human-friendly label
+                    // Update pill immediately and fetch facilities within the selected radius
+                    updateLocationPill(`📍 Active Location: (${lat.toFixed(4)}, ${lon.toFixed(4)}) — Fetching facilities...`, false);
+                    fetchHospitals();
+
+                    // Reverse geocode to get human-readable address from exact GPS (lat, lng)
                     const locLabel = await reverseGeocode(lat, lon);
                     if (thisReqId !== CURRENT_SEARCH_REQUEST_ID) return;
 
                     PATIENT_COORDS.label = locLabel;
-                    updateLocationPill(`📍 Active Location: ${locLabel} (${lat.toFixed(4)}, ${lon.toFixed(4)})`, false);
-
-                    fetchHospitals();
+                    if (manualInput) {
+                        manualInput.value = locLabel;
+                    }
+                    updateLocationPill(`📍 Active Location: ${locLabel} (${lat.toFixed(4)}, ${lon.toFixed(4)}) — ${ALL_RECOMMENDATIONS.length} facilities within ${SEARCH_RADIUS_KM} km`, false);
                 },
                 function(error) {
                     if (thisReqId !== CURRENT_SEARCH_REQUEST_ID) return;
@@ -938,7 +988,7 @@
                     updateLocationPill('Location Access Denied (Manual Search Available)', true);
                     renderEmptyTable(msg);
                 },
-                { timeout: 12000, enableHighAccuracy: true, maximumAge: 60000 }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
 
@@ -959,11 +1009,13 @@
                 if (thisReqId !== CURRENT_SEARCH_REQUEST_ID) return;
 
                 if (res) {
+                    // UI State Sync: Immediately update Active Location state
                     PATIENT_COORDS.lat = res.latitude;
                     PATIENT_COORDS.lon = res.longitude;
                     PATIENT_COORDS.label = res.display_name;
 
                     updateLocationPill(`📍 Active Location: ${res.display_name} (${res.latitude.toFixed(4)}, ${res.longitude.toFixed(4)})`, false);
+                    // Re-trigger hospital fetch
                     fetchHospitals();
                 } else {
                     PATIENT_COORDS.lat = null;
@@ -980,6 +1032,7 @@
             }
         }
 
+        // Radius change handler with immediate UI state sync and fetch
         function setRadius(radiusKm, btnElem) {
             SEARCH_RADIUS_KM = radiusKm;
             document.querySelectorAll('.radius-pill').forEach(b => b.classList.remove('active'));
@@ -1011,7 +1064,9 @@
 
             renderSearchingState(`Searching accredited healthcare facilities within ${SEARCH_RADIUS_KM} km of ${PATIENT_COORDS.label}...`);
 
-            const url = `/api/hospitals/search?condition=${encodeURIComponent(condition)}&radius_km=${SEARCH_RADIUS_KM}&lat=${PATIENT_COORDS.lat}&lon=${PATIENT_COORDS.lon}&include_global=false`;
+            const manualText = (document.getElementById('manualLocationInput')?.value || '').trim();
+            const queryParam = manualText ? `&query=${encodeURIComponent(manualText)}` : '';
+            const url = `/api/hospitals/search?condition=${encodeURIComponent(condition)}&radius_km=${SEARCH_RADIUS_KM}&lat=${PATIENT_COORDS.lat}&lon=${PATIENT_COORDS.lon}${queryParam}&include_global=false`;
 
             try {
                 const resp = await fetch(url);
@@ -1046,7 +1101,7 @@
                     <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
                         <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">🔍</div>
                         <strong>${escapeHtml(message)}</strong>
-                        <p style="font-size: 0.85rem; margin-top: 0.3rem;">Querying OpenStreetMap live healthcare registry & Overpass engine.</p>
+                        <p style="font-size: 0.85rem; margin-top: 0.3rem;">Querying live healthcare registry & verified clinical facilities.</p>
                     </td>
                 </tr>
             `;
@@ -1084,17 +1139,27 @@
 
             // Filter by Specialty Match
             if (specialtyFilter === 'matched') {
-                filtered = filtered.filter(h => h.specialty_match === true);
+                filtered = filtered.filter(h => h.specialty_match === true || h.tier === 1);
             }
 
-            // Sort
+            // Tiered Ranking Sort: Tier 1 first, then Tier 2, then ascending Haversine distance
             if (sortFilter === 'distance') {
                 filtered.sort((a, b) => (a.distance_km || 0) - (b.distance_km || 0));
             } else if (sortFilter === 'specialty') {
-                filtered.sort((a, b) => (b.specialty_match ? 1 : 0) - (a.specialty_match ? 1 : 0));
+                filtered.sort((a, b) => {
+                    const tierA = a.tier || (a.specialty_match ? 1 : 2);
+                    const tierB = b.tier || (b.specialty_match ? 1 : 2);
+                    if (tierA !== tierB) return tierA - tierB;
+                    return (a.distance_km || 0) - (b.distance_km || 0);
+                });
             } else {
-                // Default: Recommendation score descending
-                filtered.sort((a, b) => (b.recommendation_score || 0) - (a.recommendation_score || 0));
+                // Default: Smart Recommendation Sort (Tier 1 first, then Tier 2, then ascending Haversine distance)
+                filtered.sort((a, b) => {
+                    const tierA = a.tier || (a.specialty_match ? 1 : 2);
+                    const tierB = b.tier || (b.specialty_match ? 1 : 2);
+                    if (tierA !== tierB) return tierA - tierB;
+                    return (a.distance_km || 0) - (b.distance_km || 0);
+                });
             }
 
             renderHospitalRows(filtered);
@@ -1113,7 +1178,15 @@
                 const distanceLabel = h.distance_km != null ? `~${h.distance_km.toFixed(1)} km (straight-line)` : 'Global Centre';
                 const typeBadgeClass = h.is_curated ? 'curated' : 'nearby';
                 const typeBadgeText = h.is_curated ? 'Global Specialty Centre' : 'Nearby Facility';
-                const specBadgeClass = h.specialty_match ? 'spec-verified' : 'spec-unverified';
+                
+                // Strict Honest Badging (No false badges)
+                const isTier1 = (h.tier === 1) || (h.specialty_match === true);
+                const specBadgeClass = isTier1 ? 'spec-verified' : 'spec-unverified';
+                const badgeText = h.specialty_badge_label || (isTier1 ? `VERIFIED SPECIALTY MATCH (${h.primary_specialty || 'SPECIALTY'})` : 'GENERAL / MULTI-SPECIALTY (INTERNAL MEDICINE)');
+                
+                // Honest Specialty Label: DO NOT stamp condition specialty name underneath unverified hospitals
+                const subSpecText = h.display_specialty || (isTier1 ? (h.primary_specialty || '') : 'Internal Medicine / General Medicine');
+
                 const telemedBadgeClass = h.telemedicine_available ? 'telemed-yes' : 'telemed-no';
                 const telemedText = h.telemedicine_available ? 'Telemedicine Verified' : 'In-Person Only';
 
@@ -1130,9 +1203,9 @@
                             </div>
                         </td>
                         <td data-label="Specialty">
-                            <span class="hosp-badge ${specBadgeClass}">${escapeHtml(h.specialty_label || 'Specialty Matched')}</span>
+                            <span class="hosp-badge ${specBadgeClass}">${escapeHtml(badgeText)}</span>
                             <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.3rem;">
-                                ${escapeHtml(h.primary_specialty || '')}
+                                ${escapeHtml(subSpecText)}
                             </div>
                         </td>
                         <td data-label="Location">
@@ -1150,9 +1223,14 @@
                             </span>
                         </td>
                         <td data-label="Actions" style="text-align: center; white-space: nowrap;">
-                            <button type="button" class="btn btn-outline btn-sm" onclick="event.stopPropagation(); showHospitalDetailsModalById('${h.id}')">
-                                Details &rarr;
-                            </button>
+                            <div style="display: inline-flex; gap: 0.35rem; align-items: center; justify-content: center;">
+                                <button type="button" class="btn btn-outline btn-sm" onclick="event.stopPropagation(); showHospitalDetailsModalById('${h.id}')" title="View facility credentials & details">
+                                    Details
+                                </button>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="openDirectionsForHospital('${h.id}', event)" title="Navigate from what address you entered to this hospital in Google Maps" style="padding: 0.35rem 0.65rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                    🗺️ Route
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -1228,6 +1306,60 @@
             }
         }
 
+        let CURRENT_MODAL_HOSPITAL = null;
+
+        // Accurate Google Maps Directions URL from What Address the User Entered to Selected Hospital
+        function getGoogleMapsDirectionsUrl(hosp) {
+            if (!hosp) return '#';
+
+            // 1. Destination
+            let dest = '';
+            if (hosp.latitude && hosp.longitude) {
+                dest = `${hosp.latitude},${hosp.longitude}`;
+            } else if (hosp.address) {
+                dest = encodeURIComponent((hosp.name || '') + ', ' + hosp.address);
+            } else {
+                dest = encodeURIComponent(hosp.name || 'Hospital');
+            }
+
+            // 2. Origin: STRICTLY prioritize what address the user entered
+            const enteredText = (document.getElementById('manualLocationInput')?.value || '').trim();
+            let origin = '';
+
+            if (enteredText) {
+                // Strip Google Plus Codes if present so Google Maps receives a pure address
+                const cleanOrigin = enteredText
+                    .replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},?\s*/i, '')
+                    .replace(/\b[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}\b,?\s*/i, '')
+                    .trim();
+                origin = encodeURIComponent(cleanOrigin || enteredText);
+            } else if (PATIENT_COORDS && PATIENT_COORDS.lat !== null && PATIENT_COORDS.lon !== null) {
+                // GPS Coordinates from "Use My Current Location"
+                origin = `${PATIENT_COORDS.lat},${PATIENT_COORDS.lon}`;
+            } else if (PATIENT_COORDS && PATIENT_COORDS.label && PATIENT_COORDS.label !== 'Location Not Provided') {
+                origin = encodeURIComponent(PATIENT_COORDS.label);
+            }
+
+            if (origin) {
+                return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=driving`;
+            }
+            return `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`;
+        }
+
+        function openDirectionsForHospital(hospId, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            const hosp = (ALL_RECOMMENDATIONS || []).find(h => h.id === hospId) || CURRENT_SELECTED_HOSPITAL || CURRENT_MODAL_HOSPITAL;
+            if (!hosp) {
+                alert('Please select a healthcare facility to get directions.');
+                return;
+            }
+            const url = getGoogleMapsDirectionsUrl(hosp);
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+
         // 8. Hospital Details Modal
         function showHospitalDetailsModalById(hospId) {
             const found = ALL_RECOMMENDATIONS.find(h => h.id === hospId);
@@ -1236,6 +1368,14 @@
 
         function showHospitalDetailsModal(hosp) {
             if (!hosp) return;
+            CURRENT_MODAL_HOSPITAL = hosp;
+
+            const enteredOrigin = (document.getElementById('manualLocationInput')?.value || '').trim() ||
+                                  (PATIENT_COORDS && PATIENT_COORDS.label !== 'Location Not Provided' ? PATIENT_COORDS.label : '') ||
+                                  (PATIENT_COORDS.lat !== null ? `${PATIENT_COORDS.lat.toFixed(4)}, ${PATIENT_COORDS.lon.toFixed(4)}` : 'Current Location');
+            const fromEl = document.getElementById('modalHospFromAddress');
+            if (fromEl) fromEl.textContent = enteredOrigin;
+
             document.getElementById('modalHospName').textContent = hosp.name;
             document.getElementById('modalHospType').textContent = hosp.facility_type || 'Specialized Healthcare Facility';
             document.getElementById('modalHospCategoryBadge').textContent = hosp.is_curated ? 'Global Specialty Centre' : 'Nearby Facility';
@@ -1252,12 +1392,9 @@
 
             // Directions button
             const dirBtn = document.getElementById('modalHospDirectionsBtn');
-            if (hosp.directions_url) {
-                dirBtn.href = hosp.directions_url;
-                dirBtn.style.display = 'inline-flex';
-            } else {
-                dirBtn.style.display = 'none';
-            }
+            const dirUrl = getGoogleMapsDirectionsUrl(hosp);
+            dirBtn.href = dirUrl;
+            dirBtn.style.display = 'inline-flex';
 
             // Website button
             const webBtn = document.getElementById('modalHospWebsiteBtn');
@@ -1341,7 +1478,7 @@
                 facility_type: CURRENT_SELECTED_HOSPITAL.facility_type,
                 hospital_address: CURRENT_SELECTED_HOSPITAL.address || CURRENT_SELECTED_HOSPITAL.city || 'Verified Address',
                 hospital_website: CURRENT_SELECTED_HOSPITAL.website_url,
-                directions_url: CURRENT_SELECTED_HOSPITAL.directions_url,
+                directions_url: getGoogleMapsDirectionsUrl(CURRENT_SELECTED_HOSPITAL),
                 distance_km: CURRENT_SELECTED_HOSPITAL.distance_km,
                 specialty_label: CURRENT_SELECTED_HOSPITAL.specialty_label,
                 consultation_mode: mode,
@@ -1402,6 +1539,18 @@
                 document.getElementById('receiptNotesRow').style.display = 'table-row';
             } else {
                 document.getElementById('receiptNotesRow').style.display = 'none';
+            }
+
+            // Directions Link on Receipt
+            const dirReceiptBtn = document.getElementById('btnReceiptDirections');
+            if (dirReceiptBtn) {
+                const navUrl = apt.directions_url || (CURRENT_SELECTED_HOSPITAL ? getGoogleMapsDirectionsUrl(CURRENT_SELECTED_HOSPITAL) : null);
+                if (navUrl) {
+                    dirReceiptBtn.href = navUrl;
+                    dirReceiptBtn.style.display = 'inline-flex';
+                } else {
+                    dirReceiptBtn.style.display = 'none';
+                }
             }
 
             // Google Calendar link
@@ -1541,6 +1690,7 @@
                 </div>
 
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: flex-end; align-items: center;">
+                    ${apt.directions_url ? `<a href="${escapeHtml(apt.directions_url)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">🗺️ Directions to Hospital</a>` : ''}
                     ${gcalUrl ? `<a href="${gcalUrl}" target="_blank" class="btn btn-outline btn-sm">📅 Google Calendar</a>` : ''}
                     ${icsUrl ? `<a href="${icsUrl}" class="btn btn-outline btn-sm">📥 Download .ICS</a>` : ''}
                     <button type="button" class="btn btn-outline btn-sm" onclick="showConfirmationReceiptModal({ appointment: ${JSON.stringify(apt).replace(/"/g, '&quot;')}, google_calendar_url: '${gcalUrl}', ics_url: '${icsUrl}' })">
