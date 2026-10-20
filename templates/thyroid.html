@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Immediate Theme Application (Zero Flash) -->
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('medinova_theme');
+                if (stored === 'light' || stored === 'dark') {
+                    document.documentElement.setAttribute('data-theme', stored);
+                    return;
+                }
+            } catch (e) {}
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thyroid Dysfunction Screening - MediNova AI</title>
+    <meta name="description" content="Clinical machine learning preliminary screening for thyroid-stimulating hormone (TSH) and thyroxine imbalances.">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=5.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/report-scanner.css') }}?v=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        .biomarker-status-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .biomarker-status-badge.status-critical {
+            background: rgba(244, 63, 94, 0.2);
+            color: #fda4af;
+        }
+        .biomarker-status-badge.status-borderline {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fde68a;
+        }
+        .biomarker-status-badge.status-optimal,
+        .biomarker-status-badge.status-normal {
+            background: rgba(16, 185, 129, 0.2);
+            color: #a7f3d0;
+        }
+        .biomarker-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.4s ease;
+        }
+        .biomarker-bar-fill.status-critical {
+            background: #f43f5e;
+        }
+        .biomarker-bar-fill.status-borderline {
+            background: #f59e0b;
+        }
+        .biomarker-bar-fill.status-optimal,
+        .biomarker-bar-fill.status-normal {
+            background: #10b981;
+        }
+        .risk-factor-item {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 0.6rem 0.8rem;
+            border-radius: 4px;
+            border-left: 3px solid #06b6d4;
+        }
+        .risk-factor-item.severity-abnormal {
+            border-left-color: #f43f5e;
+        }
+        .risk-meter-fill {
+            height: 100%;
+            transition: width 0.6s ease;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Ambient Background -->
+    <div class="animated-bg">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+    </div>
+    <div class="bg-grid"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="nav-brand">
+            <div class="brand-icon-wrapper">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </div>
+            <span class="brand-gradient">MediNova</span>
+            <span class="brand-tag">Endocrinology</span>
+        </a>
+
+        <div class="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="/features" class="nav-link">Diagnostic Suite</a>
+            <a href="/contact" class="nav-link">Emergency & Care</a>
+            <a href="/contact" class="nav-emergency-btn">
+                <span class="pulse-dot"></span>
+                <span>24/7 Helpline: 112 / 911</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="content-wrapper container">
+        <a href="/features" class="back-button no-print">
+            <span>←</span> Back to Diagnostic Suite
+        </a>
+
+        <!-- PRINT REPORT HEADER -->
+        <div class="print-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 style="font-size: 1.8rem; color: #0284c7; margin: 0;">MediNova Clinical Intelligence</h1>
+                    <p style="font-size: 0.9rem; color: #64748b; margin: 0;">Biochemical Thyroid Panel & Hypothyroidism Preliminary Screening</p>
+                </div>
+                <div style="text-align: right; font-size: 0.85rem; color: #475569;">
+                    <p><strong>Report ID:</strong> {{ report_id or 'MN-THY-EVAL' }}</p>
+                    <p>Verified Clinical Decision Support Artifact</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-header-area no-print">
+            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(6, 182, 212, 0.12); border: 1px solid rgba(6, 182, 212, 0.35); padding: 0.3rem 0.8rem; border-radius: 999px; margin-bottom: 0.8rem; font-size: 0.8rem; font-weight: 600; color: #06b6d4;">
+                <span>🔬 Modality: Serum Laboratory Panel</span>
+                <span>•</span>
+                <span>Calibrated Random Forest (UCI Garavan Cohort)</span>
+            </div>
+            <h1>Thyroid Dysfunction Screening</h1>
+            <p class="section-subtitle">Multi-analyte laboratory screening evaluating Serum TSH, Total T4, Free Thyroxine Index (FTI), and Triiodothyronine (T3) for early detection of hypothyroidism.</p>
+        </div>
+
+        {% if error %}
+        <div class="critical-alert-card" style="margin-bottom: 2rem;">
+            <h3>Evaluation Notice</h3>
+            <p>{{ error }}</p>
+        </div>
+        {% endif %}
+
+        {% if prediction %}
+        <!-- ================================================================= -->
+        <!-- RESULTS & EMERGENCY PROTOCOL SUITE                                -->
+        <!-- ================================================================= -->
+        <div class="result-section">
+            <div class="{{ 'critical-alert-card' if is_positive else 'safe-alert-card' }}">
+                <div class="result-hero-row">
+                    <div class="result-badge-icon {{ 'danger' if is_positive else 'safe' }}">
+                        {{ '🚨' if is_positive else '🛡️' }}
+                    </div>
+                    <div class="result-hero-text">
+                        <div class="result-status-tag {{ 'danger' if is_positive else 'safe' }}">
+                            {{ insights.badge }}
+                        </div>
+                        <h2>{{ insights.title }}</h2>
+                        <p><strong>AI Screening Classification:</strong> {{ prediction }}</p>
+                        <p style="margin-top: 0.4rem;">{{ insights.description }}</p>
+                    </div>
+                </div>
+
+                <!-- Scanner Audit Badge & Integrity Seal -->
+                {% if report_id %}
+                <div class="scanner-integrity-seal-bar" data-report-id="{{ report_id }}" style="margin-top: 1rem; padding: 0.6rem 1rem; background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 8px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="scanner-audit-badge" style="background: #0891b2; color: #ffffff; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 4px;">🔬 Clinical Integrity Verified</span>
+                        <span style="font-family: monospace; font-size: 0.85rem; color: var(--text);">Report ID: <strong>{{ report_id }}</strong></span>
+                    </div>
+                    <div>
+                        <a href="/verify-report/{{ report_id }}" target="_blank" style="color: #06b6d4; font-size: 0.8rem; text-decoration: underline; font-weight: 600;">Verify Cryptographic Seal ↗</a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Risk Level Gauge -->
+                <div class="risk-meter-wrapper" style="margin-top: 1.5rem;">
+                    <div class="risk-meter-header">
+                        <span>Calibrated Endocrine Probability</span>
+                        <span><strong>{{ 'HIGH RISK (' ~ confidence_score ~ '%)' if is_positive else 'OPTIMAL (' ~ confidence_score ~ '%)' }}</strong></span>
+                    </div>
+                    <div class="risk-meter-track">
+                        <div class="risk-meter-fill {{ 'danger' if is_positive else 'safe' }}" data-fill="{{ confidence_score }}"></div>
+                    </div>
+                </div>
+
+                <!-- Action Toolbar -->
+                <div class="result-action-toolbar no-print" style="margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.8rem;">
+                    <button type="button" onclick="window.print()" class="btn btn-primary">
+                        <span>📄 Download / Print Medical Summary (PDF)</span>
+                    </button>
+                    <a href="/contact?specialty=thyroid" class="btn btn-outline">
+                        <span>🏥 Find Local Endocrinologist / Thyroid Clinic</span>
+                    </a>
+                </div>
+            </div>
+
+            {% if biomarker_gauges %}
+            <!-- Biomarker Physiological Range Indicators -->
+            <div class="biomarker-gauges-panel glass-card" style="margin-top: 1.5rem; padding: 1.2rem;">
+                <div class="panel-header" style="margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.5rem;">
+                    <h3 style="font-size: 1.1rem; color: var(--text); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📊</span> Measured Thyroid Analytes vs. Reference Intervals
+                    </h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+                        Standard venous endocrine laboratory reference ranges. Individual institutional ranges may vary slightly.
+                    </p>
+                </div>
+                <div class="gauges-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                    {% for g in biomarker_gauges %}
+                    <div class="gauge-card" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 0.9rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text);">{{ g.name }} ({{ g.field }})</span>
+                            <span class="biomarker-status-badge status-{{ g.status }}">
+                                {{ g.status_label }}
+                            </span>
+                        </div>
+                        <div style="font-size: 1.2rem; font-weight: 700; color: var(--text); margin-bottom: 0.4rem;">
+                            {{ g.value }} <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">{{ g.unit }}</span>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.1); height: 6px; border-radius: 3px; position: relative; margin-bottom: 0.4rem;">
+                            <div class="biomarker-bar-fill status-{{ g.status }}" data-fill="{{ g.position_pct }}"></div>
+                        </div>
+                        <div style="font-size: 0.72rem; color: var(--text-muted);">
+                            Clinical Target: <strong>{{ g.reference_interval }}</strong>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if top_risk_factors %}
+            <!-- Top Contributing Risk Factors -->
+            <div class="risk-factors-panel glass-card" style="margin-top: 1.5rem; padding: 1.2rem;">
+                <h3 style="font-size: 1.1rem; color: var(--text); margin: 0 0 0.8rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>🔍</span> Key Biomarker Contributors to Screening Decision
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.8rem;">
+                    {% for f in top_risk_factors %}
+                    <div class="risk-factor-item severity-{{ f.severity }}">
+                        <div style="font-size: 0.85rem; font-weight: 600; color: var(--text);">{{ f.feature_name }}</div>
+                        <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">Observed: <strong>{{ f.value }}</strong> | {{ f.clinical_context }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Clinical Protocol Guidance -->
+            <div class="protocol-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                {% if insights.emergency_symptoms %}
+                <div class="protocol-card glass-card">
+                    <h3 style="color: #fda4af; font-size: 1rem; margin-top: 0; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>⚠️</span> Warning Signs Requiring Urgent Care
+                    </h3>
+                    <ul style="font-size: 0.85rem; color: var(--text-muted); padding-left: 1.2rem; margin: 0.5rem 0 0 0;">
+                        {% for sym in insights.emergency_symptoms %}
+                        <li style="margin-bottom: 0.3rem;">{{ sym }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if insights.recommendations %}
+                <div class="protocol-card glass-card">
+                    <h3 style="color: #a7f3d0; font-size: 1rem; margin-top: 0; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>🩺</span> Recommended Clinical Next Steps
+                    </h3>
+                    <ul style="font-size: 0.85rem; color: var(--text-muted); padding-left: 1.2rem; margin: 0.5rem 0 0 0;">
+                        {% for rec in insights.recommendations %}
+                        <li style="margin-bottom: 0.3rem;">{{ rec }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if insights.doctor_questions %}
+                <div class="protocol-card glass-card">
+                    <h3 style="color: #bae6fd; font-size: 1rem; margin-top: 0; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>❓</span> Questions to Ask Your Endocrinologist
+                    </h3>
+                    <ul style="font-size: 0.85rem; color: var(--text-muted); padding-left: 1.2rem; margin: 0.5rem 0 0 0;">
+                        {% for q in insights.doctor_questions %}
+                        <li style="margin-bottom: 0.3rem;">{{ q }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if insights.diet_dos %}
+                <div class="protocol-card glass-card">
+                    <h3 style="color: #fde68a; font-size: 1rem; margin-top: 0; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>🥗</span> Nutritional & Micronutrient Guidance
+                    </h3>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">
+                        <strong style="color: #a7f3d0;">Beneficial:</strong>
+                        <ul style="padding-left: 1.2rem; margin: 0.2rem 0 0.6rem 0;">
+                            {% for d in insights.diet_dos %}
+                            <li>{{ d }}</li>
+                            {% endfor %}
+                        </ul>
+                        <strong style="color: #fda4af;">Precautions:</strong>
+                        <ul style="padding-left: 1.2rem; margin: 0.2rem 0 0 0;">
+                            {% for dt in insights.diet_donts %}
+                            <li>{{ dt }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if patient_summary %}
+            <!-- Patient Parameters Table -->
+            <div class="patient-data-table-wrapper" style="margin-top: 1.5rem; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 1.2rem;">
+                <h3 style="font-size: 1.1rem; color: var(--text); margin: 0 0 0.8rem 0;">Submitted Patient Thyroid Analytes</h3>
+                <table class="patient-data-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1); text-align: left;">
+                            <th style="padding: 0.5rem; color: var(--text-muted);">Biomarker</th>
+                            <th style="padding: 0.5rem; color: var(--text-muted);">Analyte Measurement</th>
+                            <th style="padding: 0.5rem; color: var(--text-muted);">Physiological Reference Interval</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in patient_summary %}
+                        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
+                            <td style="padding: 0.5rem; font-weight: 600; color: var(--text);">{{ item.label }}</td>
+                            <td style="padding: 0.5rem; color: #06b6d4;">{{ item.value }}</td>
+                            <td style="padding: 0.5rem; color: var(--text-muted);">
+                                {% if 'TSH' in item.label %}0.4 – 4.5 mIU/L
+                                {% elif 'T3' in item.label %}1.2 – 3.1 nmol/L
+                                {% elif 'TT4' in item.label %}60 – 150 nmol/L
+                                {% elif 'T4U' in item.label %}0.80 – 1.20 Ratio
+                                {% elif 'FTI' in item.label %}85 – 130 Index
+                                {% else %}Normal Physiological Baseline{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            <!-- Print Sign-off -->
+            <div class="print-footer-signoff" style="margin-top: 2rem; display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                    <div>
+                        <div style="width: 200px; border-bottom: 1px solid #475569; margin-bottom: 0.3rem;"></div>
+                        <p style="font-size: 0.75rem; color: #64748b; margin: 0;">Reviewing Physician Signature / License</p>
+                    </div>
+                    <div style="font-size: 0.7rem; color: #64748b; max-width: 400px; text-align: right;">
+                        <strong>Clinical Disclaimer:</strong> Automated preliminary decision aid. Venous laboratory confirmation and endocrine clinical consultation are required prior to pharmacologic intervention.
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ================================================================= -->
+        <!-- SMART MEDICAL LAB REPORT SCANNER                                  -->
+        <!-- ================================================================= -->
+        {% set scanner_module = 'thyroid' %}
+        {% include 'components/scanner_panel.html' %}
+
+        <!-- ================================================================= -->
+        <!-- PATIENT CLINICAL VITALS FORM                                      -->
+        <!-- ================================================================= -->
+        <div class="form-card rounded-2xl no-print" style="margin-top: 2rem;">
+            <div class="form-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div>
+                    <h2 class="form-section-title" style="margin: 0; font-size: 1.4rem;">Enter Patient Laboratory Values</h2>
+                    <p class="form-section-subtitle" style="margin: 0.3rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);">
+                        Input serum thyroid panel analytes manually or use the AI Lab Scanner above to auto-extract values from an uploaded lab report.
+                    </p>
+                </div>
+                <span class="form-badge-count" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;">
+                    8 Analyte Parameters
+                </span>
+            </div>
+
+            <form id="thyroidForm" action="/thyroid" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="clinical-3col-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.2rem;">
+                    <!-- 1. Age -->
+                    <div class="form-group">
+                        <div class="form-label-row" style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+                            <label for="age" style="font-weight: 600; font-size: 0.88rem; color: var(--text);">Patient Age (years)</label>
+                            <span class="normal-range-badge" style="font-size: 0.72rem; color: #06b6d4;">18 – 100</span>
+                        </div>
+                        <input type="number" id="age" name="age" required min="1" max="120" value="45" placeholder="e.g. 45" class="clinical-input" style="width: 100%; height: 44px; padding: 0 0.8rem; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(13, 21, 39, 0.8); color: #ffffff;">
+                    </div>
+
+                    <!-- 2. Sex -->
+                    <div class="form-group">
+                        <div class="form-label-row" style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+                            <label for="sex" style="font-weight: 600; font-size: 0.88rem; color: var(--text);">Biological Sex</label>
+                            <span class="normal-range-badge" style="font-size: 0.72rem; color: #06b6d4;">Demographic</span>
+                        </div>
+                        <select id="sex" name="sex" required class="clinical-input" style="width: 100%; height: 44px; padding: 0 0.8rem; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(13, 21, 39, 0.8); color: #ffffff;">
+                            <option value="Female" selected>Female</option>
+                            <option value="Male">Male</option>
+                        </select>
+                    </div>
+
+                    <!-- 3. On Thyroxine -->
+                    <div class="form-group">
+                        <div class="form-label-row" style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+                            <label for="on_thyroxine" style="font-weight: 600; font-size: 0.88rem; color: var(--text);">On Thyroxine (Levothyroxine)</label>
+                            <span class="normal-range-badge" style="font-size: 0.72rem; color: #06b6d4;">Medication</span>
+                        </div>
+                        <select id="on_thyroxine" name="on_thyroxine" required class="clinical-input" style="width: 100%; height: 44px; padding: 0 0.8rem; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(13, 21, 39, 0.8); color: #ffffff;">
+                            <option value="0" selected>No (Treatment Naive)</option>
+                            <option value="1">Yes (Receiving Replacement)</option>
+                        </select>
+                    </div>
+
+                    <!-- 4. TSH -->
+                    <div class="form-group">
+                        <div class="form-label-row" style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+                            <label for="tsh" style="font-weight: 600; font-size: 0.88rem; color: var(--text);">Serum TSH (mIU/L)</label>
+                            <span class="normal-range-badge" style="font-size: 0.72rem; color: #06b6d4;">Normal: 0.4 – 4.5</span>
+                        </div>
+                        <input type="number" id="tsh" name="tsh" step="0.01" required min="0.01" max="150" value="1.8" placeholder="e.g. 1.8" class="clinical-input" style="width: 100%; height: 44px; padding: 0 0.8rem; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(13, 21, 39, 0.8); color: #ffffff;">
+                    </div>
+
+                    <!-- 5. T3 -->
+                    <div class="form-group">
+                        <div class="form-label-row" style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+                            <label for="t3" style="font-weight: 600; font-size: 0.88rem; color: var(--text);">Serum T3 (nmol/L)</label>
+                            <span class="normal-range-badge" style="font-size: 0.72rem; color: #06b6d4;">Normal: 1.2 – 3.1</span>
+                        </div>
+                        <input type="number" id="t3" name="t3" step="0.01" required min="0.1" max="15" value="1.8" placeholder="e.g. 1.8" class="clinical-input" style="width: 100%; height: 44px; padding: 0 0.8rem; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(13, 21, 39, 0.8); color: #ffffff;">
+                    </div>
+
+                    <!-- 6. TT4 -->
+                    <div class="form-group">
+                        <div class="form-label-row" style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+                            <label for="tt4" style="font-weight: 600; font-size: 0.88rem; color: var(--text);">Serum Total T4 (TT4, nmol/L)</label>
+                            <span class="normal-range-badge" style="font-size: 0.72rem; color: #06b6d4;">Normal: 60 – 150</span>
+                        </div>
+                        <input type="number" id="tt4" name="tt4" step="0.1" required min="5" max="350" value="103" placeholder="e.g. 103" class="clinical-input" style="width: 100%; height: 44px; padding: 0 0.8rem; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(13, 21, 39, 0.8); color: #ffffff;">
+                    </div>
+
+                    <!-- 7. T4U -->
+                    <div class="form-group">
+                        <div class="form-label-row" style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+                            <label for="t4u" style="font-weight: 600; font-size: 0.88rem; color: var(--text);">T4 Uptake Ratio (T4U)</label>
+                            <span class="normal-range-badge" style="font-size: 0.72rem; color: #06b6d4;">Normal: 0.80 – 1.20</span>
+                        </div>
+                        <input type="number" id="t4u" name="t4u" step="0.01" required min="0.2" max="3.0" value="0.98" placeholder="e.g. 0.98" class="clinical-input" style="width: 100%; height: 44px; padding: 0 0.8rem; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(13, 21, 39, 0.8); color: #ffffff;">
+                    </div>
+
+                    <!-- 8. FTI -->
+                    <div class="form-group">
+                        <div class="form-label-row" style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
+                            <label for="fti" style="font-weight: 600; font-size: 0.88rem; color: var(--text);">Free Thyroxine Index (FTI)</label>
+                            <span class="normal-range-badge" style="font-size: 0.72rem; color: #06b6d4;">Normal: 85 – 130</span>
+                        </div>
+                        <input type="number" id="fti" name="fti" step="0.1" required min="10" max="350" value="107" placeholder="e.g. 107" class="clinical-input" style="width: 100%; height: 44px; padding: 0 0.8rem; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(13, 21, 39, 0.8); color: #ffffff;">
+                    </div>
+                </div>
+
+                <!-- Submit Controls -->
+                <div style="margin-top: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                    <div style="font-size: 0.78rem; color: var(--text-muted); max-width: 500px;">
+                        <span>🔒 Model Architecture: Calibrated Random Forest. All submitted biomarkers are processed locally with strict patient privacy.</span>
+                    </div>
+                    <button type="submit" id="submitBtn" class="btn btn-primary" style="min-width: 220px; height: 48px; font-weight: 700;">
+                        <span>Execute Thyroid Screening ➔</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer no-print" style="margin-top: 4rem; padding: 2rem 0; border-top: 1px solid rgba(255, 255, 255, 0.08); text-align: center; font-size: 0.8rem; color: var(--text-muted);">
+        <p>MediNova Clinical AI Platform • Endocrinology CDSS Module • Grounded in authentic biomedical science.</p>
+    </footer>
+
+    <script>
+        document.querySelectorAll('[data-fill]').forEach(function(el) {
+            el.style.width = el.getAttribute('data-fill') + '%';
+        });
+
+        document.getElementById('thyroidForm').addEventListener('submit', function() {
+            var btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span>Analyzing Thyroid Analytes...</span>';
+        });
+    </script>
+</body>
+</html>

@@ -21,6 +21,8 @@ private_uploads/
 instance/
 *.db
 *.sqlite3
+datasets/
+training/
 service_account.json
 *credentials*.json
 *.log

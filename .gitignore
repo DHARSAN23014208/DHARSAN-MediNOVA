@@ -25,6 +25,9 @@ instance/
 service_account.json
 *credentials*.json
 data/
+datasets/*
+!datasets/README.md
+training/__pycache__/
 *.xlsx
 *.csv
 *.db

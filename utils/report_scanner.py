@@ -23,7 +23,7 @@ if not logger.handlers:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
 # Supported module allowlist
-SUPPORTED_MODULES = {"diabetes", "heart", "kidney", "liver", "breast_cancer"}
+SUPPORTED_MODULES = {"diabetes", "heart", "kidney", "liver", "breast_cancer", "thyroid"}
 
 # Maximum upload file size in bytes (10 MB default)
 MAX_FILE_SIZE = int(os.environ.get("MAX_SCANNER_FILE_SIZE", 10 * 1024 * 1024))
@@ -782,6 +782,107 @@ MODULE_SCHEMAS: Dict[str, Dict[str, Any]] = {
             }
         },
         "minimum_rule": "All 5 cytological nuclear morphometry measurements must be extracted from the FNA pathology report."
+    },
+    "thyroid": {
+        "title": "Thyroid Hormone & Endocrine Profile",
+        "fields": {
+            "TSH": {
+                "type": "float",
+                "label": "Thyroid-Stimulating Hormone",
+                "unit": "mIU/L",
+                "aliases": [
+                    r"\btsh\b", r"thyroid\s*stimulating\s*hormone", r"thyrotropin",
+                    r"serum\s*tsh", r"ultra\s*tsh", r"s\.tsh"
+                ],
+                "range": (0.005, 400.0),
+                "normal_range": (0.4, 4.0),
+                "required_for_prediction": False,
+                "is_core_analyte": True
+            },
+            "T3": {
+                "type": "float",
+                "label": "Total Triiodothyronine",
+                "unit": "ng/mL",
+                "aliases": [
+                    r"\bt3\b", r"triiodothyronine", r"total\s*t3", r"serum\s*t3", r"s\.t3"
+                ],
+                "range": (0.1, 15.0),
+                "normal_range": (0.8, 2.0),
+                "required_for_prediction": False,
+                "is_core_analyte": True
+            },
+            "TT4": {
+                "type": "float",
+                "label": "Total Thyroxine (TT4)",
+                "unit": "µg/dL",
+                "aliases": [
+                    r"\btt4\b", r"total\s*t4", r"serum\s*t4", r"total\s*thyroxine",
+                    r"\bt4\b", r"s\.t4"
+                ],
+                "range": (0.5, 35.0),
+                "normal_range": (4.5, 12.0),
+                "required_for_prediction": False,
+                "is_core_analyte": True
+            },
+            "T4U": {
+                "type": "float",
+                "label": "T4 Uptake Ratio",
+                "unit": "",
+                "aliases": [
+                    r"\bt4u\b", r"t4\s*uptake", r"thyroid\s*uptake", r"t\s*uptake"
+                ],
+                "range": (0.2, 3.0),
+                "normal_range": (0.8, 1.3),
+                "required_for_prediction": False,
+                "baseline_default": 0.98,
+                "default_reason": "Standard physiological baseline T4 uptake ratio (0.98)"
+            },
+            "FTI": {
+                "type": "float",
+                "label": "Free Thyroxine Index (FTI)",
+                "unit": "",
+                "aliases": [
+                    r"\bfti\b", r"free\s*thyroxine\s*index", r"free\s*t4\s*index"
+                ],
+                "range": (5.0, 350.0),
+                "normal_range": (1.2, 4.2),
+                "required_for_prediction": False,
+                "baseline_default": 107.0,
+                "default_reason": "Standard biochemical median Free Thyroxine Index (107.0)"
+            },
+            "age": {
+                "type": "float",
+                "label": "Patient Age",
+                "unit": "years",
+                "aliases": [r"\bage\b", r"patient\s*age", r"age\s*in\s*years", r"\byrs\b"],
+                "range": (1.0, 115.0),
+                "normal_range": (18.0, 85.0),
+                "required_for_prediction": False,
+                "baseline_default": 54.0,
+                "default_reason": "Standard clinical thyroid cohort median age (54 years)"
+            },
+            "sex": {
+                "type": "category",
+                "label": "Biological Sex",
+                "unit": "",
+                "aliases": [r"\bsex\b", r"\bgender\b"],
+                "options": {"male": 1, "m": 1, "female": 0, "f": 0},
+                "required_for_prediction": False,
+                "baseline_default": 0,
+                "default_reason": "Demographic baseline category (Female / 0)"
+            },
+            "on_thyroxine": {
+                "type": "int",
+                "label": "On Thyroxine Medication",
+                "unit": "",
+                "aliases": [r"on\s*thyroxine", r"thyroxine\s*medication", r"levothyroxine", r"eltroxin", r"synthroid"],
+                "options": {"yes": 1, "true": 1, "positive": 1, "1": 1, "no": 0, "false": 0, "negative": 0, "0": 0},
+                "required_for_prediction": False,
+                "baseline_default": 0,
+                "default_reason": "No active thyroxine medication reported"
+            }
+        },
+        "minimum_rule": "At least one primary thyroid analyte (TSH, T3, or TT4) must be extracted from the laboratory report."
     }
 }
 

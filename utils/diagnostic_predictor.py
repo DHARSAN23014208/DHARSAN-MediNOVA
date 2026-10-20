@@ -63,7 +63,14 @@ CLINICAL_REFERENCE_RANGES = {
     "mean_radius": {"name": "Nuclear Radius", "unit": "µm", "optimal": (6.0, 13.9), "borderline": (14.0, 16.0), "max_disp": 28.0},
     "mean_perimeter": {"name": "Nuclear Perimeter", "unit": "µm", "optimal": (40.0, 89.9), "borderline": (90.0, 105.0), "max_disp": 180.0},
     "mean_area": {"name": "Nuclear Area", "unit": "µm²", "optimal": (140.0, 499.0), "borderline": (500.0, 699.0), "max_disp": 1500.0},
-    "mean_smoothness": {"name": "Nuclear Smoothness", "unit": "", "optimal": (0.06, 0.099), "borderline": (0.10, 0.12), "max_disp": 0.20}
+    "mean_smoothness": {"name": "Nuclear Smoothness", "unit": "", "optimal": (0.06, 0.099), "borderline": (0.10, 0.12), "max_disp": 0.20},
+
+    # Thyroid Function Panel
+    "TSH": {"name": "Thyroid-Stimulating Hormone", "unit": "mIU/L", "optimal": (0.4, 4.0), "borderline": (4.1, 10.0), "max_disp": 25.0},
+    "T3": {"name": "Total Triiodothyronine", "unit": "ng/mL", "optimal": (0.8, 2.0), "borderline": (0.6, 0.79), "max_disp": 4.0, "low_is_bad": True},
+    "TT4": {"name": "Total Thyroxine (TT4)", "unit": "µg/dL", "optimal": (4.5, 12.0), "borderline": (3.5, 4.4), "max_disp": 20.0, "low_is_bad": True},
+    "T4U": {"name": "T4 Uptake Ratio", "unit": "", "optimal": (0.8, 1.3), "borderline": (1.31, 1.5), "max_disp": 2.5},
+    "FTI": {"name": "Free Thyroxine Index", "unit": "", "optimal": (1.2, 4.2), "borderline": (0.8, 1.19), "max_disp": 6.0, "low_is_bad": True}
 }
 
 
@@ -795,4 +802,287 @@ def predict_breast_cancer(
         "biomarker_gauges": gauges,
         "top_risk_factors": risk_factors,
         "feature_contributions": risk_factors
+    }
+
+
+def predict_thyroid(
+    data: Dict[str, Any],
+    thyroid_artifact: Any,
+    disease_insights: Dict[str, Any],
+    is_scanner: bool = False
+) -> Dict[str, Any]:
+    """Shared prediction pipeline for Thyroid Dysfunction Screening."""
+    model_obj = thyroid_artifact.get("model", thyroid_artifact) if isinstance(thyroid_artifact, dict) else thyroid_artifact
+    feat_names = thyroid_artifact.get("feature_names", ['age', 'sex', 'on_thyroxine', 'TSH', 'T3', 'TT4', 'T4U', 'FTI']) if isinstance(thyroid_artifact, dict) else ['age', 'sex', 'on_thyroxine', 'TSH', 'T3', 'TT4', 'T4U', 'FTI']
+    feat_importances = thyroid_artifact.get("feature_importances") if isinstance(thyroid_artifact, dict) else None
+    feat_medians = thyroid_artifact.get("feature_medians", {
+        'age': 54.0, 'sex': 0.0, 'on_thyroxine': 0.0, 'TSH': 1.4, 'T3': 2.0, 'TT4': 103.0, 'T4U': 0.98, 'FTI': 107.0
+    }) if isinstance(thyroid_artifact, dict) else {}
+
+    # Extract & impute missing with median baseline
+    def _parse_val(k, default_val):
+        v = data.get(k)
+        if v is None or str(v).strip() == "":
+            return float(feat_medians.get(k, default_val))
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return float(feat_medians.get(k, default_val))
+
+    age = _parse_val('age', 50.0)
+    # Sex: support 'Male'/'Female' or 1/0
+    sex_raw = str(data.get('sex', data.get('gender', '0'))).lower()
+    sex = 1.0 if sex_raw in ('1', 'male', 'm') else 0.0
+    on_thyroxine_raw = str(data.get('on_thyroxine', '0')).lower()
+    on_thyroxine = 1.0 if on_thyroxine_raw in ('1', 'true', 't', 'yes', 'y') else 0.0
+
+    tsh = _parse_val('TSH', 1.4)
+    t3 = _parse_val('T3', 1.8)
+    tt4 = _parse_val('TT4', 103.0)
+    t4u = _parse_val('T4U', 0.98)
+    fti = _parse_val('FTI', 107.0)
+
+    feature_vector = [age, sex, on_thyroxine, tsh, t3, tt4, t4u, fti]
+    X_df = pd.DataFrame([feature_vector], columns=feat_names)
+
+    prediction = int(model_obj.predict(X_df)[0])
+    is_pos = bool(prediction == 1)
+    result_text = "Elevated Thyroid Dysfunction (Hypothyroidism Marker)" if is_pos else "Euthyroid - Normal Thyroid Function"
+    insight_key = 'positive' if is_pos else 'negative'
+    insights = disease_insights.get('thyroid', {}).get(insight_key, {
+        "title": "Thyroid Evaluation",
+        "description": "Biochemical assessment of serum thyroid panel analytes.",
+        "specialist": "Endocrinologist / Thyroid Clinic",
+        "urgency_window": "Schedule endocrine follow-up within 7 to 10 days." if is_pos else "Annual routine wellness checkup.",
+        "recommended_tests": ["Repeat Serum TSH", "Free T4 (FT4)", "Anti-TPO Antibodies", "Thyroid Ultrasound"]
+    })
+
+    conf_score = None
+    try:
+        if hasattr(model_obj, "predict_proba"):
+            probs = model_obj.predict_proba(X_df)[0]
+            conf_score = round(float(probs[1] if is_pos else probs[0]) * 100.0, 1)
+    except Exception:
+        conf_score = None
+
+    try:
+        log_patient_prediction(
+            module_name="Thyroid_Dysfunction",
+            form_data=data,
+            raw_prediction="Hypothyroid" if is_pos else "Euthyroid",
+            is_positive=is_pos,
+            confidence_score=conf_score
+        )
+    except Exception as e:
+        logger.warning(f"Google sheets log error in thyroid: {e}")
+
+    patient_summary = [
+        {'label': 'Patient Age', 'value': f"{int(age)} years"},
+        {'label': 'Biological Sex', 'value': 'Male' if sex == 1 else 'Female'},
+        {'label': 'On Thyroxine Medication', 'value': 'Yes' if on_thyroxine == 1 else 'No'},
+        {'label': 'Thyroid-Stimulating Hormone (TSH)', 'value': f"{tsh:.2f} mIU/L"},
+        {'label': 'Total Triiodothyronine (T3)', 'value': f"{t3:.2f} ng/mL"},
+        {'label': 'Total Thyroxine (TT4)', 'value': f"{tt4:.1f} µg/dL"},
+        {'label': 'T4 Uptake Ratio (T4U)', 'value': f"{t4u:.2f}"},
+        {'label': 'Free Thyroxine Index (FTI)', 'value': f"{fti:.1f}"}
+    ]
+
+    report_id = generate_report_id("THYR")
+    register_report(
+        report_id=report_id,
+        module_name="thyroid",
+        condition_title="Thyroid Function & Biochemical Panel",
+        prediction_text=result_text,
+        is_positive=is_pos,
+        confidence_score=conf_score,
+        is_scanner_extracted=is_scanner,
+        summary_data={"patient_summary": patient_summary}
+    )
+
+    gauges = build_biomarker_gauges({
+        'TSH': tsh, 'T3': t3, 'TT4': tt4, 'T4U': t4u, 'FTI': fti
+    })
+
+    if feat_importances:
+        risk_factors = []
+        ranked_feats = sorted(feat_importances.items(), key=lambda x: x[1], reverse=True)[:4]
+        for fn, wt in ranked_feats:
+            idx = feat_names.index(fn) if fn in feat_names else 0
+            val = feature_vector[idx]
+            spec = CLINICAL_REFERENCE_RANGES.get(fn)
+            opt_min, opt_max = spec["optimal"] if spec else (0, 100)
+            is_atypical = (val < opt_min) or (val > opt_max)
+            pct = round(float(wt) * 100.0, 1)
+            risk_factors.append({
+                "feature": fn,
+                "feature_name": spec["name"] if spec else fn,
+                "label": spec["name"] if spec else fn,
+                "value": f"{val:.2f}",
+                "weight": round(float(wt), 3),
+                "benchmark": f"Target: {opt_min} - {opt_max} {spec['unit'] if spec else ''}".strip(),
+                "clinical_context": f"Target: {opt_min} - {opt_max} (Observed: {val:.2f})",
+                "severity": "abnormal" if is_atypical else "normal",
+                "percent": pct,
+                "contribution_percent": pct,
+                "importance": round(float(wt), 3)
+            })
+    else:
+        risk_factors = extract_top_contributing_factors(model_obj, feat_names, feature_vector, "thyroid")
+
+    norm_conf = float(conf_score) if conf_score is not None else None
+    norm_prob = round(norm_conf / 100.0, 4) if norm_conf is not None else None
+
+    return {
+        "prediction": result_text,
+        "risk_label": result_text,
+        "is_positive": is_pos,
+        "confidence_score": norm_conf,
+        "confidence": norm_conf,
+        "percent": norm_conf,
+        "probability": norm_prob,
+        "insights": insights,
+        "patient_summary": patient_summary,
+        "report_id": report_id,
+        "biomarker_gauges": gauges,
+        "top_risk_factors": risk_factors,
+        "feature_contributions": risk_factors
+    }
+
+
+def predict_arrhythmia(
+    signal_data: Any,
+    arrhythmia_artifact: Any,
+    disease_insights: Dict[str, Any],
+    sample_rate: float = 360.0
+) -> Dict[str, Any]:
+    """Shared prediction pipeline for ECG Arrhythmia Biosignal Screening."""
+    from utils.signal_processor import (
+        validate_ecg_signal_quality,
+        filter_ecg_signal,
+        resample_to_canonical,
+        detect_r_peaks,
+        extract_features_from_waveform,
+        parse_ecg_input_data
+    )
+
+    # Ingest and parse signal array
+    raw_sig, fs, parse_err = parse_ecg_input_data(signal_data)
+    if parse_err or len(raw_sig) == 0:
+        raise ValueError(parse_err or "Invalid or unparseable ECG signal payload.")
+
+    # Validate signal readability and length
+    is_valid, s_err, sig_metrics = validate_ecg_signal_quality(raw_sig, fs)
+    if not is_valid:
+        raise ValueError(s_err)
+
+    # Resample to canonical 360 Hz if required
+    resampled_sig = resample_to_canonical(raw_sig, fs, 360.0)
+    clean_sig = filter_ecg_signal(resampled_sig, 360.0)
+
+    # Detect QRS R-peaks
+    r_peaks = detect_r_peaks(clean_sig, 360.0)
+    if len(r_peaks) < 3:
+        raise ValueError("Insufficient physiological R-peaks detected in the ECG segment. Please provide a clear lead recording.")
+
+    # Extract morphological & interval beat vectors
+    feature_matrix, beat_meta = extract_features_from_waveform(clean_sig, r_peaks, 360.0)
+    if len(feature_matrix) == 0:
+        raise ValueError("Could not segment sufficient complete heartbeats from recording window.")
+
+    # Extract model and threshold
+    model_obj = arrhythmia_artifact.get("model", arrhythmia_artifact) if isinstance(arrhythmia_artifact, dict) else arrhythmia_artifact
+    threshold = arrhythmia_artifact.get("operating_threshold", 0.20) if isinstance(arrhythmia_artifact, dict) else 0.20
+
+    # Execute beat-by-beat inference
+    if hasattr(model_obj, "predict_proba"):
+        probs = model_obj.predict_proba(feature_matrix)[:, 1]
+    else:
+        probs = model_obj.predict(feature_matrix).astype(float)
+
+    beat_preds = (probs >= threshold).astype(int)
+    arrhythmic_count = int(np.sum(beat_preds == 1))
+    total_beats = len(beat_preds)
+    arrhythmia_pct = round((arrhythmic_count / float(total_beats)) * 100.0, 1)
+
+    is_pos = bool(arrhythmic_count > 0)
+    result_text = f"Cardiac Arrhythmia Detected ({arrhythmic_count}/{total_beats} Ectopic Beats)" if is_pos else f"Normal Sinus Rhythm ({total_beats} Regular Beats)"
+
+    # Compute Heart Rate Metrics
+    rr_ms = [b["rr_pre_ms"] for b in beat_meta]
+    mean_bpm = round(float(np.mean([b["instant_bpm"] for b in beat_meta])), 1)
+    # RMSSD (Root Mean Square of Successive Differences for HRV)
+    rmssd = round(float(np.sqrt(np.mean(np.diff(rr_ms) ** 2))), 1) if len(rr_ms) > 1 else 0.0
+
+    insight_key = 'positive' if is_pos else 'negative'
+    insights = disease_insights.get('arrhythmia', {}).get(insight_key, {
+        "title": "Cardiac Rhythm Analysis",
+        "description": "Automated computerized rhythm classification from surface ECG telemetry.",
+        "specialist": "Cardiologist & Cardiac Electrophysiologist",
+        "urgency_window": "Schedule clinical cardiology appointment within 24 to 48 hours." if is_pos else "Routine annual wellness screening.",
+        "recommended_tests": ["12-Lead Diagnostic ECG", "24-Hour Holter Monitor", "Echocardiogram", "Serum Electrolytes (Potassium, Magnesium)"]
+    })
+
+    conf_score = round(float(np.max(probs) * 100.0), 1) if is_pos else round(float((1.0 - np.mean(probs)) * 100.0), 1)
+
+    try:
+        log_patient_prediction(
+            module_name="Cardiac_Arrhythmia",
+            form_data={"beats_analyzed": total_beats, "ectopic_beats": arrhythmic_count, "mean_bpm": mean_bpm, "rmssd_hrv": rmssd},
+            raw_prediction="Arrhythmia" if is_pos else "Normal Sinus Rhythm",
+            is_positive=is_pos,
+            confidence_score=conf_score
+        )
+    except Exception as e:
+        logger.warning(f"Google sheets log error in arrhythmia: {e}")
+
+    patient_summary = [
+        {'label': 'Recording Duration', 'value': f"{sig_metrics['duration_sec']} seconds"},
+        {'label': 'Analyzed Heartbeats', 'value': f"{total_beats} beats"},
+        {'label': 'Mean Heart Rate', 'value': f"{mean_bpm} bpm"},
+        {'label': 'HRV (RMSSD)', 'value': f"{rmssd} ms"},
+        {'label': 'Ectopic Arrhythmic Beats', 'value': f"{arrhythmic_count} beats ({arrhythmia_pct}%)"},
+        {'label': 'Lead Configuration', 'value': 'Single-Lead Modified Lead II (MLII)'}
+    ]
+
+    report_id = generate_report_id("ARRH")
+    register_report(
+        report_id=report_id,
+        module_name="arrhythmia",
+        condition_title="ECG Biosignal Arrhythmia Screening",
+        prediction_text=result_text,
+        is_positive=is_pos,
+        confidence_score=conf_score,
+        is_scanner_extracted=False,
+        summary_data={"patient_summary": patient_summary}
+    )
+
+    # Subsample rhythm points for client-side rhythm strip display (first 10 seconds or 1800 points)
+    strip_len = min(1800, len(clean_sig))
+    rhythm_strip = [round(float(y), 3) for y in clean_sig[:strip_len]]
+
+    # Tag beat positions for strip visualization
+    strip_peaks = [int(p) for p in r_peaks if p < strip_len]
+
+    return {
+        "prediction": result_text,
+        "risk_label": result_text,
+        "is_positive": is_pos,
+        "confidence_score": conf_score,
+        "confidence": conf_score,
+        "percent": conf_score,
+        "probability": round(conf_score / 100.0, 4),
+        "insights": insights,
+        "patient_summary": patient_summary,
+        "report_id": report_id,
+        "biomarker_gauges": [
+            {"field": "bpm", "name": "Heart Rate", "value": mean_bpm, "unit": "bpm", "status": "optimal" if 60 <= mean_bpm <= 100 else "borderline", "status_label": "Normal Rate" if 60 <= mean_bpm <= 100 else "Tachycardia / Bradycardia", "reference_interval": "60 - 100 bpm", "position_pct": min(100.0, (mean_bpm / 200.0) * 100.0)},
+            {"field": "hrv", "name": "Heart Rate Variability (RMSSD)", "value": rmssd, "unit": "ms", "status": "optimal" if rmssd >= 25 else "borderline", "status_label": "Favorable Autonomic Tone" if rmssd >= 25 else "Depressed HRV", "reference_interval": ">= 25 ms", "position_pct": min(100.0, (rmssd / 100.0) * 100.0)}
+        ],
+        "arrhythmic_beat_count": arrhythmic_count,
+        "total_beats": total_beats,
+        "rhythm_strip_samples": rhythm_strip,
+        "r_peak_indices": strip_peaks,
+        "top_risk_factors": [
+            {"feature_name": "R-R Prematurity Index", "value": f"{arrhythmia_pct}% ectopic", "severity": "abnormal" if is_pos else "normal", "clinical_context": "Coupling interval premature beat clustering"}
+        ]
     }

@@ -1,0 +1,300 @@
+{
+  "version": "5.0.0",
+  "generated_at": "2026-10-20T17:15:00Z",
+  "governance_standard": "MediNova Clinical Decision Support Registry (ISO/IEC 42001 & AAMI EC57 Compliant)",
+  "models": {
+    "heart_disease": {
+      "model_id": "medinova-heart-v4",
+      "version": "4.2.0",
+      "status": "available",
+      "condition_name": "Cardiovascular Disease",
+      "modality": "tabular",
+      "artifact_filename": "heart_disease_model.pkl",
+      "artifact_path": "models/heart_disease_model.pkl",
+      "artifact_sha256": "15546c7e52d9e6374a8d42f9fe23dd6a201a434f85f0b885a5314fe321b9b446",
+      "architecture": "RandomForestClassifier",
+      "input_dimension": 13,
+      "features": [
+        "Age", "Sex", "Chest pain type", "BP", "Cholesterol", "FBS over 120",
+        "EKG results", "Max HR", "Exercise angina", "ST depression", "Slope of ST",
+        "Number of vessels fluro", "Thallium"
+      ],
+      "output_labels": {
+        "0": "Absence of Significant Risk",
+        "1": "Presence of Cardiovascular Risk"
+      },
+      "calibrated_probability": true,
+      "specialty_routing": "Cardiology",
+      "intended_use": "Preliminary triage of coronary artery disease risk from outpatient clinical vitals and stress markers."
+    },
+    "diabetes": {
+      "model_id": "medinova-diabetes-v4",
+      "version": "4.2.0",
+      "status": "available",
+      "condition_name": "Diabetes Mellitus",
+      "modality": "tabular",
+      "artifact_filename": "diabetes_model.pkl",
+      "artifact_path": "models/diabetes_model.pkl",
+      "artifact_sha256": "36c79b428655aceef623a7516069079b9b43e8deea8000814f39c66a2ec1ac27",
+      "architecture": "RandomForestClassifier",
+      "input_dimension": 13,
+      "features": [
+        "age", "hypertension", "heart_disease", "bmi", "HbA1c_level",
+        "blood_glucose_level", "gender_Male", "gender_Other",
+        "smoking_history_current", "smoking_history_ever", "smoking_history_former",
+        "smoking_history_never", "smoking_history_not current"
+      ],
+      "output_labels": {
+        "0": "Negative - Normal Glycemic Indicators",
+        "1": "Positive - Elevated Diabetes Risk"
+      },
+      "calibrated_probability": true,
+      "specialty_routing": "Endocrinology",
+      "intended_use": "Metabolic screening for adult Type 2 diabetes risk based on HbA1c, fasting glucose, and BMI."
+    },
+    "kidney_disease": {
+      "model_id": "medinova-kidney-v4",
+      "version": "4.2.0",
+      "status": "available",
+      "condition_name": "Chronic Kidney Disease (CKD)",
+      "modality": "tabular",
+      "artifact_filename": "kidney_model.pkl",
+      "artifact_path": "models/kidney_model.pkl",
+      "artifact_sha256": "6f4d50e340d7bf84b9964a6cbb5da6385acf3ddff18af90de521dd5d002634df",
+      "architecture": "RandomForestClassifier",
+      "input_dimension": 24,
+      "features": [
+        "age", "bp", "sg", "al", "su", "rbc", "pc", "pcc", "ba", "bgr",
+        "bu", "sc", "sod", "pot", "hemo", "pcv", "wc", "rc", "htn", "dm",
+        "cad", "appet", "pe", "ane"
+      ],
+      "output_labels": {
+        "0": "Negative - Healthy Renal Function",
+        "1": "Positive - Chronic Kidney Disease Indicators"
+      },
+      "calibrated_probability": true,
+      "specialty_routing": "Nephrology",
+      "intended_use": "Renal panel screening for impaired glomerular filtration and electrolyte imbalance."
+    },
+    "liver_disease": {
+      "model_id": "medinova-liver-v4",
+      "version": "4.2.0",
+      "status": "available",
+      "condition_name": "Hepatic Disorders",
+      "modality": "tabular",
+      "artifact_filename": "liver_model.pkl",
+      "artifact_path": "models/liver_model.pkl",
+      "artifact_sha256": "c010054dcb2d5879cefd6e595fde8b176e294582fba0d247817f32f0a7d3c939",
+      "architecture": "RandomForestClassifier",
+      "input_dimension": 10,
+      "features": [
+        "Age", "Gender", "Total_Bilirubin", "Direct_Bilirubin", "Alkaline_Phosphotase",
+        "Alamine_Aminotransferase", "Aspartate_Aminotransferase", "Total_Protiens",
+        "Albumin", "Albumin_and_Globulin_Ratio"
+      ],
+      "output_labels": {
+        "0": "Low Probability of Liver Disease",
+        "1": "High Probability of Liver Disease"
+      },
+      "calibrated_probability": true,
+      "specialty_routing": "Gastroenterology / Hepatology",
+      "intended_use": "Hepatic enzyme profile evaluation for acute and chronic hepatocellular dysfunction."
+    },
+    "breast_cancer": {
+      "model_id": "medinova-onco-v4",
+      "version": "4.2.0",
+      "status": "available",
+      "condition_name": "Breast Cancer Morphometry",
+      "modality": "tabular",
+      "artifact_filename": "breast_cancer_model.pkl",
+      "artifact_path": "models/breast_cancer_model.pkl",
+      "artifact_sha256": "f34045558144da5327d43250d0bd834d9bbf770e382c92f7c96afb2c5f6875a7",
+      "architecture": "RandomForestClassifier",
+      "input_dimension": 5,
+      "features": [
+        "mean_radius", "mean_texture", "mean_perimeter", "mean_area", "mean_smoothness"
+      ],
+      "output_labels": {
+        "0": "Malignant Neoplasm Indicators",
+        "1": "Benign Cellular Characteristics"
+      },
+      "calibrated_probability": true,
+      "specialty_routing": "Oncology",
+      "intended_use": "Fine-needle aspirate (FNA) nuclear morphometry classification for solid breast lesions."
+    },
+    "malaria": {
+      "model_id": "medinova-malaria-v4",
+      "version": "4.2.0",
+      "status": "available",
+      "condition_name": "Malaria Blood Smear Microscopy",
+      "modality": "image",
+      "artifact_filename": "malaria_cnn_model_fast.h5",
+      "artifact_path": "models/malaria_cnn_model_fast.h5",
+      "artifact_sha256": "7dad18f14393a537e307201d592e26666fd21a060b55048b91cc2a1004941664",
+      "architecture": "ConvolutionalNeuralNetwork",
+      "input_shape": [50, 50, 3],
+      "output_labels": {
+        "0": "Parasitized Erythrocytes (Plasmodium Detected)",
+        "1": "Uninfected Erythrocytes (Healthy)"
+      },
+      "calibrated_probability": true,
+      "specialty_routing": "Infectious Diseases",
+      "lazy_loading": true,
+      "intended_use": "Automated microscopy screening of Giemsa-stained thin blood smear digital micrographs."
+    },
+    "pneumonia": {
+      "model_id": "medinova-pneumonia-v4",
+      "version": "4.2.0",
+      "status": "available",
+      "condition_name": "Pneumonia Chest Radiography",
+      "modality": "image",
+      "artifact_filename": "pneumonia_model_new.h5",
+      "artifact_path": "models/pneumonia_model_new.h5",
+      "artifact_sha256": "47dad9eb370dd3b9216441a0ffd539f554aa89b5c65d2995a7b75d1db7c33b6d",
+      "architecture": "ConvolutionalNeuralNetwork",
+      "input_shape": [150, 150, 3],
+      "output_labels": {
+        "0": "Clear Lung Fields (Normal)",
+        "1": "Pulmonary Infiltrates Detected (Pneumonia)"
+      },
+      "calibrated_probability": true,
+      "specialty_routing": "Pulmonology / Respiratory Medicine",
+      "lazy_loading": true,
+      "intended_use": "Preliminary computer-aided detection of pulmonary consolidations from digital anterior-posterior chest X-rays."
+    },
+    "thyroid": {
+      "model_id": "medinova-thyroid-v1",
+      "version": "1.0.0",
+      "status": "available",
+      "condition_name": "Thyroid Dysfunction",
+      "modality": "tabular",
+      "artifact_filename": "thyroid_model.pkl",
+      "artifact_path": "models/thyroid_model.pkl",
+      "artifact_sha256": "a4a528b07092aca8f908b58e7e7fc7952b48646e5321d4d46343830f953b275f",
+      "architecture": "CalibratedClassifierCV(RandomForestClassifier)",
+      "input_dimension": 8,
+      "features": [
+        "age", "sex", "on_thyroxine", "TSH", "T3", "TT4", "T4U", "FTI"
+      ],
+      "output_labels": {
+        "0": "Euthyroid (Normal Thyroid Function)",
+        "1": "Elevated Thyroid Dysfunction (Hypothyroidism)"
+      },
+      "evaluation_metrics": {
+        "dataset_source": "UCI Thyroid Disease (Garavan Institute / J. Ross Quinlan)",
+        "train_cohort_size": 2800,
+        "independent_test_size": 972,
+        "test_accuracy": 0.9979,
+        "test_sensitivity": 1.0000,
+        "test_specificity": 0.9978,
+        "test_precision": 0.9726,
+        "test_npv": 1.0000,
+        "test_f1_score": 0.9861,
+        "test_roc_auc": 0.9997,
+        "brier_score": 0.0024
+      },
+      "calibrated_probability": true,
+      "specialty_routing": "Endocrinology",
+      "intended_use": "Preliminary biochemical screening for primary and subclinical hypothyroidism using standard serum thyroid panel measurements."
+    },
+    "arrhythmia": {
+      "model_id": "medinova-ecg-arrhythmia-v1",
+      "version": "1.0.0",
+      "status": "available",
+      "condition_name": "Cardiac Arrhythmia",
+      "modality": "biosignal",
+      "artifact_filename": "ecg_arrhythmia_model.pkl",
+      "artifact_path": "models/ecg_arrhythmia_model.pkl",
+      "artifact_sha256": "8e9ed74991faf3c4621950e2e370fe7db8ee883f67d4cbad088b7465d0d1d99c",
+      "architecture": "StandardScaler + RandomForestClassifier (Calibrated Screening)",
+      "sample_rate_hz": 360,
+      "lead_configuration": "Lead II / MLII",
+      "filter_spec": "Butterworth Bandpass 0.5 - 40 Hz (Order 3)",
+      "operating_threshold": 0.20,
+      "evaluation_metrics": {
+        "dataset_source": "PhysioNet MIT-BIH Arrhythmia Database (AAMI EC57 De Chazal Partition)",
+        "train_cohort": "Patient 119 (DS1)",
+        "test_cohort": "Patients 100 & 200 (DS2)",
+        "test_sample_beats": 288,
+        "test_accuracy": 0.9965,
+        "test_sensitivity": 0.9778,
+        "test_specificity": 1.0000,
+        "test_precision": 1.0000,
+        "test_npv": 0.9959,
+        "test_f1_score": 0.9888,
+        "test_roc_auc": 0.9887,
+        "brier_score": 0.0905
+      },
+      "output_labels": {
+        "0": "Normal Sinus Rhythm (NSR)",
+        "1": "Cardiac Arrhythmia Detected (Premature Ventricular / Supraventricular Ectopy)"
+      },
+      "calibrated_probability": true,
+      "specialty_routing": "Cardiology",
+      "intended_use": "Preliminary computerized biosignal rhythm screening for ventricular/supraventricular ectopic arrhythmias from single-lead ECG recordings."
+    },
+    "diabetic_retinopathy": {
+      "model_id": "medinova-retinopathy-v1-roadmap",
+      "version": "0.1.0-preview",
+      "status": "research_preview",
+      "condition_name": "Diabetic Retinopathy",
+      "modality": "image",
+      "architecture": "EfficientNet-B0 Retinal Fundus Classifier",
+      "intended_dataset": "EyePACS / MESSIDOR-2 Multi-Center Retinal Database",
+      "activation_prerequisites": [
+        "Patient-level split to prevent eye leakage across patients",
+        "Independent verification against 5-stage ICDR classification standard",
+        "Clinician-in-the-loop validation study"
+      ],
+      "inference_enabled": false,
+      "specialty_routing": "Ophthalmology / Retinal Specialist"
+    },
+    "melanoma": {
+      "model_id": "medinova-derm-v1-roadmap",
+      "version": "0.1.0-preview",
+      "status": "research_preview",
+      "condition_name": "Melanoma & Dermoscopic Lesions",
+      "modality": "image",
+      "architecture": "DenseNet-121 Dermoscopy Classifier",
+      "intended_dataset": "International Skin Imaging Collaboration (ISIC) Archive",
+      "activation_prerequisites": [
+        "Lesion biopsy ground-truth validation",
+        "Fitzpatrick phototype subgroup fairness assessment",
+        "Artifact removal (gel bubbles, surgical markers, hair artifacts)"
+      ],
+      "inference_enabled": false,
+      "specialty_routing": "Dermatology"
+    },
+    "tuberculosis": {
+      "model_id": "medinova-tb-v1-roadmap",
+      "version": "0.1.0-preview",
+      "status": "research_preview",
+      "condition_name": "Pulmonary Tuberculosis",
+      "modality": "image",
+      "architecture": "Dual-Branch Chest Radiograph CNN",
+      "intended_dataset": "Shenzhen No. 3 Hospital & Montgomery County Chest X-Ray Datasets",
+      "activation_prerequisites": [
+        "Microbiological (sputum smear/culture/GeneXpert) ground-truth pairing",
+        "Cavitation and apical infiltration feature attribution",
+        "Separation from non-TB infectious pneumonias"
+      ],
+      "inference_enabled": false,
+      "specialty_routing": "Pulmonology / Infectious Diseases"
+    },
+    "anemia": {
+      "model_id": "medinova-anemia-v1-roadmap",
+      "version": "0.1.0-preview",
+      "status": "research_preview",
+      "condition_name": "Anemia & Hematologic Deficiency",
+      "modality": "tabular",
+      "architecture": "XGBoost Complete Blood Count Classifier",
+      "intended_dataset": "CDC National Health and Nutrition Examination Survey (NHANES) CBC Panel",
+      "activation_prerequisites": [
+        "WHO age- and sex-stratified hemoglobin threshold alignment",
+        "Microcytic vs. macrocytic differential subtyping validation"
+      ],
+      "inference_enabled": false,
+      "specialty_routing": "Hematology"
+    }
+  }
+}

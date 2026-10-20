@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diagnostic Suite - MediNova AI</title>
+    <title>Clinical Diagnostic Suite - MediNova AI</title>
     <!-- Immediate Theme Application (Zero Flash) -->
     <script>
         (function() {
@@ -22,7 +22,7 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0?v=4.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=5.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
@@ -59,24 +59,25 @@
 
     <div class="content-wrapper container">
         <div class="section-header">
-            <h1 class="section-title">AI Diagnostic Suite</h1>
-            <p class="section-subtitle">Select a disease module below to run multi-parameter clinical analysis with automated emergency protocols and printable medical reports.</p>
+            <h1 class="section-title">AI Clinical Diagnostic Workstation</h1>
+            <p class="section-subtitle">Select an evidence-based clinical screening module below to run multi-parameter biochemical, biosignal, or imaging analysis with automated emergency triage and printable medical reports.</p>
         </div>
 
         <!-- Search & Filter Controls -->
         <div class="search-box-wrapper">
             <span class="search-icon">🔍</span>
-            <input type="text" id="diagSearchInput" class="search-input" placeholder="Search by disease, biomarker, or organ (e.g., blood, heart, lung)..." onkeyup="filterDiagnostics()">
+            <input type="text" id="diagSearchInput" class="search-input" placeholder="Search by disease, biomarker, or organ (e.g., thyroid, ecg, kidney, blood)..." onkeyup="filterDiagnostics()">
         </div>
 
         <div class="diag-filter-bar">
-            <button class="filter-btn active" onclick="setCategory('all', this)">All Diagnostics (7)</button>
-            <button class="filter-btn" onclick="setCategory('vital', this)">Vitals & Heart</button>
-            <button class="filter-btn" onclick="setCategory('metabolic', this)">Metabolic & Labs</button>
-            <button class="filter-btn" onclick="setCategory('imaging', this)">Deep Learning Vision</button>
+            <button class="filter-btn active" onclick="setCategory('all', this)">All Screening Modules (9)</button>
+            <button class="filter-btn" onclick="setCategory('metabolic', this)">Biochemical & Labs (4)</button>
+            <button class="filter-btn" onclick="setCategory('vital', this)">Cardiovascular & Signals (2)</button>
+            <button class="filter-btn" onclick="setCategory('imaging', this)">Deep Learning Vision (3)</button>
+            <button class="filter-btn" onclick="setCategory('roadmap', this)">Research Roadmap (4 Gated)</button>
         </div>
 
-        <!-- Grid of 7 Diagnoses -->
+        <!-- Grid of 9 Active + 4 Governed Roadmap Modules -->
         <div class="features-grid" id="diagGrid">
             <!-- 1. Heart Disease -->
             <div class="diag-card glass-card" data-category="vital" data-tags="heart cardiovascular bp blood pressure cholesterol ecg ekg cardiac">
@@ -85,7 +86,7 @@
                         <div class="diag-icon">🫀</div>
                         <div class="diag-title-area">
                             <h2>Heart Disease</h2>
-                            <span class="diag-meta-tag">Random Forest • 85% Accuracy</span>
+                            <span class="diag-meta-tag">Random Forest • Cleveland Benchmark</span>
                         </div>
                     </div>
                     <p class="diag-desc">Predict cardiovascular risk and ischemia likelihood using 13 clinical indicators including resting ECG, ST depression, serum cholesterol, and fluoroscopy.</p>
@@ -102,7 +103,7 @@
                         </div>
                         <div class="diag-spec-row">
                             <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.2s Instant</span>
+                            <span class="diag-spec-value">&lt; 0.1s Instant</span>
                         </div>
                     </div>
                     <a href="/heart" class="btn btn-primary" style="width: 100%;">
@@ -119,7 +120,7 @@
                         <div class="diag-icon">🩸</div>
                         <div class="diag-title-area">
                             <h2>Diabetes Risk</h2>
-                            <span class="diag-meta-tag">XGBoost Classifier • 92% Accuracy</span>
+                            <span class="diag-meta-tag">XGBoost Classifier • Pima Benchmark</span>
                         </div>
                     </div>
                     <p class="diag-desc">Screen for type 2 diabetes and dysglycemia via glycosylated hemoglobin (HbA1c), plasma glucose, body mass index, and vascular history.</p>
@@ -136,7 +137,7 @@
                         </div>
                         <div class="diag-spec-row">
                             <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.2s Instant</span>
+                            <span class="diag-spec-value">&lt; 0.1s Instant</span>
                         </div>
                     </div>
                     <a href="/diabetes" class="btn btn-primary" style="width: 100%;">
@@ -153,7 +154,7 @@
                         <div class="diag-icon">🧪</div>
                         <div class="diag-title-area">
                             <h2>Kidney Disease</h2>
-                            <span class="diag-meta-tag">Ensemble Classifier • 98% Accuracy</span>
+                            <span class="diag-meta-tag">Random Forest • CKD Benchmark</span>
                         </div>
                     </div>
                     <p class="diag-desc">Deep renal function assessment screening for Chronic Kidney Disease (CKD) using 24 urinalysis and blood biochemistry markers.</p>
@@ -162,15 +163,15 @@
                     <div class="diag-specs">
                         <div class="diag-spec-row">
                             <span>Input Type:</span>
-                            <span class="diag-spec-value">24 Lab Biomarkers (1-Click Pre-fill)</span>
+                            <span class="diag-spec-value">24 Renal & Urine Analytes</span>
                         </div>
                         <div class="diag-spec-row">
                             <span>Report Type:</span>
-                            <span class="diag-spec-value">Nephrology Action Plan</span>
+                            <span class="diag-spec-value">Nephrology Care Plan</span>
                         </div>
                         <div class="diag-spec-row">
                             <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.3s Instant</span>
+                            <span class="diag-spec-value">&lt; 0.1s Instant</span>
                         </div>
                     </div>
                     <a href="/kidney" class="btn btn-primary" style="width: 100%;">
@@ -181,30 +182,30 @@
             </div>
 
             <!-- 4. Liver Disease -->
-            <div class="diag-card glass-card" data-category="metabolic" data-tags="liver hepatic enzymes bilirubin ast alt alb protein hepatitis">
+            <div class="diag-card glass-card" data-category="metabolic" data-tags="liver hepatic bilirubin alt ast alp enzymes jaundice">
                 <div>
                     <div class="diag-header">
                         <div class="diag-icon">🧬</div>
                         <div class="diag-title-area">
-                            <h2>Liver Function</h2>
-                            <span class="diag-meta-tag">Random Forest • 75%+ Accuracy</span>
+                            <h2>Liver Disease</h2>
+                            <span class="diag-meta-tag">Random Forest • ILPD Benchmark</span>
                         </div>
                     </div>
-                    <p class="diag-desc">Quantify hepatic dysfunction and inflammation probabilities through transaminases (ALT/AST), direct/total bilirubin, and protein synthesis ratios.</p>
+                    <p class="diag-desc">Evaluate hepatic tissue strain and cirrhosis likelihood via bilirubin fractions, aminotransferases (ALT/AST), and albumin-globulin ratio.</p>
                 </div>
                 <div>
                     <div class="diag-specs">
                         <div class="diag-spec-row">
                             <span>Input Type:</span>
-                            <span class="diag-spec-value">10 Hepatic Parameters</span>
+                            <span class="diag-spec-value">10 Liver Function Tests</span>
                         </div>
                         <div class="diag-spec-row">
                             <span>Report Type:</span>
-                            <span class="diag-spec-value">Hepatology Protocol</span>
+                            <span class="diag-spec-value">Hepatology Consultation Brief</span>
                         </div>
                         <div class="diag-spec-row">
                             <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.2s Instant</span>
+                            <span class="diag-spec-value">&lt; 0.1s Instant</span>
                         </div>
                     </div>
                     <a href="/liver" class="btn btn-primary" style="width: 100%;">
@@ -215,47 +216,47 @@
             </div>
 
             <!-- 5. Breast Cancer -->
-            <div class="diag-card glass-card" data-category="vital" data-tags="breast cancer oncology malignant benign tumor biopsy morphology">
+            <div class="diag-card glass-card" data-category="imaging" data-tags="breast oncology cancer tumor biopsy fna nuclei radius texture">
                 <div>
                     <div class="diag-header">
                         <div class="diag-icon">🔬</div>
                         <div class="diag-title-area">
-                            <h2>Breast Cancer Screening</h2>
-                            <span class="diag-meta-tag">Fine-Needle Classifier • 95% Accuracy</span>
+                            <h2>Breast Oncology</h2>
+                            <span class="diag-meta-tag">Random Forest • Wisconsin WBCD</span>
                         </div>
                     </div>
-                    <p class="diag-desc">Classify cellular tumor biopsies as benign or malignant based on nuclear radius, perimeter irregularity, area expansion, and smoothness.</p>
+                    <p class="diag-desc">Fine needle aspiration (FNA) cytological evaluation analyzing nuclear morphology parameters to distinguish benign from malignant tissue.</p>
                 </div>
                 <div>
                     <div class="diag-specs">
                         <div class="diag-spec-row">
                             <span>Input Type:</span>
-                            <span class="diag-spec-value">5 Cellular Morphometry Metrics</span>
+                            <span class="diag-spec-value">5 FNA Morphological Features</span>
                         </div>
                         <div class="diag-spec-row">
                             <span>Report Type:</span>
-                            <span class="diag-spec-value">Oncology Urgent Triage</span>
+                            <span class="diag-spec-value">Oncology Triage Plan</span>
                         </div>
                         <div class="diag-spec-row">
                             <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.2s Instant</span>
+                            <span class="diag-spec-value">&lt; 0.1s Instant</span>
                         </div>
                     </div>
                     <a href="/breast_cancer" class="btn btn-primary" style="width: 100%;">
-                        <span>Launch Cancer Screening</span>
+                        <span>Launch Oncology Diagnostic</span>
                         <span>→</span>
                     </a>
                 </div>
             </div>
 
             <!-- 6. Malaria -->
-            <div class="diag-card glass-card" data-category="imaging" data-tags="malaria parasite blood smear vision image cnn cnn microscopic cell">
+            <div class="diag-card glass-card" data-category="imaging" data-tags="malaria parasite blood smear vision image cnn microscopic cell">
                 <div>
                     <div class="diag-header">
                         <div class="diag-icon">🧫</div>
                         <div class="diag-title-area">
                             <h2>Malaria Detection</h2>
-                            <span class="diag-meta-tag">Deep CNN Vision • 95%+ Accuracy</span>
+                            <span class="diag-meta-tag">Deep Vision CNN • NIH Smear Benchmark</span>
                         </div>
                     </div>
                     <p class="diag-desc">Convolutional Deep Neural Network analyzing Giemsa-stained thin blood smear microscopic images to detect intra-erythrocytic Plasmodium parasites.</p>
@@ -272,7 +273,7 @@
                         </div>
                         <div class="diag-spec-row">
                             <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.4s Deep Scan</span>
+                            <span class="diag-spec-value">&lt; 0.3s Deep Scan</span>
                         </div>
                     </div>
                     <a href="/malaria" class="btn btn-primary" style="width: 100%;">
@@ -289,7 +290,7 @@
                         <div class="diag-icon">🫁</div>
                         <div class="diag-title-area">
                             <h2>Pneumonia Detection</h2>
-                            <span class="diag-meta-tag">Deep Neural Network • 90%+ Accuracy</span>
+                            <span class="diag-meta-tag">Deep CNN • Chest X-Ray Benchmark</span>
                         </div>
                     </div>
                     <p class="diag-desc">Deep Radiograph Convolutional Model inspecting chest X-ray scans to identify pulmonary opacities, alveolar consolidation, and infiltrates.</p>
@@ -306,13 +307,213 @@
                         </div>
                         <div class="diag-spec-row">
                             <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.5s Radiograph Scan</span>
+                            <span class="diag-spec-value">&lt; 0.4s Radiograph Scan</span>
                         </div>
                     </div>
                     <a href="/pneumonia" class="btn btn-primary" style="width: 100%;">
                         <span>Analyze Chest X-Ray</span>
                         <span>→</span>
                     </a>
+                </div>
+            </div>
+
+            <!-- 8. Thyroid Dysfunction (NEW) -->
+            <div class="diag-card glass-card" data-category="metabolic" data-tags="thyroid tsh ft4 ft3 t3 tt4 fti hypothyroidism endocrine hormone goiter" style="border-color: rgba(6, 182, 212, 0.4);">
+                <div>
+                    <div class="diag-header">
+                        <div class="diag-icon">🦋</div>
+                        <div class="diag-title-area">
+                            <h2>Thyroid Dysfunction</h2>
+                            <span class="diag-meta-tag" style="background: #0891b2; color: #fff;">Calibrated RF • UCI Garavan</span>
+                        </div>
+                    </div>
+                    <p class="diag-desc">Multi-analyte laboratory screening evaluating Serum TSH, Total T4, Free Thyroxine Index (FTI), and Triiodothyronine (T3) for early hypothyroidism detection.</p>
+                </div>
+                <div>
+                    <div class="diag-specs">
+                        <div class="diag-spec-row">
+                            <span>Input Type:</span>
+                            <span class="diag-spec-value">8 Serum Thyroid Analytes</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Report Type:</span>
+                            <span class="diag-spec-value">Endocrinology Lab Brief</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Inference Time:</span>
+                            <span class="diag-spec-value">&lt; 0.1s Instant</span>
+                        </div>
+                    </div>
+                    <a href="/thyroid" class="btn btn-primary" style="width: 100%;">
+                        <span>Launch Thyroid Diagnostic</span>
+                        <span>→</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 9. ECG Arrhythmia (NEW) -->
+            <div class="diag-card glass-card" data-category="vital" data-tags="ecg arrhythmia ekg rhythm pvc premature ventricular conduction telemetry hrv biosignal" style="border-color: rgba(6, 182, 212, 0.4);">
+                <div>
+                    <div class="diag-header">
+                        <div class="diag-icon">⚡</div>
+                        <div class="diag-title-area">
+                            <h2>ECG Arrhythmia</h2>
+                            <span class="diag-meta-tag" style="background: #0891b2; color: #fff;">Pan-Tompkins • PhysioNet MIT-BIH</span>
+                        </div>
+                    </div>
+                    <p class="diag-desc">Digital biosignal processing pipeline detecting QRS complexes, ectopic ventricular beats (PVCs), R-R interval coupling, and autonomic heart rate variability.</p>
+                </div>
+                <div>
+                    <div class="diag-specs">
+                        <div class="diag-spec-row">
+                            <span>Input Type:</span>
+                            <span class="diag-spec-value">Single-Lead 360 Hz Telemetry</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Report Type:</span>
+                            <span class="diag-spec-value">Electrophysiology Rhythm Strip</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Inference Time:</span>
+                            <span class="diag-spec-value">&lt; 0.15s Signal Pipeline</span>
+                        </div>
+                    </div>
+                    <a href="/arrhythmia" class="btn btn-primary" style="width: 100%;">
+                        <span>Launch ECG Screening</span>
+                        <span>→</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 10. Diabetic Retinopathy (ROADMAP GATED) -->
+            <div class="diag-card glass-card" data-category="roadmap" data-tags="retinopathy diabetic fundus eye retina vision microaneurysm roadmap" style="border: 1px dashed rgba(245, 158, 11, 0.4); opacity: 0.9;">
+                <div>
+                    <div class="diag-header">
+                        <div class="diag-icon">👁️</div>
+                        <div class="diag-title-area">
+                            <h2>Diabetic Retinopathy</h2>
+                            <span class="diag-meta-tag" style="background: rgba(245, 158, 11, 0.2); color: #fde68a;">Research Preview • Gated</span>
+                        </div>
+                    </div>
+                    <p class="diag-desc">Retinal fundus photography automated grading for early microaneurysms, hemorrhages, and hard exudates.</p>
+                </div>
+                <div>
+                    <div class="diag-specs">
+                        <div class="diag-spec-row">
+                            <span>Candidate Cohort:</span>
+                            <span class="diag-spec-value">EyePACS / APTOS</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Status:</span>
+                            <span class="diag-spec-value">Clinical Protocol Review</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Inference:</span>
+                            <span class="diag-spec-value" style="color: #f59e0b;">Disabled (Gated)</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline" style="width: 100%; border-color: #f59e0b; color: #fde68a; cursor: not-allowed;" onclick="alert('Module is in governed clinical research roadmap. Inference is restricted.')">
+                        <span>Research Preview (Gated)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 11. Melanoma Triage (ROADMAP GATED) -->
+            <div class="diag-card glass-card" data-category="roadmap" data-tags="melanoma skin dermoscopy lesion dermatologic mole oncology roadmap" style="border: 1px dashed rgba(245, 158, 11, 0.4); opacity: 0.9;">
+                <div>
+                    <div class="diag-header">
+                        <div class="diag-icon">🔎</div>
+                        <div class="diag-title-area">
+                            <h2>Melanoma Triage</h2>
+                            <span class="diag-meta-tag" style="background: rgba(245, 158, 11, 0.2); color: #fde68a;">Research Preview • Gated</span>
+                        </div>
+                    </div>
+                    <p class="diag-desc">Dermoscopic image classification evaluating border irregularity, color variegation, and melanocytic lesion architecture.</p>
+                </div>
+                <div>
+                    <div class="diag-specs">
+                        <div class="diag-spec-row">
+                            <span>Candidate Cohort:</span>
+                            <span class="diag-spec-value">ISIC Dermoscopy Archive</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Status:</span>
+                            <span class="diag-spec-value">License Review & Cohort Split</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Inference:</span>
+                            <span class="diag-spec-value" style="color: #f59e0b;">Disabled (Gated)</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline" style="width: 100%; border-color: #f59e0b; color: #fde68a; cursor: not-allowed;" onclick="alert('Module is in governed clinical research roadmap. Inference is restricted.')">
+                        <span>Research Preview (Gated)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 12. Pulmonary Tuberculosis (ROADMAP GATED) -->
+            <div class="diag-card glass-card" data-category="roadmap" data-tags="tuberculosis tb pulmonary lung cavitation infiltrates xray radiography roadmap" style="border: 1px dashed rgba(245, 158, 11, 0.4); opacity: 0.9;">
+                <div>
+                    <div class="diag-header">
+                        <div class="diag-icon">🫁</div>
+                        <div class="diag-title-area">
+                            <h2>Pulmonary TB</h2>
+                            <span class="diag-meta-tag" style="background: rgba(245, 158, 11, 0.2); color: #fde68a;">Research Preview • Gated</span>
+                        </div>
+                    </div>
+                    <p class="diag-desc">Chest radiograph automated screening for apical infiltrations and cavitary lesions distinguishing TB from bacterial pneumonia.</p>
+                </div>
+                <div>
+                    <div class="diag-specs">
+                        <div class="diag-spec-row">
+                            <span>Candidate Cohort:</span>
+                            <span class="diag-spec-value">Montgomery / Shenzhen</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Status:</span>
+                            <span class="diag-spec-value">Differential Pipeline Design</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Inference:</span>
+                            <span class="diag-spec-value" style="color: #f59e0b;">Disabled (Gated)</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline" style="width: 100%; border-color: #f59e0b; color: #fde68a; cursor: not-allowed;" onclick="alert('Module is in governed clinical research roadmap. Inference is restricted.')">
+                        <span>Research Preview (Gated)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 13. Hematologic Anemia (ROADMAP GATED) -->
+            <div class="diag-card glass-card" data-category="roadmap" data-tags="anemia cbc blood hemoglobin mcv rbc hematology iron deficiency roadmap" style="border: 1px dashed rgba(245, 158, 11, 0.4); opacity: 0.9;">
+                <div>
+                    <div class="diag-header">
+                        <div class="diag-icon">🩸</div>
+                        <div class="diag-title-area">
+                            <h2>Hematologic Anemia</h2>
+                            <span class="diag-meta-tag" style="background: rgba(245, 158, 11, 0.2); color: #fde68a;">Research Preview • Gated</span>
+                        </div>
+                    </div>
+                    <p class="diag-desc">Complete blood count (CBC) profiling evaluating hemoglobin, MCV, MCH, and red cell distribution width for microcytic/normocytic triage.</p>
+                </div>
+                <div>
+                    <div class="diag-specs">
+                        <div class="diag-spec-row">
+                            <span>Candidate Cohort:</span>
+                            <span class="diag-spec-value">MIMIC-IV CBC Deidentified</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Status:</span>
+                            <span class="diag-spec-value">Reference Interval Standard</span>
+                        </div>
+                        <div class="diag-spec-row">
+                            <span>Inference:</span>
+                            <span class="diag-spec-value" style="color: #f59e0b;">Disabled (Gated)</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline" style="width: 100%; border-color: #f59e0b; color: #fde68a; cursor: not-allowed;" onclick="alert('Module is in governed clinical research roadmap. Inference is restricted.')">
+                        <span>Research Preview (Gated)</span>
+                    </button>
                 </div>
             </div>
         </div>

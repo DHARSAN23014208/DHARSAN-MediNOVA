@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Immediate Theme Application (Zero Flash) -->
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('medinova_theme');
+                if (stored === 'light' || stored === 'dark') {
+                    document.documentElement.setAttribute('data-theme', stored);
+                    return;
+                }
+            } catch (e) {}
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECG Arrhythmia Biosignal Screening - MediNova AI</title>
+    <meta name="description" content="Computerized biosignal analysis of single-lead ECG telemetry for premature ventricular contractions and arrhythmia screening.">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=5.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        .ecg-canvas-container {
+            position: relative;
+            background: #050b14;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 1rem 0;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+        .ecg-grid-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: 
+                linear-gradient(to right, rgba(6, 182, 212, 0.08) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(6, 182, 212, 0.08) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+        }
+        .ecg-telemetry-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #67e8f9;
+            background: rgba(6, 182, 212, 0.12);
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+        .rhythm-status-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .rhythm-status-badge.status-optimal,
+        .rhythm-status-badge.status-normal {
+            background: rgba(16, 185, 129, 0.2);
+            color: #a7f3d0;
+        }
+        .rhythm-status-badge.status-borderline,
+        .rhythm-status-badge.status-abnormal {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fde68a;
+        }
+        .rhythm-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.4s ease;
+        }
+        .rhythm-bar-fill.status-optimal,
+        .rhythm-bar-fill.status-normal {
+            background: #10b981;
+        }
+        .rhythm-bar-fill.status-borderline,
+        .rhythm-bar-fill.status-abnormal {
+            background: #f59e0b;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Ambient Background -->
+    <div class="animated-bg">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+    </div>
+    <div class="bg-grid"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="nav-brand">
+            <div class="brand-icon-wrapper">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </div>
+            <span class="brand-gradient">MediNova</span>
+            <span class="brand-tag">Electrophysiology</span>
+        </a>
+
+        <div class="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="/features" class="nav-link">Diagnostic Suite</a>
+            <a href="/contact" class="nav-link">Emergency & Care</a>
+            <a href="/contact" class="nav-emergency-btn">
+                <span class="pulse-dot"></span>
+                <span>24/7 Helpline: 112 / 911</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="content-wrapper container">
+        <a href="/features" class="back-button no-print">
+            <span>←</span> Back to Diagnostic Suite
+        </a>
+
+        <!-- PRINT HEADER -->
+        <div class="print-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 style="font-size: 1.8rem; color: #0284c7; margin: 0;">MediNova Electrophysiology Lab</h1>
+                    <p style="font-size: 0.9rem; color: #64748b; margin: 0;">Computerized ECG Biosignal Arrhythmia Screening Report</p>
+                </div>
+                <div style="text-align: right; font-size: 0.85rem; color: #475569;">
+                    <p><strong>Report ID:</strong> {{ report_id or 'MN-ARRH-EVAL' }}</p>
+                    <p>PhysioNet MIT-BIH Validated Digital Filter Pipeline</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-header-area no-print">
+            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(6, 182, 212, 0.12); border: 1px solid rgba(6, 182, 212, 0.35); padding: 0.3rem 0.8rem; border-radius: 999px; margin-bottom: 0.8rem; font-size: 0.8rem; font-weight: 600; color: #06b6d4;">
+                <span>📈 Modality: Biosignal Telemetry (ECG Waveform)</span>
+                <span>•</span>
+                <span>Pan-Tompkins QRS & Morphological Feature Ensemble</span>
+            </div>
+            <h1>ECG Arrhythmia Biosignal Screening</h1>
+            <p class="section-subtitle">Real-time digital signal processing pipeline for single-lead ECG telemetry. Evaluates QRS morphology, premature ventricular complexes (PVC), R-R interval coupling, and autonomic heart rate variability (HRV).</p>
+        </div>
+
+        {% if error %}
+        <div class="critical-alert-card" style="margin-bottom: 2rem;">
+            <h3>Biosignal Processing Notice</h3>
+            <p>{{ error }}</p>
+        </div>
+        {% endif %}
+
+        {% if prediction %}
+        <!-- ================================================================= -->
+        <!-- RHYTHM STRIP & ARRHYTHMIA ASSESSMENT SUITE                         -->
+        <!-- ================================================================= -->
+        <div class="result-section">
+            <div class="{{ 'critical-alert-card' if is_positive else 'safe-alert-card' }}">
+                <div class="result-hero-row">
+                    <div class="result-badge-icon {{ 'danger' if is_positive else 'safe' }}">
+                        {{ '⚡' if is_positive else '💚' }}
+                    </div>
+                    <div class="result-hero-text">
+                        <div class="result-status-tag {{ 'danger' if is_positive else 'safe' }}">
+                            {{ insights.badge or ('ARRHYTHMIA DETECTED' if is_positive else 'NORMAL SINUS RHYTHM') }}
+                        </div>
+                        <h2>{{ insights.title }}</h2>
+                        <p><strong>Screening Classification:</strong> {{ prediction }}</p>
+                        <p style="margin-top: 0.4rem;">{{ insights.description }}</p>
+                    </div>
+                </div>
+
+                <!-- Report Verification Seal -->
+                {% if report_id %}
+                <div class="scanner-integrity-seal-bar" data-report-id="{{ report_id }}" style="margin-top: 1rem; padding: 0.6rem 1rem; background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 8px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="scanner-audit-badge" style="background: #0891b2; color: #ffffff; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 4px;">🔬 Biosignal Telemetry Verified</span>
+                        <span style="font-family: monospace; font-size: 0.85rem; color: var(--text);">Report ID: <strong>{{ report_id }}</strong></span>
+                    </div>
+                    <div>
+                        <a href="/verify-report/{{ report_id }}" target="_blank" style="color: #06b6d4; font-size: 0.8rem; text-decoration: underline; font-weight: 600;">Verify Cryptographic Seal ↗</a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Interactive Rhythm Strip Canvas -->
+                <div style="margin-top: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span style="font-weight: 600; font-size: 0.9rem; color: var(--text); display: flex; align-items: center; gap: 0.4rem;">
+                            <span>📊</span> Filtered Rhythm Strip (Lead II, Bandpass 0.5 – 40 Hz)
+                        </span>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <span class="ecg-telemetry-badge">Fs: 360 Hz</span>
+                            <span class="ecg-telemetry-badge">Red Markers: R-Peaks</span>
+                        </div>
+                    </div>
+                    <div class="ecg-canvas-container">
+                        <canvas id="ecgCanvas" width="900" height="200" style="width: 100%; height: 200px; display: block;"></canvas>
+                        <div class="ecg-grid-overlay"></div>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+                        <span>Time window: 0.0s – 5.0s</span>
+                        <span>Voltage scale: ±2.5 mV canonical range</span>
+                    </div>
+                </div>
+
+                <!-- Action Toolbar -->
+                <div class="result-action-toolbar no-print" style="margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.8rem;">
+                    <button type="button" onclick="window.print()" class="btn btn-primary">
+                        <span>📄 Download / Print ECG Screening Report (PDF)</span>
+                    </button>
+                    <a href="/contact?specialty=arrhythmia" class="btn btn-outline">
+                        <span>🏥 Find Electrophysiologist / Arrhythmia Center</span>
+                    </a>
+                </div>
+            </div>
+
+            {% if biomarker_gauges %}
+            <!-- Biomarker Gauges Panel -->
+            <div class="biomarker-gauges-panel glass-card" style="margin-top: 1.5rem; padding: 1.2rem;">
+                <div class="panel-header" style="margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 0.5rem;">
+                    <h3 style="font-size: 1.1rem; color: var(--text); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>💓</span> Electrophysiological Rhythm Metrics
+                    </h3>
+                </div>
+                <div class="gauges-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                    {% for g in biomarker_gauges %}
+                    <div class="gauge-card" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 0.9rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text);">{{ g.name }}</span>
+                            <span class="rhythm-status-badge status-{{ g.status }}">
+                                {{ g.status_label }}
+                            </span>
+                        </div>
+                        <div style="font-size: 1.3rem; font-weight: 700; color: var(--text); margin-bottom: 0.4rem;">
+                            {{ g.value }} <span style="font-size: 0.85rem; font-weight: 400; color: var(--text-muted);">{{ g.unit }}</span>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.1); height: 6px; border-radius: 3px; position: relative; margin-bottom: 0.4rem;">
+                            <div class="rhythm-bar-fill status-{{ g.status }}" data-fill="{{ g.position_pct }}"></div>
+                        </div>
+                        <div style="font-size: 0.72rem; color: var(--text-muted);">
+                            Normal Target: <strong>{{ g.reference_interval }}</strong>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Clinical Protocol Guidance -->
+            <div class="protocol-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                {% if insights.emergency_symptoms %}
+                <div class="protocol-card glass-card">
+                    <h3 style="color: #fda4af; font-size: 1rem; margin-top: 0; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>⚠️</span> Warning Signs Requiring Urgent ER Evaluation
+                    </h3>
+                    <ul style="font-size: 0.85rem; color: var(--text-muted); padding-left: 1.2rem; margin: 0.5rem 0 0 0;">
+                        {% for sym in insights.emergency_symptoms %}
+                        <li style="margin-bottom: 0.3rem;">{{ sym }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if insights.recommendations %}
+                <div class="protocol-card glass-card">
+                    <h3 style="color: #a7f3d0; font-size: 1rem; margin-top: 0; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>🩺</span> Recommended Cardiology Next Steps
+                    </h3>
+                    <ul style="font-size: 0.85rem; color: var(--text-muted); padding-left: 1.2rem; margin: 0.5rem 0 0 0;">
+                        {% for rec in insights.recommendations %}
+                        <li style="margin-bottom: 0.3rem;">{{ rec }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if insights.doctor_questions %}
+                <div class="protocol-card glass-card">
+                    <h3 style="color: #bae6fd; font-size: 1rem; margin-top: 0; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>❓</span> Questions for Your Electrophysiologist
+                    </h3>
+                    <ul style="font-size: 0.85rem; color: var(--text-muted); padding-left: 1.2rem; margin: 0.5rem 0 0 0;">
+                        {% for q in insights.doctor_questions %}
+                        <li style="margin-bottom: 0.3rem;">{{ q }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if insights.diet_dos %}
+                <div class="protocol-card glass-card">
+                    <h3 style="color: #fde68a; font-size: 1rem; margin-top: 0; display: flex; align-items: center; gap: 0.4rem;">
+                        <span>🥗</span> Autonomic Lifestyle & Electrolyte Guidance
+                    </h3>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">
+                        <strong style="color: #a7f3d0;">Beneficial:</strong>
+                        <ul style="padding-left: 1.2rem; margin: 0.2rem 0 0.6rem 0;">
+                            {% for d in insights.diet_dos %}
+                            <li>{{ d }}</li>
+                            {% endfor %}
+                        </ul>
+                        <strong style="color: #fda4af;">Precautions:</strong>
+                        <ul style="padding-left: 1.2rem; margin: 0.2rem 0 0 0;">
+                            {% for dt in insights.diet_donts %}
+                            <li>{{ dt }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if patient_summary %}
+            <!-- Summary Table -->
+            <div class="patient-data-table-wrapper" style="margin-top: 1.5rem; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 1.2rem;">
+                <h3 style="font-size: 1.1rem; color: var(--text); margin: 0 0 0.8rem 0;">ECG Recording Telemetry Details</h3>
+                <table class="patient-data-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <tbody>
+                        {% for item in patient_summary %}
+                        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04);">
+                            <td style="padding: 0.5rem; font-weight: 600; color: var(--text); width: 40%;">{{ item.label }}</td>
+                            <td style="padding: 0.5rem; color: #06b6d4;">{{ item.value }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- ================================================================= -->
+        <!-- ECG SIGNAL INPUT FORM & PRE-WARMED BENCHMARKS                    -->
+        <!-- ================================================================= -->
+        <div class="form-card rounded-2xl no-print" style="margin-top: 2rem;">
+            <div class="form-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div>
+                    <h2 class="form-section-title" style="margin: 0; font-size: 1.4rem;">Submit ECG Recording for Automated Screening</h2>
+                    <p class="form-section-subtitle" style="margin: 0.3rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);">
+                        Choose an authentic pre-loaded MIT-BIH PhysioNet benchmark recording, upload your own telemetry file (CSV/TXT), or paste numerical waveform samples.
+                    </p>
+                </div>
+                <span class="form-badge-count" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;">
+                    360 Hz Single-Lead MLII
+                </span>
+            </div>
+
+            <!-- Authentic Pre-loaded PhysioNet Demo Triggers -->
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 1.2rem; margin-bottom: 1.5rem;">
+                <div style="font-weight: 600; font-size: 0.9rem; color: var(--text); margin-bottom: 0.3rem;">
+                    🧪 One-Click Authentic PhysioNet MIT-BIH Clinical Benchmarks
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 1rem 0;">
+                    Instantly load and evaluate untouched patient telemetry records from the PhysioNet MIT-BIH Arrhythmia Database:
+                </p>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.8rem;">
+                    <form action="/arrhythmia" method="POST" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="demo_sample" value="normal_sinus">
+                        <button type="submit" class="btn btn-outline" style="border-color: #10b981; color: #a7f3d0;">
+                            <span>💚 Test Record 100: Normal Sinus Rhythm (10s)</span>
+                        </button>
+                    </form>
+                    <form action="/arrhythmia" method="POST" style="display: inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="demo_sample" value="pvc_arrhythmia">
+                        <button type="submit" class="btn btn-outline" style="border-color: #f43f5e; color: #fda4af;">
+                            <span>⚡ Test Record 119: Ventricular Ectopy / PVCs (10s)</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <form id="arrhythmiaForm" action="/arrhythmia" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+                    <!-- Option 1: File Upload -->
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px dashed rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 1.2rem;">
+                        <label for="ecg_file" style="display: block; font-weight: 600; font-size: 0.9rem; color: var(--text); margin-bottom: 0.4rem;">
+                            📁 Upload Telemetry Waveform File
+                        </label>
+                        <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.8rem 0;">
+                            Accepts CSV, TXT, or JSON files containing raw or mV voltage measurements.
+                        </p>
+                        <input type="file" id="ecg_file" name="ecg_file" accept=".csv,.txt,.json" style="font-size: 0.85rem; color: var(--text);">
+                    </div>
+
+                    <!-- Option 2: Direct Telemetry Samples -->
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 1.2rem;">
+                        <label for="signal_data" style="display: block; font-weight: 600; font-size: 0.9rem; color: var(--text); margin-bottom: 0.4rem;">
+                            📋 Or Paste Signal Voltages (CSV / Space-delimited)
+                        </label>
+                        <textarea id="signal_data" name="signal_data" rows="3" placeholder="-0.145, -0.145, -0.145, -0.145, -0.145, -0.120, -0.135, -0.100, 0.050, 0.350, 0.890..." style="width: 100%; font-family: monospace; font-size: 0.8rem; background: rgba(13, 21, 39, 0.8); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 6px; padding: 0.6rem; color: #ffffff;"></textarea>
+                    </div>
+                </div>
+
+                <!-- Submit Controls -->
+                <div style="margin-top: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                    <div style="font-size: 0.78rem; color: var(--text-muted); max-width: 550px;">
+                        <span>🔒 Validated Biosignal Screening: Digital Butterworth Bandpass (0.5 – 40 Hz), Pan-Tompkins Peak Localization, and Morphological Machine Learning.</span>
+                    </div>
+                    <button type="submit" id="submitBtn" class="btn btn-primary" style="min-width: 220px; height: 48px; font-weight: 700;">
+                        <span>Execute ECG Screening ➔</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer no-print" style="margin-top: 4rem; padding: 2rem 0; border-top: 1px solid rgba(255, 255, 255, 0.08); text-align: center; font-size: 0.8rem; color: var(--text-muted);">
+        <p>MediNova Clinical AI Platform • Electrophysiology Biosignal CDSS Module • Grounded in authentic PhysioNet MIT-BIH telemetry data.</p>
+    </footer>
+
+    {% if rhythm_strip_samples %}
+    <script id="ecgRawSamples" type="application/json">{{ rhythm_strip_samples | tojson | safe }}</script>
+    <script id="ecgPeakIndices" type="application/json">{{ r_peak_indices | tojson | safe }}</script>
+    <script>
+        (function() {
+            try {
+                var samplesEl = document.getElementById('ecgRawSamples');
+                var peaksEl = document.getElementById('ecgPeakIndices');
+                var rawSamples = samplesEl ? JSON.parse(samplesEl.textContent || '[]') : [];
+                var peakIndices = peaksEl ? JSON.parse(peaksEl.textContent || '[]') : [];
+                var canvas = document.getElementById('ecgCanvas');
+                if (!canvas || !rawSamples || rawSamples.length === 0) return;
+
+                var ctx = canvas.getContext('2d');
+                var width = canvas.width;
+                var height = canvas.height;
+
+                ctx.clearRect(0, 0, width, height);
+
+                // Find min and max for auto-scaling
+                var minVal = Math.min.apply(null, rawSamples);
+                var maxVal = Math.max.apply(null, rawSamples);
+                var range = Math.max(0.5, maxVal - minVal);
+                var padding = height * 0.15;
+                var drawHeight = height - (2 * padding);
+
+                function scaleY(val) {
+                    var norm = (val - minVal) / range;
+                    return height - (padding + norm * drawHeight);
+                }
+
+                // Draw Waveform Line
+                ctx.beginPath();
+                ctx.strokeStyle = '#06b6d4';
+                ctx.lineWidth = 1.8;
+                ctx.lineJoin = 'round';
+
+                var stepX = width / Math.max(1, rawSamples.length - 1);
+                for (var i = 0; i < rawSamples.length; i++) {
+                    var x = i * stepX;
+                    var y = scaleY(rawSamples[i]);
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+
+                // Draw Detected R-Peaks
+                if (peakIndices && peakIndices.length > 0) {
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1;
+
+                    for (var j = 0; j < peakIndices.length; j++) {
+                        var pIdx = peakIndices[j];
+                        if (pIdx < rawSamples.length) {
+                            var px = pIdx * stepX;
+                            var py = scaleY(rawSamples[pIdx]);
+                            
+                            ctx.beginPath();
+                            ctx.arc(px, py, 4, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.stroke();
+
+                            // Marker label
+                            ctx.font = '10px monospace';
+                            ctx.fillStyle = '#fda4af';
+                            ctx.fillText('R' + (j + 1), px - 7, py - 8);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Error drawing ECG canvas rhythm strip:', err);
+            }
+        })();
+    </script>
+    {% endif %}
+
+    <script>
+        document.querySelectorAll('[data-fill]').forEach(function(el) {
+            el.style.width = el.getAttribute('data-fill') + '%';
+        });
+
+        document.getElementById('arrhythmiaForm').addEventListener('submit', function() {
+            var btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span>Processing ECG Waveform...</span>';
+        });
+    </script>
+</body>
+</html>

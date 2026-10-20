@@ -81,6 +81,8 @@ from utils.diagnostic_predictor import (
     predict_kidney,
     predict_liver,
     predict_breast_cancer,
+    predict_thyroid,
+    predict_arrhythmia,
     generate_report_id
 )
 
@@ -125,6 +127,64 @@ if IS_PRODUCTION:
 app = Flask(__name__)
 app.secret_key = RAW_SECRET_KEY or DEFAULT_INSECURE_SECRET
 init_report_verifier_db()
+
+# Clinical Security & Session Hardening
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=IS_PRODUCTION,
+    PERMANENT_SESSION_LIFETIME=datetime.timedelta(hours=4)
+)
+
+def get_csrf_token():
+    """Generates or retrieves a cryptographically secure session-bound CSRF token."""
+    if '_csrf_token' not in session:
+        session['_csrf_token'] = secrets.token_hex(32)
+    return session['_csrf_token']
+
+@app.context_processor
+def inject_csrf_token():
+    return dict(csrf_token=get_csrf_token)
+
+@app.after_request
+def set_security_headers(response):
+    """Applies strict clinical defense-in-depth security headers."""
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+    
+    csp = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+        "img-src 'self' data: blob:; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none';"
+    )
+    response.headers['Content-Security-Policy'] = csp
+    if IS_PRODUCTION:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
+
+@app.before_request
+def validate_csrf():
+    """Validates session-bound CSRF token on state-changing requests."""
+    if request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
+        if app.config.get('TESTING'):
+            return None
+        exempt_prefixes = ('/api/scan-report', '/api/appointments', '/api/patient-images', '/api/chat', '/api/report-qr')
+        if any(request.path.startswith(p) for p in exempt_prefixes):
+            return None
+            
+        token = request.headers.get('X-CSRF-Token') or request.form.get('csrf_token')
+        expected_token = session.get('_csrf_token')
+        if expected_token and token:
+            if not secrets.compare_digest(token, expected_token):
+                if request.is_json or 'application/json' in request.headers.get('Accept', ''):
+                    return jsonify({'success': False, 'error': 'Security verification failed: Invalid CSRF token.'}), 403
+                return render_template('home.html', error="Security verification failed: Invalid CSRF token."), 403
 
 # Developer Master Gate Configuration (Strictly restricted to authorized developer email)
 AUTHORIZED_DEV_EMAIL = os.environ.get('AUTHORIZED_DEV_EMAIL', 'dharshankumarkumar3@gmail.com').strip().lower()
@@ -285,6 +345,22 @@ diabetes_model = load_pkl_model('diabetes_model.pkl')
 kidney_model = load_pkl_model('kidney_model.pkl')
 liver_model = load_pkl_model('liver_model.pkl')
 breast_cancer_model = load_pkl_model('breast_cancer_model.pkl')
+thyroid_model = load_pkl_model('thyroid_model.pkl')
+arrhythmia_model = load_pkl_model('ecg_arrhythmia_model.pkl')
+
+def get_thyroid_model():
+    """Lazy loader for thyroid dysfunction model."""
+    global thyroid_model
+    if thyroid_model is None:
+        thyroid_model = load_pkl_model('thyroid_model.pkl')
+    return thyroid_model
+
+def get_arrhythmia_model():
+    """Lazy loader for ECG arrhythmia model."""
+    global arrhythmia_model
+    if arrhythmia_model is None:
+        arrhythmia_model = load_pkl_model('ecg_arrhythmia_model.pkl')
+    return arrhythmia_model
 
 # Absolute filesystem paths to deep learning vision models
 pneumonia_model_path = os.path.abspath(os.path.join(MODELS_DIR, 'pneumonia_model_new.h5'))
@@ -903,6 +979,142 @@ DISEASE_INSIGHTS = {
             ],
             'recommended_tests': ['Routine Clinical Respiratory Auscultation as needed']
         }
+    },
+    'thyroid': {
+        'positive': {
+            'is_positive': True,
+            'title': 'Serum Thyroid Dysfunction Detected (Hypothyroidism Marker)',
+            'severity': 'Moderate Clinical Priority - Endocrine Follow-up Indicated',
+            'badge': 'ATTENTION REQUIRED',
+            'status_color': 'danger',
+            'description': 'Laboratory biochemical panel analysis identified elevated serum TSH accompanied by suppressed or borderline free thyroxine (FT4/FTI) parameters, characteristic of primary or subclinical hypothyroidism.',
+            'specialist': 'Board-Certified Endocrinologist & Thyroid Specialist',
+            'urgency_window': 'Schedule clinical endocrine consultation within 7 to 10 days.',
+            'risk_factors': [
+                'Elevated Serum Thyroid-Stimulating Hormone (TSH > 4.5 mIU/L)',
+                'Decreased Free Thyroxine Index (FTI < 85) or Total Thyroxine (TT4 < 60 nmol/L)',
+                'Subnormal serum Triiodothyronine (T3 < 1.2 nmol/L)',
+                'Prior history of thyroiditis, auto-antibodies, or thyroid surgery'
+            ],
+            'emergency_symptoms': [
+                'Severe hypothermia, profound lethargy, confusion, or periorbital edema (Myxedema crisis)',
+                'Severe bradycardia (heart rate < 45 bpm) or hemodynamic instability',
+                'Acute onset of hoarseness, dysphagia, or rapidly enlarging anterior neck mass'
+            ],
+            'recommendations': [
+                'Confirm results with a repeat venous Thyroid Panel (Serum TSH, Free T4, and Free T3)',
+                'Test serum Anti-Thyroid Peroxidase (Anti-TPO) and Anti-Thyroglobulin antibodies to screen for Hashimoto thyroiditis',
+                'Undergo high-resolution Thyroid Ultrasound if palpable goiter or nodules are present',
+                'Consult an endocrinologist regarding appropriate Levothyroxine replacement titration'
+            ],
+            'doctor_questions': [
+                'Does this panel reflect subclinical hypothyroidism or overt clinical thyroid failure?',
+                'Should an autoimmune antibody panel (Anti-TPO / Anti-TG) be performed?',
+                'Is daily Levothyroxine sodium therapy recommended at this stage?',
+                'At what frequency should TSH levels be rechecked to monitor therapeutic titration?'
+            ],
+            'diet_dos': [
+                'Incorporate adequate dietary iodine sources (iodized salt, sea vegetables, eggs, dairy)',
+                'Consume selenium-rich foods (Brazil nuts, sunflower seeds, fish) to support deiodinase enzyme conversion',
+                'Include zinc-rich proteins (lean poultry, pumpkin seeds, lentils) for thyroid hormone synthesis'
+            ],
+            'diet_donts': [
+                'Avoid consuming raw cruciferous vegetables (broccoli, cabbage, kale) in large quantities without cooking',
+                'Avoid taking iron or calcium supplements within 4 hours of thyroid medications',
+                'Limit ultra-processed soy isolates which can interfere with thyroid hormone uptake'
+            ],
+            'recommended_tests': ['Repeat Serum TSH', 'Free T4 (FT4)', 'Free T3 (FT3)', 'Anti-TPO Antibodies', 'High-Resolution Thyroid Ultrasound']
+        },
+        'negative': {
+            'is_positive': False,
+            'title': 'Serum Thyroid Analytes Within Physiological Limits',
+            'severity': 'Optimal Endocrine Profile - Euthyroid Status',
+            'badge': 'OPTIMAL HEALTH',
+            'status_color': 'safe',
+            'description': 'Serum Thyroid-Stimulating Hormone (TSH), Total Thyroxine (TT4), and Free Thyroxine Index (FTI) values fall within recognized standard clinical laboratory reference intervals.',
+            'specialist': 'Primary Care Physician / General Practitioner',
+            'urgency_window': 'Routine annual wellness laboratory screening.',
+            'tips': [
+                'Maintain a balanced, nutrient-dense diet supporting endocrine homeostasis',
+                'Stay active and get 7 to 8 hours of restorative sleep nightly to regulate hypothalamic-pituitary-thyroid axis',
+                'Perform routine preventive wellness screenings if constitutional fatigue develops'
+            ],
+            'diet_dos': [
+                'Balanced diet with adequate dietary iodine and micronutrients'
+            ],
+            'diet_donts': [
+                'Avoid excessive iodine megadoses from unverified kelp supplements'
+            ],
+            'recommended_tests': ['Routine Annual Wellness Chemistry Panel']
+        }
+    },
+    'arrhythmia': {
+        'positive': {
+            'is_positive': True,
+            'title': 'Cardiac Arrhythmia / Ectopic Ventricular Activity Detected',
+            'severity': 'High Clinical Priority - Cardiology Evaluation Advised',
+            'badge': 'ARRHYTHMIA DETECTED',
+            'status_color': 'danger',
+            'description': 'Computerized digital biosignal analysis of single-lead ECG telemetry detected Premature Ventricular Contractions (PVCs) or ectopic rhythm disturbance with abnormal R-R interval coupling and altered QRS morphology.',
+            'specialist': 'Cardiologist & Cardiac Electrophysiologist',
+            'urgency_window': 'Schedule formal diagnostic cardiology appointment within 24 to 48 hours.',
+            'risk_factors': [
+                'Premature ectopic ventricular depolarizations (PVCs)',
+                'Marked R-R interval variability and prematurity index',
+                'Altered QRS complex width and elevated morphological skewness',
+                'Underlying ischemic heart disease, electrolyte imbalance, or autonomic dysregulation'
+            ],
+            'emergency_symptoms': [
+                'Sustained palpitations accompanied by dizziness, near-syncope, or loss of consciousness',
+                'Acute onset of chest pressure, squeezing pain, or diaphoresis (cold sweats)',
+                'Severe sudden dyspnea (shortness of breath) or acute confusion'
+            ],
+            'recommendations': [
+                'Obtain a comprehensive standard clinical 12-lead Electrocardiogram (ECG)',
+                'Wear a 24-48 hour ambulatory continuous Holter ECG monitor to quantify total ectopic burden',
+                'Check basic serum metabolic panel for electrolyte anomalies (Serum Potassium, Magnesium, Calcium)',
+                'Undergo a 2D Doppler Echocardiogram to evaluate left ventricular ejection fraction and structural heart health'
+            ],
+            'doctor_questions': [
+                'What is my 24-hour total ventricular premature contraction burden percentage?',
+                'Is there evidence of structural or ischemic substrate predisposing to arrhythmia?',
+                'Are antiarrhythmic pharmacotherapies or catheter ablation indicated?',
+                'Should I avoid specific triggers like caffeine, decongestants, or strenuous athletic exertion?'
+            ],
+            'diet_dos': [
+                'Maintain optimal hydration and consume electrolyte-rich foods (bananas, spinach, sweet potatoes, coconut water)',
+                'Incorporate magnesium-rich foods (pumpkin seeds, almonds, dark leafy greens, whole grains)',
+                'Practice daily vagal tone optimization techniques (mindful breathing, meditation, stress management)'
+            ],
+            'diet_donts': [
+                'Avoid high doses of caffeine, pre-workout supplements, and energy drinks containing taurine/guarana',
+                'Strictly avoid recreational stimulants, excessive alcohol, and tobacco/nicotine products',
+                'Avoid OTC decongestants containing pseudoephedrine or phenylephrine without doctor approval'
+            ],
+            'recommended_tests': ['12-Lead Diagnostic ECG', '24-Hour Ambulatory Holter Monitor', '2D Doppler Echocardiogram', 'Serum Potassium & Magnesium Panel', 'Exercise Stress ECG']
+        },
+        'negative': {
+            'is_positive': False,
+            'title': 'Regular Sinus Rhythm - No Ectopic Beats Detected',
+            'severity': 'Normal Rhythm - Stable Physiological Electrophysiology',
+            'badge': 'NORMAL SINUS RHYTHM',
+            'status_color': 'safe',
+            'description': 'Surface ECG biosignal evaluation demonstrates regular P-QRS-T complexes, uniform R-R intervals, and absence of significant ectopic or premature ventricular depolarizations during the recorded window.',
+            'specialist': 'Primary Care Physician / Preventive Cardiologist',
+            'urgency_window': 'Routine annual cardiovascular checkup.',
+            'tips': [
+                'Continue regular cardiovascular aerobic conditioning (150 minutes weekly)',
+                'Manage lifestyle stress and maintain balanced electrolyte hydration',
+                'If symptoms such as sudden fluttering or dizzy spells occur, request an on-demand rhythm strip'
+            ],
+            'diet_dos': [
+                'Heart-healthy balanced diet with plenty of water and natural dietary electrolytes'
+            ],
+            'diet_donts': [
+                'Avoid excessive consumption of energy drinks or high-stimulant dietary supplements'
+            ],
+            'recommended_tests': ['Routine Annual Wellness Physical & Resting ECG Checkup']
+        }
     }
 }
 
@@ -1399,6 +1611,86 @@ def breast_cancer():
             return render_template('breast_cancer.html', error=str(e))
     return render_template('breast_cancer.html')
 
+# --- Thyroid Dysfunction ---
+@app.route('/thyroid', methods=['GET', 'POST'])
+def thyroid():
+    if request.method == 'POST':
+        is_json_req = bool(request.is_json or 'application/json' in request.headers.get('Accept', '') or (request.content_type and 'application/json' in request.content_type))
+        try:
+            req_data = request.get_json(silent=True) if request.is_json else None
+            if not req_data:
+                req_data = request.form.to_dict()
+
+            t_model = get_thyroid_model()
+            if t_model is None:
+                err_msg = "Thyroid diagnostic model is not loaded or missing from server."
+                if is_json_req:
+                    return jsonify({"success": False, "error": err_msg}), 503
+                return render_template('thyroid.html', error=err_msg)
+
+            res = predict_thyroid(req_data, t_model, DISEASE_INSIGHTS, is_scanner=False)
+
+            conf_val = res.get("confidence_score") or res.get("confidence") or res.get("percent")
+            risk_label = res.get("risk_label", res.get("prediction", "Evaluated"))
+            prob_val = res.get("probability")
+            feat_contribs = res.get("feature_contributions", res.get("top_risk_factors", []))
+            gauges = res.get("biomarker_gauges", [])
+
+            session['last_diagnosis'] = to_python_type({
+                'condition': 'Thyroid Dysfunction',
+                'route': '/thyroid',
+                'prediction': res['prediction'],
+                'risk_label': risk_label,
+                'is_positive': res['is_positive'],
+                'confidence_score': conf_val,
+                'percent': conf_val,
+                'probability': prob_val,
+                'patient_summary': res['patient_summary'],
+                'report_id': res['report_id'],
+                'specialist': res['insights'].get('specialist'),
+                'urgency_window': res['insights'].get('urgency_window'),
+                'recommended_tests': res['insights'].get('recommended_tests', []),
+                'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+
+            if is_json_req:
+                return jsonify({
+                    "success": True,
+                    "prediction": res['prediction'],
+                    "risk_label": risk_label,
+                    "is_positive": res['is_positive'],
+                    "confidence": conf_val,
+                    "confidence_score": conf_val,
+                    "percent": conf_val,
+                    "probability": prob_val,
+                    "patient_summary": res['patient_summary'],
+                    "report_id": res['report_id'],
+                    "biomarker_gauges": gauges,
+                    "top_risk_factors": feat_contribs,
+                    "feature_contributions": feat_contribs,
+                    "insights": res['insights']
+                }), 200
+
+            return render_template(
+                'thyroid.html',
+                prediction=res['prediction'],
+                insights=res['insights'],
+                is_positive=res['is_positive'],
+                confidence_score=conf_val,
+                patient_summary=res['patient_summary'],
+                report_id=res['report_id'],
+                biomarker_gauges=gauges,
+                top_risk_factors=feat_contribs
+            )
+        except Exception as e:
+            app.logger.error(f"[THYROID EVALUATION ERROR] {e}", exc_info=True)
+            if is_json_req:
+                return jsonify({"success": False, "error": str(e)}), 400
+            return render_template('thyroid.html', error=str(e))
+    return render_template('thyroid.html')
+
+
+
 # ============================================================================
 # SMART MEDICAL LAB REPORT SCANNER & VERIFICATION APIS
 # ============================================================================
@@ -1759,6 +2051,149 @@ def pneumonia():
         except Exception as e:
             return render_template('pneumonia.html', error=str(e))
     return render_template('pneumonia.html')
+
+# --- ECG Arrhythmia Biosignal Screening ---
+@app.route('/arrhythmia', methods=['GET', 'POST'])
+def arrhythmia():
+    if request.method == 'POST':
+        is_json_req = bool(request.is_json or 'application/json' in request.headers.get('Accept', '') or (request.content_type and 'application/json' in request.content_type))
+        try:
+            a_model = get_arrhythmia_model()
+            if a_model is None:
+                err_msg = "ECG Arrhythmia diagnostic model artifact is not loaded or missing from server."
+                if is_json_req:
+                    return jsonify({"success": False, "error": err_msg}), 503
+                return render_template('arrhythmia.html', error=err_msg)
+
+            signal_data = None
+            sample_rate = 360.0
+
+            demo_type = request.form.get('demo_sample') if not request.is_json else None
+            if not demo_type and request.is_json:
+                req_json = request.get_json(silent=True) or {}
+                demo_type = req_json.get('demo_sample')
+
+            if demo_type in ('normal_sinus', 'mitbih_100'):
+                demo_path = os.path.join(BASE_DIR, 'datasets', 'mitbih', '100.dat')
+                if os.path.exists(demo_path):
+                    import wfdb
+                    rec = wfdb.rdrecord(os.path.join(BASE_DIR, 'datasets', 'mitbih', '100'), sampto=3600)
+                    signal_data = rec.p_signal[:, 0].tolist()
+                    sample_rate = float(rec.fs)
+            elif demo_type in ('pvc_arrhythmia', 'mitbih_119'):
+                demo_path = os.path.join(BASE_DIR, 'datasets', 'mitbih', '119.dat')
+                if os.path.exists(demo_path):
+                    import wfdb
+                    rec = wfdb.rdrecord(os.path.join(BASE_DIR, 'datasets', 'mitbih', '119'), sampto=3600)
+                    signal_data = rec.p_signal[:, 0].tolist()
+                    sample_rate = float(rec.fs)
+
+            if signal_data is None:
+                if 'ecg_file' in request.files and request.files['ecg_file'].filename:
+                    f = request.files['ecg_file']
+                    content = f.read().decode('utf-8', errors='ignore')
+                    signal_data = content
+                elif request.is_json:
+                    req_json = request.get_json(silent=True) or {}
+                    signal_data = req_json.get('signal') or req_json.get('signal_data')
+                    sample_rate = float(req_json.get('sample_rate', 360.0))
+                else:
+                    signal_data = request.form.get('signal_data') or request.form.get('signal')
+
+            if not signal_data:
+                err_msg = "Please provide an ECG signal recording (upload CSV/TXT, paste telemetry data, or select a demo MIT-BIH recording)."
+                if is_json_req:
+                    return jsonify({"success": False, "error": err_msg}), 400
+                return render_template('arrhythmia.html', error=err_msg)
+
+            res = predict_arrhythmia(signal_data, a_model, DISEASE_INSIGHTS, sample_rate=sample_rate)
+
+            session['last_diagnosis'] = to_python_type({
+                'condition': 'ECG Arrhythmia',
+                'route': '/arrhythmia',
+                'prediction': res['prediction'],
+                'risk_label': res['risk_label'],
+                'is_positive': res['is_positive'],
+                'confidence_score': res['confidence_score'],
+                'patient_summary': res['patient_summary'],
+                'report_id': res['report_id'],
+                'specialist': res['insights'].get('specialist'),
+                'urgency_window': res['insights'].get('urgency_window'),
+                'recommended_tests': res['insights'].get('recommended_tests', []),
+                'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+
+            if is_json_req:
+                return jsonify({
+                    "success": True,
+                    "prediction": res['prediction'],
+                    "risk_label": res['risk_label'],
+                    "is_positive": res['is_positive'],
+                    "confidence_score": res['confidence_score'],
+                    "patient_summary": res['patient_summary'],
+                    "report_id": res['report_id'],
+                    "biomarker_gauges": res['biomarker_gauges'],
+                    "arrhythmic_beat_count": res['arrhythmic_beat_count'],
+                    "total_beats": res['total_beats'],
+                    "rhythm_strip_samples": res['rhythm_strip_samples'],
+                    "r_peak_indices": res['r_peak_indices'],
+                    "top_risk_factors": res['top_risk_factors'],
+                    "insights": res['insights']
+                }), 200
+
+            return render_template(
+                'arrhythmia.html',
+                prediction=res['prediction'],
+                insights=res['insights'],
+                is_positive=res['is_positive'],
+                confidence_score=res['confidence_score'],
+                patient_summary=res['patient_summary'],
+                report_id=res['report_id'],
+                biomarker_gauges=res['biomarker_gauges'],
+                arrhythmic_beat_count=res['arrhythmic_beat_count'],
+                total_beats=res['total_beats'],
+                rhythm_strip_samples=json.dumps(res['rhythm_strip_samples']),
+                r_peak_indices=json.dumps(res['r_peak_indices']),
+                top_risk_factors=res['top_risk_factors']
+            )
+        except Exception as e:
+            app.logger.error(f"[ARRHYTHMIA EVALUATION ERROR] {e}", exc_info=True)
+            if is_json_req:
+                return jsonify({"success": False, "error": str(e)}), 400
+            return render_template('arrhythmia.html', error=str(e))
+    return render_template('arrhythmia.html')
+
+# --- Model Governance, Monitoring, & Research Gating Endpoints ---
+@app.route('/api/catalog', methods=['GET'])
+def api_catalog():
+    """Returns verified model catalog with real provenance and evaluation benchmarks."""
+    from utils.model_registry import get_catalog_summary
+    return jsonify(get_catalog_summary()), 200
+
+@app.route('/api/monitoring', methods=['GET'])
+def api_monitoring():
+    """Returns runtime telemetry, latency, error rates, and system resource metrics."""
+    from utils.model_monitoring import get_system_telemetry
+    return jsonify(get_system_telemetry()), 200
+
+@app.route('/diabetic_retinopathy', methods=['GET', 'POST'])
+@app.route('/melanoma', methods=['GET', 'POST'])
+@app.route('/tuberculosis', methods=['GET', 'POST'])
+@app.route('/anemia', methods=['GET', 'POST'])
+def roadmap_gated_modules():
+    """Governed research-preview gate: real inference is disabled until clinical validation."""
+    module_name = request.path.strip('/')
+    if request.method == 'POST' or request.is_json:
+        return jsonify({
+            "success": False,
+            "status": "research_preview",
+            "active": False,
+            "condition": module_name,
+            "error": f"The '{module_name}' module is currently under governed clinical research. Active screening inference is restricted until dataset acquisition and clinical protocol validation are completed."
+        }), 403
+    return render_template('home.html', research_preview_notice=f"Module '{module_name}' is currently in governed research roadmap. Clinical inference is disabled.")
+
+
 
 
 # ============================================================================

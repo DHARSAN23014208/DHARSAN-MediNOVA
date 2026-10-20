@@ -238,6 +238,55 @@ DISEASE_SPECIALTY_MAP: Dict[str, Dict[str, Any]] = {
         "telemedicine_eligible": False,
         "telemedicine_notes": "Malaria requires confirmatory peripheral blood smear/rapid antigen testing and immediate administration of oral or IV antimalarial therapy. In-person visit is mandatory."
     },
+    "thyroid": {
+        "id": "thyroid",
+        "canonical_name": "Thyroid Dysfunction / Endocrine Disorders",
+        "primary_specialty": "Endocrinology / Thyroid Center",
+        "accepted_specialties": [
+            "Endocrinology",
+            "Thyroid Center",
+            "Endocrine Surgery",
+            "Metabolic Disorders",
+            "Internal Medicine"
+        ],
+        "specialist_types": ["Endocrinologist", "Thyroid Specialist", "Endocrine Surgeon"],
+        "relevant_departments": [
+            "Department of Endocrinology",
+            "Thyroid & Endocrine Surgery Clinic",
+            "Comprehensive Metabolic Center"
+        ],
+        "search_keywords": ["thyroid", "endocrinologist", "endocrinology", "hormone", "endocrine"],
+        "disallow_general_medicine_fallback": False,
+        "requires_urgent_assessment": False,
+        "urgent_warning": "Severe thyroid crisis (myxedema coma or thyroid storm with high fever, delirium, tachycardia) requires immediate emergency room resuscitation.",
+        "telemedicine_eligible": True,
+        "telemedicine_notes": "Thyroid hormone level monitoring (TSH, FT4, T3) and dosage adjustments are highly suitable for telemedicine consultations."
+    },
+    "arrhythmia": {
+        "id": "arrhythmia",
+        "canonical_name": "Cardiac Arrhythmia / Rhythm Disorders",
+        "primary_specialty": "Cardiology / Electrophysiology (EP)",
+        "accepted_specialties": [
+            "Cardiology",
+            "Cardiac Electrophysiology",
+            "Electrophysiology",
+            "Arrhythmia Clinic",
+            "Cardiovascular Care Unit (CCU)",
+            "Heart Failure Care"
+        ],
+        "specialist_types": ["Cardiologist", "Cardiac Electrophysiologist", "Arrhythmia Specialist"],
+        "relevant_departments": [
+            "Department of Cardiac Electrophysiology",
+            "Arrhythmia & Pacemaker Clinic",
+            "Cardiovascular Intensive Care Unit"
+        ],
+        "search_keywords": ["arrhythmia", "cardiology", "electrophysiology", "ep clinic", "pacemaker", "heart rhythm"],
+        "disallow_general_medicine_fallback": True,
+        "requires_urgent_assessment": True,
+        "urgent_warning": "Sustained rapid heart rate (>150 bpm), syncope/fainting, crushing chest pain, or severe shortness of breath requires IMMEDIATE emergency medical care.",
+        "telemedicine_eligible": True,
+        "telemedicine_notes": "Holter monitor reviews, ECG rhythm strip second opinions, and stable medication checks are suitable for telemedicine."
+    },
     "general": {
         "id": "general",
         "canonical_name": "Internal Medicine & General Care",
@@ -296,6 +345,10 @@ def get_specialty_mapping(condition_id: Optional[str]) -> Dict[str, Any]:
         return DISEASE_SPECIALTY_MAP["cancer"]
     if c_lower in ("infectious", "tropical", "infection", "infectious_disease"):
         return DISEASE_SPECIALTY_MAP["malaria"]
+    if c_lower in ("thyroid", "thyroid_dysfunction", "hypothyroidism", "hyperthyroidism", "goitre"):
+        return DISEASE_SPECIALTY_MAP["thyroid"]
+    if c_lower in ("arrhythmia", "cardiac_arrhythmia", "ecg", "ekg", "palpitations", "electrophysiology"):
+        return DISEASE_SPECIALTY_MAP["arrhythmia"]
     if c_lower in ("general", "default", "internal_medicine", "general_physician"):
         return DISEASE_SPECIALTY_MAP["general"]
 

@@ -86,55 +86,60 @@
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-content">
+            {% if research_preview_notice %}
+            <div class="critical-alert-card" style="margin-bottom: 1.5rem; text-align: left;">
+                <h4 style="margin: 0 0 0.3rem 0; color: #fda4af;">Governed Research Protocol Notice</h4>
+                <p style="margin: 0; font-size: 0.85rem;">{{ research_preview_notice }}</p>
+            </div>
+            {% endif %}
+
             <div class="hero-badge">
                 <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
                     <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 8px #10b981;"></span>
                     Clinical AI Intelligence System
                 </span>
                 <span style="opacity: 0.5;">|</span>
-                <span>7 Multi-Parametric Diagnostic Engines</span>
+                <span>9 Validated Screening Engines + 4 Governed Roadmaps</span>
             </div>
             
             <h1 class="hero-title">
-                Intelligent Health Diagnostics <br>
-                <span class="gradient-text">Powered by Advanced AI</span>
+                Clinical Health Diagnostics <br>
+                <span class="gradient-text">Powered by Evidence-Based AI</span>
             </h1>
 
             <p class="hero-description">
-                MediNova bridges clinical parameters and computer vision with ensemble machine learning 
-                to deliver instant preliminary health assessments, automated emergency triage guidance, 
-                and comprehensive downloadable clinical reports across 7 vital conditions.
+                MediNova combines multi-analyte laboratory biochemistry, digital ECG biosignal telemetry, and deep learning medical vision with validated machine learning architectures to deliver rapid preliminary screening, emergency triage guidance, and cryptographic report verification.
             </p>
 
             <div class="hero-buttons">
                 <a href="/features" class="btn btn-primary btn-large">
-                    <span>Explore Diagnostic Suite</span>
+                    <span>Clinical Workstation Suite</span>
                     <span style="font-size: 1.2rem;">→</span>
                 </a>
                 <a href="#about" class="btn btn-outline btn-large">
-                    <span>Clinical Capabilities</span>
+                    <span>Validated Capabilities</span>
                 </a>
             </div>
 
             <div class="hero-stats">
                 <div class="stat-item">
-                    <span class="stat-number">7</span>
-                    <span class="stat-label">Diagnostic Models</span>
+                    <span class="stat-number">9</span>
+                    <span class="stat-label">Validated Modules</span>
                 </div>
                 <div class="stat-divider"></div>
                 <div class="stat-item">
-                    <span class="stat-number">95%+</span>
-                    <span class="stat-label">Model Accuracy</span>
+                    <span class="stat-number">100%</span>
+                    <span class="stat-label">Verified Artifacts</span>
                 </div>
                 <div class="stat-divider"></div>
                 <div class="stat-item">
-                    <span class="stat-number">&lt; 0.5s</span>
-                    <span class="stat-label">Instant Inference</span>
+                    <span class="stat-number">&lt; 100ms</span>
+                    <span class="stat-label">Tabular / Signal Latency</span>
                 </div>
                 <div class="stat-divider"></div>
                 <div class="stat-item">
-                    <span class="stat-number">PDF</span>
-                    <span class="stat-label">Printable Lab Reports</span>
+                    <span class="stat-number">HMAC</span>
+                    <span class="stat-label">Cryptographic Reports</span>
                 </div>
             </div>
         </div>
@@ -143,58 +148,142 @@
     <!-- Features Overview Section -->
     <section id="about" class="container" style="padding-bottom: 6rem;">
         <div class="section-header">
-            <h2 class="section-title">Comprehensive Diagnostic Capabilities</h2>
-            <p class="section-subtitle">Trained on authoritative international biomedical datasets to deliver precision early detection</p>
+            <h2 class="section-title">Validated Clinical Screening Engines</h2>
+            <p class="section-subtitle">Trained and benchmarked on verified biomedical cohorts with patient-level split separation</p>
         </div>
 
         <div class="features-grid">
+            <!-- 1. Heart Disease -->
             <div class="feature-card glass-card">
                 <div class="feature-icon-wrapper">❤️</div>
                 <h3>Cardiovascular Health</h3>
-                <p>Multi-parametric cardiac risk stratification analyzing resting BP, serum cholesterol, exercise angina, and fluoroscopy vessels.</p>
-                <a href="/heart" class="feature-badge">Random Forest Ensemble →</a>
+                <p>Multi-parametric cardiac risk stratification analyzing resting BP, serum cholesterol, exercise-induced ST depression, and fluoroscopy vessels.</p>
+                <a href="/heart" class="feature-badge">Random Forest • Cleveland Cohort →</a>
             </div>
 
+            <!-- 2. Diabetes -->
             <div class="feature-card glass-card">
                 <div class="feature-icon-wrapper">🩸</div>
                 <h3>Diabetes & Glycemic Profile</h3>
-                <p>Metabolic screening evaluating HbA1c glycosylation, fasting blood glucose, BMI, and hypertension history.</p>
-                <a href="/diabetes" class="feature-badge">XGBoost Classifier →</a>
+                <p>Metabolic screening evaluating HbA1c glycosylation, plasma fasting glucose, body mass index (BMI), and vascular history.</p>
+                <a href="/diabetes" class="feature-badge">XGBoost Classifier • Pima Cohort →</a>
             </div>
 
+            <!-- 3. Kidney -->
             <div class="feature-card glass-card">
                 <div class="feature-icon-wrapper">🧪</div>
                 <h3>Chronic Kidney Panel</h3>
-                <p>Comprehensive 24-parameter renal panel examining urinary albumin, specific gravity, serum creatinine, and electrolytes.</p>
-                <a href="/kidney" class="feature-badge">98% Accuracy Model →</a>
+                <p>Comprehensive 24-parameter renal panel examining urinary albumin, specific gravity, serum creatinine, urea, and electrolyte balance.</p>
+                <a href="/kidney" class="feature-badge">Random Forest • CKD Cohort →</a>
             </div>
 
+            <!-- 4. Liver -->
             <div class="feature-card glass-card">
                 <div class="feature-icon-wrapper">🧬</div>
                 <h3>Hepatic Function Assessment</h3>
-                <p>Liver disease probability screening utilizing bilirubin levels, transaminases (ALT/AST), and albumin-globulin ratios.</p>
-                <a href="/liver" class="feature-badge">Hepatic Function Classifier →</a>
+                <p>Liver disease probability screening utilizing total bilirubin, transaminases (ALT/AST), and albumin-globulin ratio.</p>
+                <a href="/liver" class="feature-badge">Random Forest • ILPD Cohort →</a>
             </div>
 
+            <!-- 5. Breast Cancer -->
             <div class="feature-card glass-card">
                 <div class="feature-icon-wrapper">🔬</div>
                 <h3>Breast Oncology Screening</h3>
                 <p>Cellular morphometric nuclear analysis distinguishing benign tissues from malignant neoplasms with high sensitivity.</p>
-                <a href="/breast_cancer" class="feature-badge">Wisconsin Diagnostic Model →</a>
+                <a href="/breast_cancer" class="feature-badge">Random Forest • Wisconsin Cohort →</a>
             </div>
 
+            <!-- 6. Malaria -->
             <div class="feature-card glass-card">
                 <div class="feature-icon-wrapper">🧫</div>
-                <h3>Malaria Smear Vision</h3>
-                <p>Deep Convolutional Neural Network (CNN) scanning microscopic Giemsa-stained thin blood smears for parasitized red cells.</p>
-                <a href="/malaria" class="feature-badge">Deep CNN Vision →</a>
+                <h3>Malaria Smear Microscopy</h3>
+                <p>Deep Convolutional Neural Network (CNN) scanning microscopic Giemsa-stained thin blood smears for intracellular Plasmodium parasites.</p>
+                <a href="/malaria" class="feature-badge">Deep Vision CNN • NIH Smears →</a>
             </div>
 
+            <!-- 7. Pneumonia -->
             <div class="feature-card glass-card">
                 <div class="feature-icon-wrapper">🫁</div>
                 <h3>Pneumonia Radiography</h3>
-                <p>Computer vision deep neural network identifying pulmonary opacification and alveolar consolidation in chest X-rays.</p>
-                <a href="/pneumonia" class="feature-badge">Deep Neural Network →</a>
+                <p>Computer vision deep neural network identifying pulmonary consolidation, alveolar infiltrates, and opacification in chest X-rays.</p>
+                <a href="/pneumonia" class="feature-badge">Deep CNN • Chest X-Ray Cohort →</a>
+            </div>
+
+            <!-- 8. Thyroid Dysfunction (NEW) -->
+            <div class="feature-card glass-card" style="border-color: rgba(6, 182, 212, 0.4);">
+                <div class="feature-icon-wrapper">🦋</div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem;">
+                    <h3 style="margin: 0;">Thyroid Dysfunction</h3>
+                    <span style="font-size: 0.7rem; font-weight: 700; background: #0891b2; color: #fff; padding: 2px 6px; border-radius: 4px;">ACTIVE CDSS</span>
+                </div>
+                <p>Multi-analyte laboratory screening evaluating Serum TSH, Total T4, Free Thyroxine Index (FTI), and Triiodothyronine (T3) for hypothyroidism detection.</p>
+                <a href="/thyroid" class="feature-badge" style="background: rgba(6, 182, 212, 0.2); border-color: #06b6d4;">Calibrated Random Forest • UCI Garavan →</a>
+            </div>
+
+            <!-- 9. ECG Arrhythmia (NEW) -->
+            <div class="feature-card glass-card" style="border-color: rgba(6, 182, 212, 0.4);">
+                <div class="feature-icon-wrapper">⚡</div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem;">
+                    <h3 style="margin: 0;">ECG Arrhythmia Telemetry</h3>
+                    <span style="font-size: 0.7rem; font-weight: 700; background: #0891b2; color: #fff; padding: 2px 6px; border-radius: 4px;">ACTIVE CDSS</span>
+                </div>
+                <p>Digital biosignal Pan-Tompkins QRS detection and morphological beat classifier for Premature Ventricular Contractions (PVCs) and rhythm irregularities.</p>
+                <a href="/arrhythmia" class="feature-badge" style="background: rgba(6, 182, 212, 0.2); border-color: #06b6d4;">Signal Ensemble • PhysioNet MIT-BIH →</a>
+            </div>
+        </div>
+
+        <!-- Governed Research Roadmap Section -->
+        <div style="margin-top: 4rem;">
+            <div class="section-header" style="margin-bottom: 2rem;">
+                <div style="display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); padding: 0.3rem 0.8rem; border-radius: 999px; margin-bottom: 0.5rem; font-size: 0.78rem; font-weight: 700; color: #f59e0b;">
+                    <span>🔒 Governed Clinical Research Pipeline</span>
+                </div>
+                <h3 style="font-size: 1.6rem; color: var(--text); margin: 0;">Roadmap Candidates (Inference Gated)</h3>
+                <p class="section-subtitle" style="max-width: 700px; margin: 0.4rem auto 0 auto;">
+                    In accordance with clinical AI governance standards, inference remains strictly disabled until data acquisition, patient-level verification, and multi-metric evaluations are completed.
+                </p>
+            </div>
+
+            <div class="features-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+                <div class="feature-card glass-card" style="opacity: 0.85; border: 1px dashed rgba(255, 255, 255, 0.15);">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">👁️</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <h4 style="margin: 0; color: var(--text);">Diabetic Retinopathy</h4>
+                        <span style="font-size: 0.68rem; font-weight: 700; background: rgba(245, 158, 11, 0.2); color: #fde68a; padding: 2px 6px; border-radius: 4px;">RESEARCH PREVIEW</span>
+                    </div>
+                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.8rem;">Retinal fundus photography deep learning classification for early microaneurysms and hard exudates.</p>
+                    <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Candidate: EyePACS / APTOS Cohort • Gated</span>
+                </div>
+
+                <div class="feature-card glass-card" style="opacity: 0.85; border: 1px dashed rgba(255, 255, 255, 0.15);">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔎</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <h4 style="margin: 0; color: var(--text);">Melanoma Triage</h4>
+                        <span style="font-size: 0.68rem; font-weight: 700; background: rgba(245, 158, 11, 0.2); color: #fde68a; padding: 2px 6px; border-radius: 4px;">RESEARCH PREVIEW</span>
+                    </div>
+                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.8rem;">Dermoscopic imaging analysis for asymmetric border irregularity, color variegation, and melanocytic triage.</p>
+                    <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Candidate: ISIC Archive • Gated</span>
+                </div>
+
+                <div class="feature-card glass-card" style="opacity: 0.85; border: 1px dashed rgba(255, 255, 255, 0.15);">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🫁</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <h4 style="margin: 0; color: var(--text);">Pulmonary Tuberculosis</h4>
+                        <span style="font-size: 0.68rem; font-weight: 700; background: rgba(245, 158, 11, 0.2); color: #fde68a; padding: 2px 6px; border-radius: 4px;">RESEARCH PREVIEW</span>
+                    </div>
+                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.8rem;">Cavitary pulmonary lesion and apical infiltration screening distinguishing TB from acute bacterial pneumonia.</p>
+                    <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Candidate: Montgomery / Shenzhen • Gated</span>
+                </div>
+
+                <div class="feature-card glass-card" style="opacity: 0.85; border: 1px dashed rgba(255, 255, 255, 0.15);">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🩸</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <h4 style="margin: 0; color: var(--text);">Hematologic Anemia</h4>
+                        <span style="font-size: 0.68rem; font-weight: 700; background: rgba(245, 158, 11, 0.2); color: #fde68a; padding: 2px 6px; border-radius: 4px;">RESEARCH PREVIEW</span>
+                    </div>
+                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.8rem;">Complete blood count (CBC) hematology profiling evaluating hemoglobin, MCV, MCH, and red cell distribution.</p>
+                    <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Candidate: MIMIC-IV Clinical CBC • Gated</span>
+                </div>
             </div>
         </div>
     </section>
