@@ -1,0 +1,121 @@
+<!-- ========================================================================= -->
+<!-- MEDINOVA EKON-INSPIRED FLOATING ISLAND NAVIGATION DOCK                     -->
+<!-- 3-Zone Architecture: Left Brand | Center Dock | Right Theme & CTA          -->
+<!-- ========================================================================= -->
+<nav class="navbar mn-nav-wrap" role="navigation" aria-label="Main Navigation">
+    <!-- Zone 1: Left Brand Anchor -->
+    <div class="navbar-left">
+        <a href="/" class="nav-brand mn-brand" aria-label="MediNova Clinical AI Home">
+            <div class="brand-icon-wrapper mn-brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" style="width: 17px; height: 17px; fill: currentColor;">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </div>
+            <span class="brand-gradient">MediNova</span>
+            <span class="brand-tag">Clinical AI</span>
+        </a>
+    </div>
+
+    <!-- Zone 2: Center Floating Dock (Single-Row Desktop Navigation) -->
+    <div class="navbar-center mn-center-dock">
+        <a href="/" class="nav-link {% if active_page == 'home' %}active{% endif %}">Home</a>
+        <a href="/features" class="nav-link {% if active_page == 'features' %}active{% endif %}">Disease Prediction</a>
+        <a href="/features#scanner" class="nav-link">Lab Report Scanner</a>
+        <a href="/contact" class="nav-link {% if active_page == 'contact' %}active{% endif %}">Find Specialist Hospitals</a>
+        <a href="/contact#appointments" class="nav-link">Appointments</a>
+        <a href="/#how-it-works" class="nav-link">How It Works</a>
+    </div>
+
+    <!-- Zone 3: Right Controls & Actions -->
+    <div class="navbar-right mn-right-actions">
+        <!-- Ekon UI Kit Theme Controls -->
+        <div class="mn-theme-group" style="display: inline-flex; align-items: center; gap: 6px;">
+            <button id="themeToggleBtn" class="mn-theme-toggle theme-toggle-btn" type="button" data-theme-toggle aria-label="Switch theme" title="Switch theme">
+                <span data-theme-icon aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="width: 18px; height: 18px; display: block;"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                </span>
+                <span class="theme-mode-text" style="display: none;">Mode</span>
+            </button>
+            <button type="button" class="mn-button mn-button--small mn-theme-system-btn" data-theme-system hidden title="Restore system OS theme">
+                Auto
+            </button>
+        </div>
+
+        <!-- Start Diagnosis CTA Button -->
+        <a href="/features" class="nav-cta-btn mn-button mn-button--primary mn-button--small">
+            <span>Start Diagnosis</span>
+            <span style="font-size: 1rem; line-height: 1;" aria-hidden="true">→</span>
+        </a>
+    </div>
+
+    <!-- Mobile Hamburger Toggle Button (Active below 1140px) -->
+    <button id="navToggleBtn" class="nav-toggle-btn mn-menu-toggle" type="button" data-mobile-menu-toggle aria-controls="mobileNavDrawer" aria-label="Toggle Navigation Menu" aria-expanded="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+</nav>
+
+<!-- Accessible Mobile Navigation Drawer (Full-Featured Modal / Card) -->
+<div id="mobileNavDrawer" class="mobile-nav-drawer mn-mobile-drawer" role="menu" data-mobile-menu aria-label="Mobile Navigation">
+    <a href="/" class="nav-link {% if active_page == 'home' %}active{% endif %}" role="menuitem">Home</a>
+    <a href="/features" class="nav-link {% if active_page == 'features' %}active{% endif %}" role="menuitem">Disease Prediction</a>
+    <a href="/features#scanner" class="nav-link" role="menuitem">Lab Report Scanner</a>
+    <a href="/contact" class="nav-link {% if active_page == 'contact' %}active{% endif %}" role="menuitem">Find Specialist Hospitals</a>
+    <a href="/contact#appointments" class="nav-link" role="menuitem">Appointments</a>
+    <a href="/#how-it-works" class="nav-link" role="menuitem">How It Works</a>
+    <div style="display: flex; gap: 10px; align-items: center; margin-top: 0.5rem;">
+        <button class="mn-theme-toggle theme-toggle-btn" type="button" data-theme-toggle aria-label="Switch theme" title="Switch theme" style="flex: 1; border-radius: 999px; height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+            <span data-theme-icon aria-hidden="true"></span>
+            <span style="font-size: 0.82rem; font-weight: 600;">Switch Theme</span>
+        </button>
+        <button type="button" class="mn-button mn-button--small mn-theme-system-btn" data-theme-system hidden style="flex: 1; justify-content: center;">
+            Use Device Theme
+        </button>
+    </div>
+    <a href="/features" class="btn-ekon-primary mn-button mn-button--primary" style="justify-content: center; margin-top: 0.5rem;" role="menuitem">
+        <span>Start Diagnosis →</span>
+    </a>
+</div>
+
+<script>
+    (function() {
+        var toggle = document.getElementById('navToggleBtn');
+        var drawer = document.getElementById('mobileNavDrawer');
+        if (toggle && drawer) {
+            toggle.addEventListener('click', function() {
+                var isOpen = drawer.classList.contains('open') || drawer.classList.contains('is-open');
+                if (isOpen) {
+                    drawer.classList.remove('open');
+                    drawer.classList.remove('is-open');
+                    toggle.setAttribute('aria-expanded', 'false');
+                } else {
+                    drawer.classList.add('open');
+                    drawer.classList.add('is-open');
+                    toggle.setAttribute('aria-expanded', 'true');
+                }
+            });
+
+            // Close when pressing Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && (drawer.classList.contains('open') || drawer.classList.contains('is-open'))) {
+                    drawer.classList.remove('open');
+                    drawer.classList.remove('is-open');
+                    toggle.setAttribute('aria-expanded', 'false');
+                    toggle.focus();
+                }
+            });
+
+            // Close when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!drawer.contains(e.target) && !toggle.contains(e.target) && (drawer.classList.contains('open') || drawer.classList.contains('is-open'))) {
+                    drawer.classList.remove('open');
+                    drawer.classList.remove('is-open');
+                    toggle.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+    })();
+</script>

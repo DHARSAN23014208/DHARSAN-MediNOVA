@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clinical Diagnostic Suite - MediNova AI</title>
+    <meta name="description" content="AI Clinical Diagnostic Workstation: Evidence-based clinical screening modules spanning biochemical vitals, ECG biosignal telemetry, and deep vision neural networks.">
+
     <!-- Immediate Theme Application (Zero Flash) -->
     <script>
         (function() {
@@ -22,545 +24,553 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=5.0">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Ekon Typography (Switzer + Inter) -->
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700,800&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=6.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/medinova-ekon.css') }}?v=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/report-scanner.css') }}?v=1.0">
+
+    <style>
+        .features-hero-wrap {
+            padding-top: calc(85px + 3.5rem);
+            padding-bottom: 2rem;
+        }
+
+        .features-search-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-glass);
+            border-radius: 9999px;
+            padding: 10px 20px;
+            max-width: 650px;
+            margin: 1.5rem 0 2rem 0;
+            transition: all 0.25s ease;
+        }
+
+        .features-search-bar:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18);
+            background: var(--bg-surface);
+        }
+
+        .features-search-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-heading);
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+
+        .features-search-input::placeholder {
+            color: var(--text-subtle);
+        }
+
+        /* Clinical Research Protocol Modal Dialog */
+        .clinical-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .clinical-modal-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-glass);
+            border-radius: 24px;
+            max-width: 580px;
+            width: 100%;
+            padding: 2.2rem;
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7);
+            position: relative;
+        }
+
+        [data-theme="light"] .clinical-modal-card {
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.18);
+        }
+
+        .clinical-modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-close-btn {
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-glass);
+            color: var(--text-heading);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            line-height: 1;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close-btn:hover {
+            background: var(--border-glass-hover);
+            transform: scale(1.05);
+        }
+
+        .clinical-modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.97); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .filter-pill-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+
+        .filter-pill {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-glass);
+            border-radius: 9999px;
+            padding: 8px 18px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-pill:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .filter-pill.active {
+            background: var(--btn-primary-bg);
+            color: var(--btn-primary-text);
+            border-color: var(--btn-primary-border);
+            font-weight: 700;
+        }
+
+        .catalog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 24px;
+        }
+
+        @media (max-width: 600px) {
+            .catalog-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <!-- Ambient Background -->
-    <div class="animated-bg">
-        <div class="gradient-orb orb-1"></div>
-        <div class="gradient-orb orb-2"></div>
-    </div>
-    <div class="bg-grid"></div>
+    <div class="mn-progress" data-scroll-progress></div>
 
-    <!-- Navigation -->
-    <nav class="navbar">
-        <a href="/" class="nav-brand">
-            <div class="brand-icon-wrapper">
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-            </div>
-            <span class="brand-gradient">MediNova</span>
-            <span class="brand-tag">Diagnostic Suite</span>
-        </a>
+    <!-- Reusable Ekon Floating Island Navbar -->
+    {% set active_page = 'features' %}
+    {% include 'components/ekon_navbar.html' %}
 
-        <div class="nav-links">
-            <a href="/" class="nav-link">Home</a>
-            <a href="/features" class="nav-link active">Diagnostic Suite</a>
-            <a href="/contact" class="nav-link">Emergency & Care</a>
-            <a href="/contact" class="nav-emergency-btn">
-                <span class="pulse-dot"></span>
-                <span>24/7 Helpline: 112 / 911</span>
-            </a>
-        </div>
-    </nav>
-
-    <div class="content-wrapper container">
-        <div class="section-header">
-            <h1 class="section-title">AI Clinical Diagnostic Workstation</h1>
-            <p class="section-subtitle">Select an evidence-based clinical screening module below to run multi-parameter biochemical, biosignal, or imaging analysis with automated emergency triage and printable medical reports.</p>
-        </div>
-
-        <!-- Search & Filter Controls -->
-        <div class="search-box-wrapper">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="diagSearchInput" class="search-input" placeholder="Search by disease, biomarker, or organ (e.g., thyroid, ecg, kidney, blood)..." onkeyup="filterDiagnostics()">
-        </div>
-
-        <div class="diag-filter-bar">
-            <button class="filter-btn active" onclick="setCategory('all', this)">All Screening Modules (9)</button>
-            <button class="filter-btn" onclick="setCategory('metabolic', this)">Biochemical & Labs (4)</button>
-            <button class="filter-btn" onclick="setCategory('vital', this)">Cardiovascular & Signals (2)</button>
-            <button class="filter-btn" onclick="setCategory('imaging', this)">Deep Learning Vision (3)</button>
-            <button class="filter-btn" onclick="setCategory('roadmap', this)">Research Roadmap (4 Gated)</button>
-        </div>
-
-        <!-- Grid of 9 Active + 4 Governed Roadmap Modules -->
-        <div class="features-grid" id="diagGrid">
-            <!-- 1. Heart Disease -->
-            <div class="diag-card glass-card" data-category="vital" data-tags="heart cardiovascular bp blood pressure cholesterol ecg ekg cardiac">
-                <div>
-                    <div class="diag-header">
-                        <div class="diag-icon">🫀</div>
-                        <div class="diag-title-area">
-                            <h2>Heart Disease</h2>
-                            <span class="diag-meta-tag">Random Forest • Cleveland Benchmark</span>
-                        </div>
-                    </div>
-                    <p class="diag-desc">Predict cardiovascular risk and ischemia likelihood using 13 clinical indicators including resting ECG, ST depression, serum cholesterol, and fluoroscopy.</p>
-                </div>
-                <div>
-                    <div class="diag-specs">
-                        <div class="diag-spec-row">
-                            <span>Input Type:</span>
-                            <span class="diag-spec-value">13 Clinical Vitals</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Report Type:</span>
-                            <span class="diag-spec-value">Cardiology Action Sheet</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.1s Instant</span>
-                        </div>
-                    </div>
-                    <a href="/heart" class="btn btn-primary" style="width: 100%;">
-                        <span>Launch Heart Diagnostic</span>
-                        <span>→</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- 2. Diabetes -->
-            <div class="diag-card glass-card" data-category="metabolic" data-tags="diabetes glucose sugar hba1c metabolic insulin bmi hypertension">
-                <div>
-                    <div class="diag-header">
-                        <div class="diag-icon">🩸</div>
-                        <div class="diag-title-area">
-                            <h2>Diabetes Risk</h2>
-                            <span class="diag-meta-tag">XGBoost Classifier • Pima Benchmark</span>
-                        </div>
-                    </div>
-                    <p class="diag-desc">Screen for type 2 diabetes and dysglycemia via glycosylated hemoglobin (HbA1c), plasma glucose, body mass index, and vascular history.</p>
-                </div>
-                <div>
-                    <div class="diag-specs">
-                        <div class="diag-spec-row">
-                            <span>Input Type:</span>
-                            <span class="diag-spec-value">8 Metabolic Metrics</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Report Type:</span>
-                            <span class="diag-spec-value">Endocrinology Protocol</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.1s Instant</span>
-                        </div>
-                    </div>
-                    <a href="/diabetes" class="btn btn-primary" style="width: 100%;">
-                        <span>Launch Diabetes Diagnostic</span>
-                        <span>→</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- 3. Kidney Disease -->
-            <div class="diag-card glass-card" data-category="metabolic" data-tags="kidney renal ckd urine creatinine urea albumin electrolytes">
-                <div>
-                    <div class="diag-header">
-                        <div class="diag-icon">🧪</div>
-                        <div class="diag-title-area">
-                            <h2>Kidney Disease</h2>
-                            <span class="diag-meta-tag">Random Forest • CKD Benchmark</span>
-                        </div>
-                    </div>
-                    <p class="diag-desc">Deep renal function assessment screening for Chronic Kidney Disease (CKD) using 24 urinalysis and blood biochemistry markers.</p>
-                </div>
-                <div>
-                    <div class="diag-specs">
-                        <div class="diag-spec-row">
-                            <span>Input Type:</span>
-                            <span class="diag-spec-value">24 Renal & Urine Analytes</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Report Type:</span>
-                            <span class="diag-spec-value">Nephrology Care Plan</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.1s Instant</span>
-                        </div>
-                    </div>
-                    <a href="/kidney" class="btn btn-primary" style="width: 100%;">
-                        <span>Launch Kidney Diagnostic</span>
-                        <span>→</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- 4. Liver Disease -->
-            <div class="diag-card glass-card" data-category="metabolic" data-tags="liver hepatic bilirubin alt ast alp enzymes jaundice">
-                <div>
-                    <div class="diag-header">
-                        <div class="diag-icon">🧬</div>
-                        <div class="diag-title-area">
-                            <h2>Liver Disease</h2>
-                            <span class="diag-meta-tag">Random Forest • ILPD Benchmark</span>
-                        </div>
-                    </div>
-                    <p class="diag-desc">Evaluate hepatic tissue strain and cirrhosis likelihood via bilirubin fractions, aminotransferases (ALT/AST), and albumin-globulin ratio.</p>
-                </div>
-                <div>
-                    <div class="diag-specs">
-                        <div class="diag-spec-row">
-                            <span>Input Type:</span>
-                            <span class="diag-spec-value">10 Liver Function Tests</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Report Type:</span>
-                            <span class="diag-spec-value">Hepatology Consultation Brief</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.1s Instant</span>
-                        </div>
-                    </div>
-                    <a href="/liver" class="btn btn-primary" style="width: 100%;">
-                        <span>Launch Liver Diagnostic</span>
-                        <span>→</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- 5. Breast Cancer -->
-            <div class="diag-card glass-card" data-category="imaging" data-tags="breast oncology cancer tumor biopsy fna nuclei radius texture">
-                <div>
-                    <div class="diag-header">
-                        <div class="diag-icon">🔬</div>
-                        <div class="diag-title-area">
-                            <h2>Breast Oncology</h2>
-                            <span class="diag-meta-tag">Random Forest • Wisconsin WBCD</span>
-                        </div>
-                    </div>
-                    <p class="diag-desc">Fine needle aspiration (FNA) cytological evaluation analyzing nuclear morphology parameters to distinguish benign from malignant tissue.</p>
-                </div>
-                <div>
-                    <div class="diag-specs">
-                        <div class="diag-spec-row">
-                            <span>Input Type:</span>
-                            <span class="diag-spec-value">5 FNA Morphological Features</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Report Type:</span>
-                            <span class="diag-spec-value">Oncology Triage Plan</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.1s Instant</span>
-                        </div>
-                    </div>
-                    <a href="/breast_cancer" class="btn btn-primary" style="width: 100%;">
-                        <span>Launch Oncology Diagnostic</span>
-                        <span>→</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- 6. Malaria -->
-            <div class="diag-card glass-card" data-category="imaging" data-tags="malaria parasite blood smear vision image cnn microscopic cell">
-                <div>
-                    <div class="diag-header">
-                        <div class="diag-icon">🧫</div>
-                        <div class="diag-title-area">
-                            <h2>Malaria Detection</h2>
-                            <span class="diag-meta-tag">Deep Vision CNN • NIH Smear Benchmark</span>
-                        </div>
-                    </div>
-                    <p class="diag-desc">Convolutional Deep Neural Network analyzing Giemsa-stained thin blood smear microscopic images to detect intra-erythrocytic Plasmodium parasites.</p>
-                </div>
-                <div>
-                    <div class="diag-specs">
-                        <div class="diag-spec-row">
-                            <span>Input Type:</span>
-                            <span class="diag-spec-value">Microscope Blood Smear Image</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Report Type:</span>
-                            <span class="diag-spec-value">Infectious Disease Protocol</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.3s Deep Scan</span>
-                        </div>
-                    </div>
-                    <a href="/malaria" class="btn btn-primary" style="width: 100%;">
-                        <span>Analyze Blood Smear</span>
-                        <span>→</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- 7. Pneumonia -->
-            <div class="diag-card glass-card" data-category="imaging" data-tags="pneumonia xray x-ray chest lung radiography deep learning cnn">
-                <div>
-                    <div class="diag-header">
-                        <div class="diag-icon">🫁</div>
-                        <div class="diag-title-area">
-                            <h2>Pneumonia Detection</h2>
-                            <span class="diag-meta-tag">Deep CNN • Chest X-Ray Benchmark</span>
-                        </div>
-                    </div>
-                    <p class="diag-desc">Deep Radiograph Convolutional Model inspecting chest X-ray scans to identify pulmonary opacities, alveolar consolidation, and infiltrates.</p>
-                </div>
-                <div>
-                    <div class="diag-specs">
-                        <div class="diag-spec-row">
-                            <span>Input Type:</span>
-                            <span class="diag-spec-value">Chest Radiograph Scan (X-Ray)</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Report Type:</span>
-                            <span class="diag-spec-value">Pulmonology Emergency Plan</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.4s Radiograph Scan</span>
-                        </div>
-                    </div>
-                    <a href="/pneumonia" class="btn btn-primary" style="width: 100%;">
-                        <span>Analyze Chest X-Ray</span>
-                        <span>→</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- 8. Thyroid Dysfunction (NEW) -->
-            <div class="diag-card glass-card" data-category="metabolic" data-tags="thyroid tsh ft4 ft3 t3 tt4 fti hypothyroidism endocrine hormone goiter" style="border-color: rgba(6, 182, 212, 0.4);">
-                <div>
-                    <div class="diag-header">
-                        <div class="diag-icon">🦋</div>
-                        <div class="diag-title-area">
-                            <h2>Thyroid Dysfunction</h2>
-                            <span class="diag-meta-tag" style="background: #0891b2; color: #fff;">Calibrated RF • UCI Garavan</span>
-                        </div>
-                    </div>
-                    <p class="diag-desc">Multi-analyte laboratory screening evaluating Serum TSH, Total T4, Free Thyroxine Index (FTI), and Triiodothyronine (T3) for early hypothyroidism detection.</p>
-                </div>
-                <div>
-                    <div class="diag-specs">
-                        <div class="diag-spec-row">
-                            <span>Input Type:</span>
-                            <span class="diag-spec-value">8 Serum Thyroid Analytes</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Report Type:</span>
-                            <span class="diag-spec-value">Endocrinology Lab Brief</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.1s Instant</span>
-                        </div>
-                    </div>
-                    <a href="/thyroid" class="btn btn-primary" style="width: 100%;">
-                        <span>Launch Thyroid Diagnostic</span>
-                        <span>→</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- 9. ECG Arrhythmia (NEW) -->
-            <div class="diag-card glass-card" data-category="vital" data-tags="ecg arrhythmia ekg rhythm pvc premature ventricular conduction telemetry hrv biosignal" style="border-color: rgba(6, 182, 212, 0.4);">
-                <div>
-                    <div class="diag-header">
-                        <div class="diag-icon">⚡</div>
-                        <div class="diag-title-area">
-                            <h2>ECG Arrhythmia</h2>
-                            <span class="diag-meta-tag" style="background: #0891b2; color: #fff;">Pan-Tompkins • PhysioNet MIT-BIH</span>
-                        </div>
-                    </div>
-                    <p class="diag-desc">Digital biosignal processing pipeline detecting QRS complexes, ectopic ventricular beats (PVCs), R-R interval coupling, and autonomic heart rate variability.</p>
-                </div>
-                <div>
-                    <div class="diag-specs">
-                        <div class="diag-spec-row">
-                            <span>Input Type:</span>
-                            <span class="diag-spec-value">Single-Lead 360 Hz Telemetry</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Report Type:</span>
-                            <span class="diag-spec-value">Electrophysiology Rhythm Strip</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Inference Time:</span>
-                            <span class="diag-spec-value">&lt; 0.15s Signal Pipeline</span>
-                        </div>
-                    </div>
-                    <a href="/arrhythmia" class="btn btn-primary" style="width: 100%;">
-                        <span>Launch ECG Screening</span>
-                        <span>→</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- 10. Diabetic Retinopathy (ROADMAP GATED) -->
-            <div class="diag-card glass-card" data-category="roadmap" data-tags="retinopathy diabetic fundus eye retina vision microaneurysm roadmap" style="border: 1px dashed rgba(245, 158, 11, 0.4); opacity: 0.9;">
-                <div>
-                    <div class="diag-header">
-                        <div class="diag-icon">👁️</div>
-                        <div class="diag-title-area">
-                            <h2>Diabetic Retinopathy</h2>
-                            <span class="diag-meta-tag" style="background: rgba(245, 158, 11, 0.2); color: #fde68a;">Research Preview • Gated</span>
-                        </div>
-                    </div>
-                    <p class="diag-desc">Retinal fundus photography automated grading for early microaneurysms, hemorrhages, and hard exudates.</p>
-                </div>
-                <div>
-                    <div class="diag-specs">
-                        <div class="diag-spec-row">
-                            <span>Candidate Cohort:</span>
-                            <span class="diag-spec-value">EyePACS / APTOS</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Status:</span>
-                            <span class="diag-spec-value">Clinical Protocol Review</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Inference:</span>
-                            <span class="diag-spec-value" style="color: #f59e0b;">Disabled (Gated)</span>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-outline" style="width: 100%; border-color: #f59e0b; color: #fde68a; cursor: not-allowed;" onclick="alert('Module is in governed clinical research roadmap. Inference is restricted.')">
-                        <span>Research Preview (Gated)</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 11. Melanoma Triage (ROADMAP GATED) -->
-            <div class="diag-card glass-card" data-category="roadmap" data-tags="melanoma skin dermoscopy lesion dermatologic mole oncology roadmap" style="border: 1px dashed rgba(245, 158, 11, 0.4); opacity: 0.9;">
-                <div>
-                    <div class="diag-header">
-                        <div class="diag-icon">🔎</div>
-                        <div class="diag-title-area">
-                            <h2>Melanoma Triage</h2>
-                            <span class="diag-meta-tag" style="background: rgba(245, 158, 11, 0.2); color: #fde68a;">Research Preview • Gated</span>
-                        </div>
-                    </div>
-                    <p class="diag-desc">Dermoscopic image classification evaluating border irregularity, color variegation, and melanocytic lesion architecture.</p>
-                </div>
-                <div>
-                    <div class="diag-specs">
-                        <div class="diag-spec-row">
-                            <span>Candidate Cohort:</span>
-                            <span class="diag-spec-value">ISIC Dermoscopy Archive</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Status:</span>
-                            <span class="diag-spec-value">License Review & Cohort Split</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Inference:</span>
-                            <span class="diag-spec-value" style="color: #f59e0b;">Disabled (Gated)</span>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-outline" style="width: 100%; border-color: #f59e0b; color: #fde68a; cursor: not-allowed;" onclick="alert('Module is in governed clinical research roadmap. Inference is restricted.')">
-                        <span>Research Preview (Gated)</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 12. Pulmonary Tuberculosis (ROADMAP GATED) -->
-            <div class="diag-card glass-card" data-category="roadmap" data-tags="tuberculosis tb pulmonary lung cavitation infiltrates xray radiography roadmap" style="border: 1px dashed rgba(245, 158, 11, 0.4); opacity: 0.9;">
-                <div>
-                    <div class="diag-header">
-                        <div class="diag-icon">🫁</div>
-                        <div class="diag-title-area">
-                            <h2>Pulmonary TB</h2>
-                            <span class="diag-meta-tag" style="background: rgba(245, 158, 11, 0.2); color: #fde68a;">Research Preview • Gated</span>
-                        </div>
-                    </div>
-                    <p class="diag-desc">Chest radiograph automated screening for apical infiltrations and cavitary lesions distinguishing TB from bacterial pneumonia.</p>
-                </div>
-                <div>
-                    <div class="diag-specs">
-                        <div class="diag-spec-row">
-                            <span>Candidate Cohort:</span>
-                            <span class="diag-spec-value">Montgomery / Shenzhen</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Status:</span>
-                            <span class="diag-spec-value">Differential Pipeline Design</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Inference:</span>
-                            <span class="diag-spec-value" style="color: #f59e0b;">Disabled (Gated)</span>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-outline" style="width: 100%; border-color: #f59e0b; color: #fde68a; cursor: not-allowed;" onclick="alert('Module is in governed clinical research roadmap. Inference is restricted.')">
-                        <span>Research Preview (Gated)</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 13. Hematologic Anemia (ROADMAP GATED) -->
-            <div class="diag-card glass-card" data-category="roadmap" data-tags="anemia cbc blood hemoglobin mcv rbc hematology iron deficiency roadmap" style="border: 1px dashed rgba(245, 158, 11, 0.4); opacity: 0.9;">
-                <div>
-                    <div class="diag-header">
-                        <div class="diag-icon">🩸</div>
-                        <div class="diag-title-area">
-                            <h2>Hematologic Anemia</h2>
-                            <span class="diag-meta-tag" style="background: rgba(245, 158, 11, 0.2); color: #fde68a;">Research Preview • Gated</span>
-                        </div>
-                    </div>
-                    <p class="diag-desc">Complete blood count (CBC) profiling evaluating hemoglobin, MCV, MCH, and red cell distribution width for microcytic/normocytic triage.</p>
-                </div>
-                <div>
-                    <div class="diag-specs">
-                        <div class="diag-spec-row">
-                            <span>Candidate Cohort:</span>
-                            <span class="diag-spec-value">MIMIC-IV CBC Deidentified</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Status:</span>
-                            <span class="diag-spec-value">Reference Interval Standard</span>
-                        </div>
-                        <div class="diag-spec-row">
-                            <span>Inference:</span>
-                            <span class="diag-spec-value" style="color: #f59e0b;">Disabled (Gated)</span>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-outline" style="width: 100%; border-color: #f59e0b; color: #fde68a; cursor: not-allowed;" onclick="alert('Module is in governed clinical research roadmap. Inference is restricted.')">
-                        <span>Research Preview (Gated)</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="footer">
+    <!-- HERO HEADER -->
+    <div class="features-hero-wrap">
         <div class="container">
-            <div class="footer-content">
-                <div class="footer-brand">
-                    <div class="brand-icon-wrapper" style="width: 32px; height: 32px;">
-                        <svg viewBox="0 0 24 24" style="width: 18px; height: 18px;">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                        </svg>
+            <div class="ekon-chip" style="margin-bottom: 1rem;">
+                <span class="ekon-chip-pulse"></span>
+                <span>[ 01 ] // CLINICAL DECISION SUPPORT SUITE</span>
+            </div>
+
+            <h1 class="ekon-editorial-title">
+                Diagnostic Workstation
+            </h1>
+
+            <p class="ekon-editorial-desc" style="margin-bottom: 1.5rem;">
+                Select an evidence-based screening engine below to run multi-parametric biochemical, biosignal, or imaging analysis with automated emergency triage and printable medical reports.
+            </p>
+
+            <!-- Search Bar with Instant Filtering -->
+            <div class="features-search-bar">
+                <span style="font-size: 1rem; color: rgba(255, 255, 255, 0.4);">🔍</span>
+                <input type="text" id="diagSearchInput" class="features-search-input" placeholder="Search by disease, biomarker, or organ (e.g., thyroid, ecg, kidney, glucose)..." onkeyup="filterDiagnostics()" aria-label="Search Diagnostic Engines">
+            </div>
+
+            <!-- Filter Pills Bar -->
+            <div class="filter-pill-bar">
+                <button class="filter-pill active" onclick="setCategory('all', this)">All Screening Modules (9)</button>
+                <button class="filter-pill" onclick="setCategory('metabolic', this)">Biochemical &amp; Labs (4)</button>
+                <button class="filter-pill" onclick="setCategory('vital', this)">Cardiovascular &amp; Signals (2)</button>
+                <button class="filter-pill" onclick="setCategory('imaging', this)">Deep Learning Vision (3)</button>
+                <button class="filter-pill" onclick="setCategory('roadmap', this)">Research Roadmap (4 Gated)</button>
+            </div>
+
+            <!-- Grid of 9 Active + 4 Governed Roadmap Modules -->
+            <div class="catalog-grid" id="diagGrid">
+                <!-- 1. Heart Disease -->
+                <div class="ekon-module-card" data-category="vital" data-tags="heart cardiovascular bp blood pressure cholesterol ecg ekg cardiac">
+                    <div>
+                        <div class="ekon-card-top">
+                            <span class="ekon-card-index">[ 01 ] // CARDIOLOGY</span>
+                            <span class="ekon-modality-badge">13 Vitals</span>
+                        </div>
+                        <div class="ekon-card-icon">🫀</div>
+                        <h3 class="ekon-card-title">Heart Disease</h3>
+                        <p class="ekon-card-desc">
+                            Cardiovascular risk and ischemia prediction analyzing resting blood pressure, serum cholesterol, exercise ST depression, and fluoroscopy vessels.
+                        </p>
                     </div>
-                    <span>MediNova Medical AI</span>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--text-subtle); margin-bottom: 1rem;">
+                            <strong>Model:</strong> Random Forest Classifier &bull; <strong>Latency:</strong> &lt; 50ms
+                        </div>
+                        <a href="/heart" class="btn-ekon-primary" style="width: 100%; justify-content: center;">
+                            <span>Launch Heart Diagnostic →</span>
+                        </a>
+                    </div>
                 </div>
-                <p class="developer-footer-credit">DEVELOPED BY <span class="dev-highlight">DHARSANKUMAR</span></p>
+
+                <!-- 2. Diabetes Risk -->
+                <div class="ekon-module-card" data-category="metabolic" data-tags="diabetes glucose sugar hba1c metabolic insulin bmi hypertension">
+                    <div>
+                        <div class="ekon-card-top">
+                            <span class="ekon-card-index">[ 02 ] // ENDOCRINE</span>
+                            <span class="ekon-modality-badge">8 Metabolic</span>
+                        </div>
+                        <div class="ekon-card-icon">🩸</div>
+                        <h3 class="ekon-card-title">Diabetes Mellitus</h3>
+                        <p class="ekon-card-desc">
+                            Screen for adult Type 2 diabetes and dysglycemia via glycosylated hemoglobin (HbA1c), fasting glucose, body mass index, and blood pressure.
+                        </p>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--text-subtle); margin-bottom: 1rem;">
+                            <strong>Model:</strong> Gradient Boosted Trees &bull; <strong>Latency:</strong> &lt; 50ms
+                        </div>
+                        <a href="/diabetes" class="btn-ekon-primary" style="width: 100%; justify-content: center;">
+                            <span>Launch Diabetes Diagnostic →</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 3. Kidney Disease -->
+                <div class="ekon-module-card" data-category="metabolic" data-tags="kidney renal ckd urine creatinine urea albumin electrolytes">
+                    <div>
+                        <div class="ekon-card-top">
+                            <span class="ekon-card-index">[ 03 ] // NEPHROLOGY</span>
+                            <span class="ekon-modality-badge">24 Biomarkers</span>
+                        </div>
+                        <div class="ekon-card-icon">🧪</div>
+                        <h3 class="ekon-card-title">Chronic Kidney Disease</h3>
+                        <p class="ekon-card-desc">
+                            Deep renal panel evaluating urinary albumin, specific gravity, serum creatinine, blood urea, and electrolyte homeostasis.
+                        </p>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--text-subtle); margin-bottom: 1rem;">
+                            <strong>Model:</strong> Random Forest Ensemble &bull; <strong>Latency:</strong> &lt; 50ms
+                        </div>
+                        <a href="/kidney" class="btn-ekon-primary" style="width: 100%; justify-content: center;">
+                            <span>Launch Kidney Diagnostic →</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 4. Liver Disease -->
+                <div class="ekon-module-card" data-category="metabolic" data-tags="liver hepatic bilirubin alt ast alp enzymes jaundice">
+                    <div>
+                        <div class="ekon-card-top">
+                            <span class="ekon-card-index">[ 04 ] // HEPATOLOGY</span>
+                            <span class="ekon-modality-badge">10 Enzymes</span>
+                        </div>
+                        <div class="ekon-card-icon">🧬</div>
+                        <h3 class="ekon-card-title">Hepatic Disorders</h3>
+                        <p class="ekon-card-desc">
+                            Hepatic tissue strain and jaundice evaluation via total bilirubin, aminotransferases (ALT/AST), alkaline phosphatase, and albumin ratio.
+                        </p>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--text-subtle); margin-bottom: 1rem;">
+                            <strong>Model:</strong> Random Forest Classifier &bull; <strong>Latency:</strong> &lt; 50ms
+                        </div>
+                        <a href="/liver" class="btn-ekon-primary" style="width: 100%; justify-content: center;">
+                            <span>Launch Liver Diagnostic →</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 5. Breast Oncology FNA -->
+                <div class="ekon-module-card" data-category="imaging" data-tags="breast oncology cancer tumor biopsy fna nuclei radius texture">
+                    <div>
+                        <div class="ekon-card-top">
+                            <span class="ekon-card-index">[ 05 ] // ONCOLOGY</span>
+                            <span class="ekon-modality-badge">FNA Morphometry</span>
+                        </div>
+                        <div class="ekon-card-icon">🔬</div>
+                        <h3 class="ekon-card-title">Breast Cancer FNA</h3>
+                        <p class="ekon-card-desc">
+                            Fine needle aspiration (FNA) nuclear morphometry distinguishing benign tissue architectures from malignant neoplasms with calibrated probability.
+                        </p>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--text-subtle); margin-bottom: 1rem;">
+                            <strong>Model:</strong> FNA Morphometry Classifier &bull; <strong>Latency:</strong> &lt; 50ms
+                        </div>
+                        <a href="/breast_cancer" class="btn-ekon-primary" style="width: 100%; justify-content: center;">
+                            <span>Launch Oncology Diagnostic →</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 6. Malaria Smear Microscopy -->
+                <div class="ekon-module-card" data-category="imaging" data-tags="malaria blood smear parasites microscopy parasitology cnn">
+                    <div>
+                        <div class="ekon-card-top">
+                            <span class="ekon-card-index">[ 06 ] // PARASITOLOGY</span>
+                            <span class="ekon-modality-badge">Deep Vision CNN</span>
+                        </div>
+                        <div class="ekon-card-icon">🧫</div>
+                        <h3 class="ekon-card-title">Malaria Smear Microscopy</h3>
+                        <p class="ekon-card-desc">
+                            Deep Convolutional Neural Network analyzing 50x50 microscopic Giemsa-stained thin blood smears for intracellular Plasmodium parasites.
+                        </p>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--text-subtle); margin-bottom: 1rem;">
+                            <strong>Model:</strong> Fast Deep CNN &bull; <strong>Modality:</strong> 50x50x3 Micrograph
+                        </div>
+                        <a href="/malaria" class="btn-ekon-primary" style="width: 100%; justify-content: center;">
+                            <span>Launch Malaria Vision →</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 7. Pneumonia Chest CXR -->
+                <div class="ekon-module-card" data-category="imaging" data-tags="pneumonia chest xray cxr lung respiratory pulmonology">
+                    <div>
+                        <div class="ekon-card-top">
+                            <span class="ekon-card-index">[ 07 ] // PULMONOLOGY</span>
+                            <span class="ekon-modality-badge">Chest Radiography</span>
+                        </div>
+                        <div class="ekon-card-icon">🫁</div>
+                        <h3 class="ekon-card-title">Pneumonia CXR Analysis</h3>
+                        <p class="ekon-card-desc">
+                            Deep learning computer vision evaluating 150x150 chest radiographs for pulmonary consolidation and alveolar opacification.
+                        </p>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--text-subtle); margin-bottom: 1rem;">
+                            <strong>Model:</strong> Deep CXR CNN &bull; <strong>Modality:</strong> 150x150x3 Radiograph
+                        </div>
+                        <a href="/pneumonia" class="btn-ekon-primary" style="width: 100%; justify-content: center;">
+                            <span>Launch Pneumonia Vision →</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 8. Thyroid Dysfunction (Active) -->
+                <div class="ekon-module-card" data-category="metabolic" data-tags="thyroid tsh t3 tt4 fti endocrine hormone metabolism">
+                    <div>
+                        <div class="ekon-card-top">
+                            <span class="ekon-card-index">[ 08 ] // ENDOCRINOLOGY</span>
+                            <span class="ekon-modality-badge" style="color: var(--primary); border-color: rgba(0, 240, 255, 0.4);">Active CDSS</span>
+                        </div>
+                        <div class="ekon-card-icon">🦋</div>
+                        <h3 class="ekon-card-title">Thyroid Dysfunction</h3>
+                        <p class="ekon-card-desc">
+                            Calibrated Random Forest pipeline evaluating 8 serum analytes (TSH, T3, TT4, T4U, FTI) for primary and secondary hypothyroidism.
+                        </p>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--text-subtle); margin-bottom: 1rem;">
+                            <strong>Model:</strong> Calibrated Sigmoid Pipeline &bull; <strong>Brier:</strong> 0.0024
+                        </div>
+                        <a href="/thyroid" class="btn-ekon-primary" style="width: 100%; justify-content: center;">
+                            <span>Launch Thyroid Diagnostic →</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 9. Cardiac Arrhythmia Telemetry (Active) -->
+                <div class="ekon-module-card" data-category="vital" data-tags="arrhythmia ecg ekg pan-tompkins pvc rhythm telemetry biosignal">
+                    <div>
+                        <div class="ekon-card-top">
+                            <span class="ekon-card-index">[ 09 ] // BIOSIGNAL</span>
+                            <span class="ekon-modality-badge" style="color: var(--primary); border-color: rgba(0, 240, 255, 0.4);">Active CDSS</span>
+                        </div>
+                        <div class="ekon-card-icon">⚡</div>
+                        <h3 class="ekon-card-title">ECG Arrhythmia Telemetry</h3>
+                        <p class="ekon-card-desc">
+                            Digital biosignal Pan-Tompkins QRS detection and morphological beat classifier for Premature Ventricular Contractions (PVCs) from Lead MLII.
+                        </p>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--text-subtle); margin-bottom: 1rem;">
+                            <strong>Model:</strong> Biosignal Feature Ensemble &bull; <strong>Sampling:</strong> 360 Hz
+                        </div>
+                        <a href="/arrhythmia" class="btn-ekon-primary" style="width: 100%; justify-content: center;">
+                            <span>Launch Arrhythmia Telemetry →</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Governed Research Candidates (Roadmap - Evidence-Based Clinical Transparency) -->
+                <!-- 10. Diabetic Retinopathy -->
+                <div class="ekon-module-card" data-category="roadmap" data-tags="retinopathy diabetic eye retina fundus roadmap" style="border: 1px dashed var(--border-glass); opacity: 0.92;">
+                    <div>
+                        <div class="ekon-card-top">
+                            <span class="ekon-card-index">[ ROADMAP ]</span>
+                            <span class="ekon-modality-badge" style="color: var(--warning); border-color: var(--warning-border); background: var(--warning-bg); font-weight: 700;">Research Protocol</span>
+                        </div>
+                        <div class="ekon-card-icon">👁️</div>
+                        <h3 class="ekon-card-title">Diabetic Retinopathy</h3>
+                        <p class="ekon-card-desc">
+                            Color fundus photography evaluation for microaneurysms, hemorrhages, and retinal vascular leakage.
+                        </p>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--text-subtle); margin-bottom: 1rem; line-height: 1.45;">
+                            <strong>Validation Pipeline:</strong> EyePACS / MESSIDOR-2 Multi-Center Study<br>
+                            <strong>Status:</strong> Governed Research &bull; Active Inference Gated
+                        </div>
+                        <button type="button" class="btn-ekon-secondary" style="width: 100%; justify-content: center; font-size: 0.82rem; font-weight: 600; cursor: pointer;" onclick="openResearchModal('Diabetic Retinopathy', 'EfficientNet-B0 Color Fundus Classifier', 'EyePACS / MESSIDOR-2 Multi-Center Retinal Database', 'Active patient inference is restricted under MediNova ISO/IEC 42001 governance until patient-level eye leakage verification, 5-stage ICDR classification auditing, and multi-center clinician-in-the-loop studies are certified.')">
+                            <span>View Research Protocol</span>
+                            <span style="font-size: 0.95rem; margin-left: 4px;" aria-hidden="true">ⓘ</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 11. Cutaneous Melanoma -->
+                <div class="ekon-module-card" data-category="roadmap" data-tags="melanoma skin lesion dermoscopy cancer roadmap" style="border: 1px dashed var(--border-glass); opacity: 0.92;">
+                    <div>
+                        <div class="ekon-card-top">
+                            <span class="ekon-card-index">[ ROADMAP ]</span>
+                            <span class="ekon-modality-badge" style="color: var(--warning); border-color: var(--warning-border); background: var(--warning-bg); font-weight: 700;">Research Protocol</span>
+                        </div>
+                        <div class="ekon-card-icon">🔎</div>
+                        <h3 class="ekon-card-title">Cutaneous Melanoma</h3>
+                        <p class="ekon-card-desc">
+                            Dermoscopic lesion assessment analyzing border irregularity, color variegation, and melanocytic triage.
+                        </p>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--text-subtle); margin-bottom: 1rem; line-height: 1.45;">
+                            <strong>Validation Pipeline:</strong> International Skin Imaging Collaboration (ISIC)<br>
+                            <strong>Status:</strong> Governed Research &bull; Active Inference Gated
+                        </div>
+                        <button type="button" class="btn-ekon-secondary" style="width: 100%; justify-content: center; font-size: 0.82rem; font-weight: 600; cursor: pointer;" onclick="openResearchModal('Cutaneous Melanoma', 'DenseNet-121 Dermoscopy Classifier', 'ISIC Archive Multi-Year Dataset', 'Active patient inference is restricted under MediNova ISO/IEC 42001 governance until biopsy-verified ground-truth pairing, Fitzpatrick skin phototype fairness assessment, and artifact removal pipelines (surgical markers, gel bubbles) are certified.')">
+                            <span>View Research Protocol</span>
+                            <span style="font-size: 0.95rem; margin-left: 4px;" aria-hidden="true">ⓘ</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 12. Pulmonary Tuberculosis -->
+                <div class="ekon-module-card" data-category="roadmap" data-tags="tuberculosis tb chest cavitary cxr roadmap" style="border: 1px dashed var(--border-glass); opacity: 0.92;">
+                    <div>
+                        <div class="ekon-card-top">
+                            <span class="ekon-card-index">[ ROADMAP ]</span>
+                            <span class="ekon-modality-badge" style="color: var(--warning); border-color: var(--warning-border); background: var(--warning-bg); font-weight: 700;">Research Protocol</span>
+                        </div>
+                        <div class="ekon-card-icon">🫁</div>
+                        <h3 class="ekon-card-title">Pulmonary Tuberculosis</h3>
+                        <p class="ekon-card-desc">
+                            Cavitary pulmonary lesion and apical infiltration screening distinguishing active TB from acute pneumonia.
+                        </p>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--text-subtle); margin-bottom: 1rem; line-height: 1.45;">
+                            <strong>Validation Pipeline:</strong> Montgomery &amp; Shenzhen Hospital CXR Repositories<br>
+                            <strong>Status:</strong> Governed Research &bull; Active Inference Gated
+                        </div>
+                        <button type="button" class="btn-ekon-secondary" style="width: 100%; justify-content: center; font-size: 0.82rem; font-weight: 600; cursor: pointer;" onclick="openResearchModal('Pulmonary Tuberculosis', 'Dual-Branch Chest Radiograph CNN', 'Shenzhen No. 3 Hospital & Montgomery County Datasets', 'Active patient inference is restricted under MediNova ISO/IEC 42001 governance until microbiological (sputum smear/culture/GeneXpert) pairing, cavitation feature attribution, and acute pneumonia differential validation are certified.')">
+                            <span>View Research Protocol</span>
+                            <span style="font-size: 0.95rem; margin-left: 4px;" aria-hidden="true">ⓘ</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 13. Hematologic Anemia -->
+                <div class="ekon-module-card" data-category="roadmap" data-tags="anemia cbc blood hemoglobin rdw roadmap" style="border: 1px dashed var(--border-glass); opacity: 0.92;">
+                    <div>
+                        <div class="ekon-card-top">
+                            <span class="ekon-card-index">[ ROADMAP ]</span>
+                            <span class="ekon-modality-badge" style="color: var(--warning); border-color: var(--warning-border); background: var(--warning-bg); font-weight: 700;">Research Protocol</span>
+                        </div>
+                        <div class="ekon-card-icon">🩸</div>
+                        <h3 class="ekon-card-title">Hematologic Anemia</h3>
+                        <p class="ekon-card-desc">
+                            Complete blood count (CBC) hematological panel evaluating hemoglobin, red blood cells, MCV, MCH, and RDW.
+                        </p>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--text-subtle); margin-bottom: 1rem; line-height: 1.45;">
+                            <strong>Validation Pipeline:</strong> CDC NHANES &amp; MIMIC-IV Clinical CBC Cohorts<br>
+                            <strong>Status:</strong> Governed Research &bull; Active Inference Gated
+                        </div>
+                        <button type="button" class="btn-ekon-secondary" style="width: 100%; justify-content: center; font-size: 0.82rem; font-weight: 600; cursor: pointer;" onclick="openResearchModal('Hematologic Anemia', 'XGBoost Complete Blood Count Classifier', 'CDC NHANES CBC Panel & MIMIC-IV Clinical Cohorts', 'Active patient inference is restricted under MediNova ISO/IEC 42001 governance until WHO age- and sex-stratified hemoglobin threshold alignment and microcytic vs. macrocytic differential subtyping benchmarks are certified.')">
+                            <span>View Research Protocol</span>
+                            <span style="font-size: 0.95rem; margin-left: 4px;" aria-hidden="true">ⓘ</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LAB REPORT SCANNER EMBEDDED UNDER #scanner -->
+            <div id="scanner" style="margin-top: 5rem; padding-top: 2rem;">
+                {% set scanner_module = 'diabetes' %}
+                {% include 'components/scanner_panel.html' %}
             </div>
         </div>
-    </footer>
+    </div>
 
-    <!-- Client-side filtering script -->
+    <!-- Reusable Ekon Editorial Footer -->
+    {% include 'components/ekon_footer.html' %}
+
+    <!-- Filter & Search JavaScript -->
     <script>
-        let currentCategory = 'all';
+        var currentCategory = 'all';
 
         function setCategory(cat, btn) {
             currentCategory = cat;
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            var pills = document.querySelectorAll('.filter-pill');
+            pills.forEach(function(p) { p.classList.remove('active'); });
+            if (btn) btn.classList.add('active');
             filterDiagnostics();
         }
 
         function filterDiagnostics() {
-            const query = document.getElementById('diagSearchInput').value.toLowerCase().trim();
-            const cards = document.querySelectorAll('#diagGrid .diag-card');
+            var search = (document.getElementById('diagSearchInput').value || '').toLowerCase().trim();
+            var cards = document.querySelectorAll('#diagGrid .ekon-module-card');
 
-            cards.forEach(card => {
-                const category = card.getAttribute('data-category');
-                const tags = card.getAttribute('data-tags') || '';
-                const title = card.querySelector('h2').textContent.toLowerCase();
-                const desc = card.querySelector('.diag-desc').textContent.toLowerCase();
+            cards.forEach(function(card) {
+                var cat = card.getAttribute('data-category');
+                var tags = (card.getAttribute('data-tags') || '').toLowerCase();
+                var text = card.innerText.toLowerCase();
 
-                const matchesCategory = (currentCategory === 'all' || category === currentCategory);
-                const matchesSearch = (!query || title.includes(query) || desc.includes(query) || tags.includes(query));
+                var matchesCat = (currentCategory === 'all') || (cat === currentCategory);
+                var matchesSearch = !search || tags.indexOf(search) !== -1 || text.indexOf(search) !== -1;
 
-                if (matchesCategory && matchesSearch) {
+                if (matchesCat && matchesSearch) {
                     card.style.display = 'flex';
                 } else {
                     card.style.display = 'none';
@@ -568,8 +578,66 @@
             });
         }
     </script>
-    <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
-    <script src="{{ url_for('static', filename='chatbot.js') }}?v=3"></script>
+
+    <!-- Ekon UI Kit & Chatbot Scripts -->
+    <script src="{{ url_for('static', filename='js/medinova-ui.js') }}?v=1.0" defer></script>
+    <script src="{{ url_for('static', filename='chatbot.js') }}?v=4" defer></script>
+    <script src="{{ url_for('static', filename='js/report-scanner.js') }}?v=2" defer></script>
+
+    <!-- Governed Clinical Research Protocol Modal Dialog -->
+    <div id="researchProtocolModal" class="clinical-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="modalConditionTitle">
+        <div class="clinical-modal-card">
+            <div class="clinical-modal-header">
+                <div>
+                    <div class="ekon-chip" style="margin-bottom: 0.65rem;">
+                        <span class="ekon-chip-pulse" style="background: var(--warning);"></span>
+                        <span>ISO/IEC 42001 &bull; RESEARCH GOVERNANCE</span>
+                    </div>
+                    <h3 id="modalConditionTitle" style="font-size: 1.35rem; font-weight: 800; color: var(--text-heading); margin: 0; letter-spacing: -0.02em;"></h3>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="closeResearchModal()" aria-label="Close dialog">&times;</button>
+            </div>
+            <div class="clinical-modal-body">
+                <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 18px; margin-bottom: 1.25rem;">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-subtle); margin-bottom: 5px;">Target Architecture &amp; Cohort:</div>
+                    <div id="modalArchitectureText" style="font-size: 0.92rem; font-weight: 700; color: var(--text-heading); line-height: 1.4;"></div>
+                </div>
+                <p id="modalGovernanceText" style="font-size: 0.9rem; line-height: 1.62; color: var(--text-muted); margin-bottom: 1.5rem;"></p>
+                <div style="background: var(--warning-bg); border: 1px solid var(--warning-border); border-radius: 14px; padding: 14px 18px; font-size: 0.84rem; color: var(--text-heading); line-height: 1.5; margin-bottom: 1.5rem;">
+                    <strong style="color: var(--warning);">Clinical Safety Policy:</strong> To ensure diagnostic integrity, MediNova strictly gates automated predictions on exploratory models until multi-center clinical trials, ground-truth pairing, and regulatory certifications are achieved.
+                </div>
+            </div>
+            <div class="clinical-modal-footer">
+                <button type="button" class="btn-ekon-primary" style="padding: 10px 24px; font-size: 0.88rem;" onclick="closeResearchModal()">Understood</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openResearchModal(title, arch, cohort, governance) {
+            var modal = document.getElementById('researchProtocolModal');
+            if (!modal) return;
+            document.getElementById('modalConditionTitle').textContent = title + ' // Research Protocol';
+            document.getElementById('modalArchitectureText').textContent = arch + ' (' + cohort + ')';
+            document.getElementById('modalGovernanceText').textContent = governance;
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closeResearchModal() {
+            var modal = document.getElementById('researchProtocolModal');
+            if (!modal) return;
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeResearchModal();
+        });
+        document.addEventListener('click', function(e) {
+            var modal = document.getElementById('researchProtocolModal');
+            if (modal && e.target === modal) closeResearchModal();
+        });
+    </script>
+
 </body>
 
 </html>

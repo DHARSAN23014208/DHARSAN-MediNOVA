@@ -25,6 +25,9 @@
     <title>ECG Arrhythmia Biosignal Screening - MediNova AI</title>
     <meta name="description" content="Computerized biosignal analysis of single-lead ECG telemetry for premature ventricular contractions and arrhythmia screening.">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=5.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/medinova-ekon.css') }}?v=1.0">
+
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700,800&display=swap">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
         .ecg-canvas-container {
@@ -87,6 +90,7 @@
 </head>
 
 <body>
+    <div class="mn-progress" data-scroll-progress></div>
     <!-- Ambient Background -->
     <div class="animated-bg">
         <div class="gradient-orb orb-1"></div>
@@ -95,27 +99,8 @@
     <div class="bg-grid"></div>
 
     <!-- Navigation -->
-    <nav class="navbar">
-        <a href="/" class="nav-brand">
-            <div class="brand-icon-wrapper">
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-            </div>
-            <span class="brand-gradient">MediNova</span>
-            <span class="brand-tag">Electrophysiology</span>
-        </a>
-
-        <div class="nav-links">
-            <a href="/" class="nav-link">Home</a>
-            <a href="/features" class="nav-link">Diagnostic Suite</a>
-            <a href="/contact" class="nav-link">Emergency & Care</a>
-            <a href="/contact" class="nav-emergency-btn">
-                <span class="pulse-dot"></span>
-                <span>24/7 Helpline: 112 / 911</span>
-            </a>
-        </div>
-    </nav>
+    {% set active_page = 'features' %}
+{% include 'components/ekon_navbar.html' %}
 
     <div class="content-wrapper container">
         <a href="/features" class="back-button no-print">
@@ -413,9 +398,7 @@
     </div>
 
     <!-- Footer -->
-    <footer class="footer no-print" style="margin-top: 4rem; padding: 2rem 0; border-top: 1px solid rgba(255, 255, 255, 0.08); text-align: center; font-size: 0.8rem; color: var(--text-muted);">
-        <p>MediNova Clinical AI Platform • Electrophysiology Biosignal CDSS Module • Grounded in authentic PhysioNet MIT-BIH telemetry data.</p>
-    </footer>
+    {% include 'components/ekon_footer.html' %}
 
     {% if rhythm_strip_samples %}
     <script id="ecgRawSamples" type="application/json">{{ rhythm_strip_samples | tojson | safe }}</script>
@@ -508,5 +491,6 @@
             btn.innerHTML = '<span>Processing ECG Waveform...</span>';
         });
     </script>
+    <script src="{{ url_for('static', filename='js/medinova-ui.js') }}?v=1.0" defer></script>
 </body>
 </html>

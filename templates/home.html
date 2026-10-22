@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MediNova - AI-Powered Medical Diagnosis & Clinical Screening</title>
-    <meta name="description" content="Next-generation AI medical diagnostic intelligence suite for preliminary disease screening across 7 critical conditions.">
+    <title>MediNova - Smarter Insights. Better-Informed Healthcare Decisions.</title>
+    <meta name="description" content="Explore AI-assisted disease prediction, laboratory report analysis, and specialist hospital discovery in one streamlined clinical decision support platform.">
+
     <!-- Immediate Theme Application (Zero Flash) -->
     <script>
         (function() {
@@ -23,371 +24,737 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Ekon Typography (Switzer from Fontshare + Inter from Google Fonts) -->
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700,800&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@1,6..72,400..600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=6.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/medinova-ekon.css') }}?v=1.0">
+
+    <style>
+        /* Specific page layout spacing */
+        .home-hero-wrap {
+            padding-top: calc(90px + 3.5rem);
+            padding-bottom: 4rem;
+        }
+
+        /* Product Dashboard Preview Frame (Ekon Tech Mockup - Adaptive Theme) */
+        .ekon-dashboard-preview {
+            background: var(--dashboard-preview-bg);
+            border: 1px solid var(--border-glass);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--card-shadow);
+            margin-top: 3.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: background var(--fast) ease, border-color var(--fast) ease, box-shadow var(--fast) ease;
+        }
+
+        .dashboard-header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border-glass);
+            margin-bottom: 20px;
+        }
+
+        .dashboard-dot-group {
+            display: flex;
+            gap: 7px;
+        }
+
+        .dashboard-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border-glass-hover);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 18px;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .dashboard-stat-tile {
+            background: var(--dashboard-tile-bg);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 20px;
+            transition: background var(--fast) ease, border-color var(--fast) ease;
+        }
+
+        .dashboard-stat-tile h4 {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-subtle) !important;
+            margin-bottom: 8px;
+        }
+
+        .dashboard-stat-tile .stat-num {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-heading) !important;
+            letter-spacing: -0.03em;
+            margin-bottom: 4px;
+        }
+
+        .dashboard-stat-tile .stat-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted) !important;
+        }
+
+        .feature-showcase-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-glass);
+            border-radius: 24px;
+            padding: 3rem;
+            margin: 4rem 0;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            transition: background var(--fast) ease, border-color var(--fast) ease, box-shadow var(--fast) ease;
+        }
+
+        @media (max-width: 768px) {
+            .feature-showcase-panel {
+                padding: 1.75rem;
+            }
+        }
+    </style>
 </head>
 
 <body class="home-page">
-    <!-- Ambient Background -->
-    <div class="animated-bg">
-        <div class="gradient-orb orb-1"></div>
-        <div class="gradient-orb orb-2"></div>
-        <div class="gradient-orb orb-3"></div>
-    </div>
-    <div class="bg-grid"></div>
+    <div class="mn-progress" data-scroll-progress></div>
 
-    <!-- Navigation -->
-    <nav class="navbar">
-        <a href="/" class="nav-brand">
-            <div class="brand-icon-wrapper">
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-            </div>
-            <span class="brand-gradient">MediNova</span>
-            <span class="brand-tag">Clinical AI</span>
-        </a>
+    <!-- Reusable Ekon Floating Island Navbar -->
+    {% set active_page = 'home' %}
+    {% include 'components/ekon_navbar.html' %}
 
-        <div class="nav-links">
-            <a href="/" class="nav-link active">Home</a>
-            <a href="/features" class="nav-link">Diagnostic Suite</a>
-            <a href="/contact" class="nav-link">Emergency & Care</a>
-
-            <!-- Dark / Light Mode Switcher -->
-            <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle Dark and Light Mode" title="Toggle Theme (Dark / Light)">
-                <span class="theme-icon-sun" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="5"></circle>
-                        <line x1="12" y1="1" x2="12" y2="3"></line>
-                        <line x1="12" y1="21" x2="12" y2="23"></line>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                        <line x1="1" y1="12" x2="3" y2="12"></line>
-                        <line x1="21" y1="12" x2="23" y2="12"></line>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                    </svg>
-                </span>
-                <span class="theme-icon-moon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                    </svg>
-                </span>
-                <span class="theme-mode-text">Mode</span>
-            </button>
-
-            <a href="/contact" class="nav-emergency-btn">
-                <span class="pulse-dot"></span>
-                <span>24/7 Helpline: 112 / 911</span>
-            </a>
+    <!-- ========================================================================= -->
+    <!-- CINEMATIC MEDICAL HERO SECTION (Direct Reference Composition)             -->
+    <!-- ========================================================================= -->
+    <section class="cinematic-hero-section">
+        <!-- Cinematic Medical Background Image Layer -->
+        <div class="hero-backdrop" aria-hidden="true">
+            <picture>
+                <source srcset="{{ url_for('static', filename='images/hero_cinematic_medical.jpg') }}" type="image/jpeg">
+                <img src="{{ url_for('static', filename='images/hero_cinematic_medical.jpg') }}" 
+                     alt="Clinical AI Medical Diagnosis" 
+                     class="hero-bg-img" 
+                     loading="eager" 
+                     fetchpriority="high">
+            </picture>
+            <div class="hero-gradient-overlay"></div>
+            <div class="hero-ambient-glow"></div>
         </div>
-    </nav>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="hero-content">
+        <!-- Architectural Fine Vertical Grid Lines (Reference visual match) -->
+        <div class="hero-grid-lines" aria-hidden="true">
+            <div class="grid-line"></div>
+            <div class="grid-line"></div>
+            <div class="grid-line"></div>
+            <div class="grid-line"></div>
+        </div>
+
+        <div class="container hero-container">
             {% if research_preview_notice %}
-            <div class="critical-alert-card" style="margin-bottom: 1.5rem; text-align: left;">
-                <h4 style="margin: 0 0 0.3rem 0; color: #fda4af;">Governed Research Protocol Notice</h4>
-                <p style="margin: 0; font-size: 0.85rem;">{{ research_preview_notice }}</p>
+            <div class="critical-alert-card mn-reveal" style="margin-bottom: 2rem; text-align: left; background: var(--danger-bg); border: 1px solid var(--danger-border); padding: 1.25rem 1.5rem; border-radius: 16px;">
+                <h4 style="margin: 0 0 0.4rem 0; color: var(--danger); font-size: 0.95rem; font-weight: 700;">Governed Research Protocol Notice</h4>
+                <p style="margin: 0; font-size: 0.88rem; color: var(--text-heading); line-height: 1.5;">{{ research_preview_notice }}</p>
             </div>
             {% endif %}
 
-            <div class="hero-badge">
-                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 8px #10b981;"></span>
-                    Clinical AI Intelligence System
-                </span>
-                <span style="opacity: 0.5;">|</span>
-                <span>9 Validated Screening Engines + 4 Governed Roadmaps</span>
+            <!-- Category / Eyebrow Pill -->
+            <div class="ekon-chip mn-reveal">
+                <span class="ekon-chip-pulse"></span>
+                <span>CLINICAL INTELLIGENCE &bull; AI-ASSISTED HEALTHCARE</span>
             </div>
-            
-            <h1 class="hero-title">
-                Clinical Health Diagnostics <br>
-                <span class="gradient-text">Powered by Evidence-Based AI</span>
-            </h1>
 
-            <p class="hero-description">
-                MediNova combines multi-analyte laboratory biochemistry, digital ECG biosignal telemetry, and deep learning medical vision with validated machine learning architectures to deliver rapid preliminary screening, emergency triage guidance, and cryptographic report verification.
+            <!-- Editorial Split Headline (Matching Reference Composition) -->
+            <div class="editorial-headline-wrapper mn-reveal mn-delay-1">
+                <h1 class="cinematic-editorial-title">
+                    <span class="headline-part-primary">Smarter insights.</span>
+                    <span class="headline-part-accent"><em>Better healthcare decisions.</em></span>
+                </h1>
+            </div>
+
+            <!-- Supporting Paragraph -->
+            <p class="cinematic-editorial-desc mn-reveal mn-delay-2">
+                Explore AI-assisted disease screening, laboratory report analysis, and specialist hospital discovery in one streamlined healthcare platform.
             </p>
 
-            <div class="hero-buttons">
-                <a href="/features" class="btn btn-primary btn-large">
-                    <span>Clinical Workstation Suite</span>
-                    <span style="font-size: 1.2rem;">→</span>
+            <!-- Dual Action CTAs -->
+            <div class="cinematic-cta-group mn-reveal mn-delay-3">
+                <a href="/features" class="btn-ekon-primary">
+                    <span>Start a Diagnosis</span>
+                    <span class="btn-arrow" aria-hidden="true">→</span>
                 </a>
-                <a href="#about" class="btn btn-outline btn-large">
-                    <span>Validated Capabilities</span>
+                <a href="#modules" class="btn-ekon-secondary">
+                    <span>Explore MediNova</span>
                 </a>
             </div>
 
-            <div class="hero-stats">
-                <div class="stat-item">
-                    <span class="stat-number">9</span>
-                    <span class="stat-label">Validated Modules</span>
-                </div>
-                <div class="stat-divider"></div>
-                <div class="stat-item">
-                    <span class="stat-number">100%</span>
-                    <span class="stat-label">Verified Artifacts</span>
-                </div>
-                <div class="stat-divider"></div>
-                <div class="stat-item">
-                    <span class="stat-number">&lt; 100ms</span>
-                    <span class="stat-label">Tabular / Signal Latency</span>
-                </div>
-                <div class="stat-divider"></div>
-                <div class="stat-item">
-                    <span class="stat-number">HMAC</span>
-                    <span class="stat-label">Cryptographic Reports</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Features Overview Section -->
-    <section id="about" class="container" style="padding-bottom: 6rem;">
-        <div class="section-header">
-            <h2 class="section-title">Validated Clinical Screening Engines</h2>
-            <p class="section-subtitle">Trained and benchmarked on verified biomedical cohorts with patient-level split separation</p>
-        </div>
-
-        <div class="features-grid">
-            <!-- 1. Heart Disease -->
-            <div class="feature-card glass-card">
-                <div class="feature-icon-wrapper">❤️</div>
-                <h3>Cardiovascular Health</h3>
-                <p>Multi-parametric cardiac risk stratification analyzing resting BP, serum cholesterol, exercise-induced ST depression, and fluoroscopy vessels.</p>
-                <a href="/heart" class="feature-badge">Random Forest • Cleveland Cohort →</a>
+            <!-- Clinical AI Medical Disclaimer -->
+            <div class="ekon-hero-disclaimer mn-reveal mn-delay-3">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <span>MediNova provides preliminary AI-assisted risk screening and decision support. It does not replace diagnosis or medical advice from qualified healthcare professionals.</span>
             </div>
 
-            <!-- 2. Diabetes -->
-            <div class="feature-card glass-card">
-                <div class="feature-icon-wrapper">🩸</div>
-                <h3>Diabetes & Glycemic Profile</h3>
-                <p>Metabolic screening evaluating HbA1c glycosylation, plasma fasting glucose, body mass index (BMI), and vascular history.</p>
-                <a href="/diabetes" class="feature-badge">XGBoost Classifier • Pima Cohort →</a>
-            </div>
-
-            <!-- 3. Kidney -->
-            <div class="feature-card glass-card">
-                <div class="feature-icon-wrapper">🧪</div>
-                <h3>Chronic Kidney Panel</h3>
-                <p>Comprehensive 24-parameter renal panel examining urinary albumin, specific gravity, serum creatinine, urea, and electrolyte balance.</p>
-                <a href="/kidney" class="feature-badge">Random Forest • CKD Cohort →</a>
-            </div>
-
-            <!-- 4. Liver -->
-            <div class="feature-card glass-card">
-                <div class="feature-icon-wrapper">🧬</div>
-                <h3>Hepatic Function Assessment</h3>
-                <p>Liver disease probability screening utilizing total bilirubin, transaminases (ALT/AST), and albumin-globulin ratio.</p>
-                <a href="/liver" class="feature-badge">Random Forest • ILPD Cohort →</a>
-            </div>
-
-            <!-- 5. Breast Cancer -->
-            <div class="feature-card glass-card">
-                <div class="feature-icon-wrapper">🔬</div>
-                <h3>Breast Oncology Screening</h3>
-                <p>Cellular morphometric nuclear analysis distinguishing benign tissues from malignant neoplasms with high sensitivity.</p>
-                <a href="/breast_cancer" class="feature-badge">Random Forest • Wisconsin Cohort →</a>
-            </div>
-
-            <!-- 6. Malaria -->
-            <div class="feature-card glass-card">
-                <div class="feature-icon-wrapper">🧫</div>
-                <h3>Malaria Smear Microscopy</h3>
-                <p>Deep Convolutional Neural Network (CNN) scanning microscopic Giemsa-stained thin blood smears for intracellular Plasmodium parasites.</p>
-                <a href="/malaria" class="feature-badge">Deep Vision CNN • NIH Smears →</a>
-            </div>
-
-            <!-- 7. Pneumonia -->
-            <div class="feature-card glass-card">
-                <div class="feature-icon-wrapper">🫁</div>
-                <h3>Pneumonia Radiography</h3>
-                <p>Computer vision deep neural network identifying pulmonary consolidation, alveolar infiltrates, and opacification in chest X-rays.</p>
-                <a href="/pneumonia" class="feature-badge">Deep CNN • Chest X-Ray Cohort →</a>
-            </div>
-
-            <!-- 8. Thyroid Dysfunction (NEW) -->
-            <div class="feature-card glass-card" style="border-color: rgba(6, 182, 212, 0.4);">
-                <div class="feature-icon-wrapper">🦋</div>
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem;">
-                    <h3 style="margin: 0;">Thyroid Dysfunction</h3>
-                    <span style="font-size: 0.7rem; font-weight: 700; background: #0891b2; color: #fff; padding: 2px 6px; border-radius: 4px;">ACTIVE CDSS</span>
-                </div>
-                <p>Multi-analyte laboratory screening evaluating Serum TSH, Total T4, Free Thyroxine Index (FTI), and Triiodothyronine (T3) for hypothyroidism detection.</p>
-                <a href="/thyroid" class="feature-badge" style="background: rgba(6, 182, 212, 0.2); border-color: #06b6d4;">Calibrated Random Forest • UCI Garavan →</a>
-            </div>
-
-            <!-- 9. ECG Arrhythmia (NEW) -->
-            <div class="feature-card glass-card" style="border-color: rgba(6, 182, 212, 0.4);">
-                <div class="feature-icon-wrapper">⚡</div>
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem;">
-                    <h3 style="margin: 0;">ECG Arrhythmia Telemetry</h3>
-                    <span style="font-size: 0.7rem; font-weight: 700; background: #0891b2; color: #fff; padding: 2px 6px; border-radius: 4px;">ACTIVE CDSS</span>
-                </div>
-                <p>Digital biosignal Pan-Tompkins QRS detection and morphological beat classifier for Premature Ventricular Contractions (PVCs) and rhythm irregularities.</p>
-                <a href="/arrhythmia" class="feature-badge" style="background: rgba(6, 182, 212, 0.2); border-color: #06b6d4;">Signal Ensemble • PhysioNet MIT-BIH →</a>
-            </div>
-        </div>
-
-        <!-- Governed Research Roadmap Section -->
-        <div style="margin-top: 4rem;">
-            <div class="section-header" style="margin-bottom: 2rem;">
-                <div style="display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); padding: 0.3rem 0.8rem; border-radius: 999px; margin-bottom: 0.5rem; font-size: 0.78rem; font-weight: 700; color: #f59e0b;">
-                    <span>🔒 Governed Clinical Research Pipeline</span>
-                </div>
-                <h3 style="font-size: 1.6rem; color: var(--text); margin: 0;">Roadmap Candidates (Inference Gated)</h3>
-                <p class="section-subtitle" style="max-width: 700px; margin: 0.4rem auto 0 auto;">
-                    In accordance with clinical AI governance standards, inference remains strictly disabled until data acquisition, patient-level verification, and multi-metric evaluations are completed.
-                </p>
-            </div>
-
-            <div class="features-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
-                <div class="feature-card glass-card" style="opacity: 0.85; border: 1px dashed rgba(255, 255, 255, 0.15);">
-                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">👁️</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                        <h4 style="margin: 0; color: var(--text);">Diabetic Retinopathy</h4>
-                        <span style="font-size: 0.68rem; font-weight: 700; background: rgba(245, 158, 11, 0.2); color: #fde68a; padding: 2px 6px; border-radius: 4px;">RESEARCH PREVIEW</span>
+            <!-- Bottom Editorial Metadata Row (Reference layout: bottom left + bottom right) -->
+            <div class="hero-bottom-meta mn-reveal mn-delay-4" aria-label="Clinical Metrics Overview">
+                <div class="meta-col-left">
+                    <div class="meta-item">
+                        <span class="meta-val">9 Predictive</span>
+                        <span class="meta-lbl">Disease Screening Modules</span>
                     </div>
-                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.8rem;">Retinal fundus photography deep learning classification for early microaneurysms and hard exudates.</p>
-                    <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Candidate: EyePACS / APTOS Cohort • Gated</span>
-                </div>
-
-                <div class="feature-card glass-card" style="opacity: 0.85; border: 1px dashed rgba(255, 255, 255, 0.15);">
-                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔎</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                        <h4 style="margin: 0; color: var(--text);">Melanoma Triage</h4>
-                        <span style="font-size: 0.68rem; font-weight: 700; background: rgba(245, 158, 11, 0.2); color: #fde68a; padding: 2px 6px; border-radius: 4px;">RESEARCH PREVIEW</span>
+                    <div class="meta-separator" aria-hidden="true"></div>
+                    <div class="meta-item">
+                        <span class="meta-val">&lt; 50ms Latency</span>
+                        <span class="meta-lbl">Deterministic Dispatcher</span>
                     </div>
-                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.8rem;">Dermoscopic imaging analysis for asymmetric border irregularity, color variegation, and melanocytic triage.</p>
-                    <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Candidate: ISIC Archive • Gated</span>
-                </div>
-
-                <div class="feature-card glass-card" style="opacity: 0.85; border: 1px dashed rgba(255, 255, 255, 0.15);">
-                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🫁</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                        <h4 style="margin: 0; color: var(--text);">Pulmonary Tuberculosis</h4>
-                        <span style="font-size: 0.68rem; font-weight: 700; background: rgba(245, 158, 11, 0.2); color: #fde68a; padding: 2px 6px; border-radius: 4px;">RESEARCH PREVIEW</span>
+                    <div class="meta-separator" aria-hidden="true"></div>
+                    <div class="meta-item">
+                        <span class="meta-val">HMAC-SHA256</span>
+                        <span class="meta-lbl">Cryptographic Audit Seal</span>
                     </div>
-                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.8rem;">Cavitary pulmonary lesion and apical infiltration screening distinguishing TB from acute bacterial pneumonia.</p>
-                    <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Candidate: Montgomery / Shenzhen • Gated</span>
                 </div>
-
-                <div class="feature-card glass-card" style="opacity: 0.85; border: 1px dashed rgba(255, 255, 255, 0.15);">
-                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🩸</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                        <h4 style="margin: 0; color: var(--text);">Hematologic Anemia</h4>
-                        <span style="font-size: 0.68rem; font-weight: 700; background: rgba(245, 158, 11, 0.2); color: #fde68a; padding: 2px 6px; border-radius: 4px;">RESEARCH PREVIEW</span>
+                <div class="meta-col-right">
+                    <div class="meta-status-pill">
+                        <span class="pulse-dot" aria-hidden="true"></span>
+                        <span>AAMI EC57 &amp; ISO/IEC 42001 Protocol</span>
                     </div>
-                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.8rem;">Complete blood count (CBC) hematology profiling evaluating hemoglobin, MCV, MCH, and red cell distribution.</p>
-                    <span style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Candidate: MIMIC-IV Clinical CBC • Gated</span>
                 </div>
             </div>
-        </div>
-    </section>
 
-    <!-- Emergency Action Protocol Highlight -->
-    <section class="container" style="padding-bottom: 6rem;">
-        <div class="glass-card emergency-protocol-card">
-            <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
-                <div style="font-size: 3.5rem; width: 80px; height: 80px; border-radius: 20px; background: rgba(244, 63, 94, 0.2); border: 2px solid var(--danger); display: flex; align-items: center; justify-content: center;">
-                    🚨
-                </div>
-                <div style="flex: 1; min-width: 280px;">
-                    <div class="emergency-badge-tag">
-                        Automated Emergency Protocol Suite
+            <!-- Interactive Healthcare Tech Dashboard Preview (Ekon Tech Mockup) -->
+            <div class="ekon-dashboard-preview mn-reveal mn-delay-4">
+                <div class="dashboard-header-bar">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="dashboard-dot-group">
+                            <div class="dashboard-dot"></div>
+                            <div class="dashboard-dot"></div>
+                            <div class="dashboard-dot"></div>
+                        </div>
+                        <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-subtle); letter-spacing: 0.05em;">
+                            MEDINOVA_WORKSTATION // v5.0.0
+                        </span>
                     </div>
-                    <h2 style="font-size: 1.8rem; margin-bottom: 0.5rem; color: var(--text);">Immediate Guidance When Tests Are Positive</h2>
-                    <p style="color: var(--text-muted); font-size: 0.98rem; line-height: 1.6;">
-                        Unlike standard calculators, MediNova automatically deploys an intensive clinical action plan whenever high-risk or positive markers are identified: specialist referral matching, critical red-flag emergency symptoms, dietary dos/don'ts, tailored doctor consultation questions, and a 1-click printable clinical PDF medical report.
-                    </p>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                        <span style="font-size: 0.72rem; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.08em;">Live Telemetry Active</span>
+                    </div>
                 </div>
-                <div>
-                    <a href="/features" class="btn btn-danger btn-large">
-                        Test With Live Demo Data →
+
+                <div class="dashboard-grid">
+                    <div class="dashboard-stat-tile">
+                        <h4>Diagnostic Coverage</h4>
+                        <div class="stat-num">9 Modules</div>
+                        <div class="stat-sub">Biochemical Labs, 360Hz ECG, CXR &amp; Smear CNNs</div>
+                    </div>
+
+                    <div class="dashboard-stat-tile">
+                        <h4>Inference Performance</h4>
+                        <div class="stat-num">&lt; 50ms</div>
+                        <div class="stat-sub">Deterministic Lazy-Loaded ML Dispatcher</div>
+                    </div>
+
+                    <div class="dashboard-stat-tile">
+                        <h4>Integrity &amp; Auditing</h4>
+                        <div class="stat-num">HMAC-SHA256</div>
+                        <div class="stat-sub">Cryptographically Sealed Medical PDF Reports</div>
+                    </div>
+                </div>
+
+                <!-- Live Pipeline Waveform Preview Bar -->
+                <div style="margin-top: 18px; padding: 14px 18px; background: rgba(0, 240, 255, 0.03); border: 1px solid rgba(0, 240, 255, 0.15); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 1.2rem;">⚡</span>
+                        <div>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-heading);">PhysioNet MIT-BIH Lead MLII Arrhythmia Engine Active</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">Butterworth 0.5-40Hz Filter &bull; Pan-Tompkins Adaptive QRS Segmentation</div>
+                        </div>
+                    </div>
+                    <a href="/arrhythmia" class="btn-ekon-secondary" style="padding: 7px 18px; font-size: 0.8rem;">
+                        View Waveform Canvas →
                     </a>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- How It Works -->
-    <section class="how-it-works container">
-        <div class="section-header">
-            <h2 class="section-title">How The Diagnostic Pipeline Operates</h2>
-            <p class="section-subtitle">From biomarker ingestion to structured clinical reporting in three simple steps</p>
+    <!-- EKON SIGNATURE INFINITE MARQUEE TICKER -->
+    <div class="ekon-marquee-wrap" aria-hidden="true">
+        <div class="ekon-marquee-track">
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> Cardiovascular Disease</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> Diabetes Metabolic Panel</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> 24-Biomarker Chronic Kidney Panel</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> Hepatic Liver Function</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> Breast Oncology FNA Morphometry</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> Endocrine Thyroid Dysfunction</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> MIT-BIH ECG Arrhythmia Telemetry</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> Chest CXR Pneumonia CNN</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> Malaria Smear Microscopy</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> 7-Tier Progressive Address Geocoding</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> HMAC-SHA256 Report Verification</span>
+            <!-- Duplicated for infinite continuous loop -->
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> Cardiovascular Disease</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> Diabetes Metabolic Panel</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> 24-Biomarker Chronic Kidney Panel</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> Hepatic Liver Function</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> Breast Oncology FNA Morphometry</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> Endocrine Thyroid Dysfunction</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> MIT-BIH ECG Arrhythmia Telemetry</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> Chest CXR Pneumonia CNN</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> Malaria Smear Microscopy</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> 7-Tier Progressive Address Geocoding</span>
+            <span class="ekon-marquee-item"><span class="ekon-marquee-dot"></span> HMAC-SHA256 Report Verification</span>
+        </div>
+    </div>
+
+    <!-- VERIFIED METRIC COUNTERS SECTION -->
+    <section class="container" style="padding-top: 5rem; padding-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2.5rem;">
+            <div>
+                <div class="ekon-chip" style="margin-bottom: 0.75rem;">
+                    <span>[ 01 ] // SYSTEM ARCHITECTURE METRICS</span>
+                </div>
+                <h2 class="ekon-section-title">
+                    Rigorous Clinical AI Engineering
+                </h2>
+            </div>
+            <p class="ekon-section-desc" style="max-width: 480px;">
+                Every model artifact is locked with immutable SHA-256 digests, evaluated against untouched test cohorts, and monitored for inference execution latency.
+            </p>
         </div>
 
-        <div class="steps-container">
-            <div class="step">
-                <div class="step-number">1</div>
-                <h3>Select Condition</h3>
-                <p>Choose from 7 clinical disease categories spanning vital organs and imaging.</p>
+        <div class="ekon-metrics-grid mn-metrics">
+            <div class="ekon-metric-card mn-metric mn-reveal">
+                <div class="ekon-metric-val mn-metric-value" data-count="9" data-count-suffix="">9</div>
+                <div class="ekon-metric-lbl mn-metric-label">Active Clinical Modules</div>
             </div>
-            <div class="step-connector"></div>
-            <div class="step">
-                <div class="step-number">2</div>
-                <h3>Input Biomarkers</h3>
-                <p>Enter patient vitals, laboratory panels, or upload medical imagery (X-ray / Smear).</p>
+
+            <div class="ekon-metric-card mn-metric mn-reveal mn-delay-1">
+                <div class="ekon-metric-val mn-metric-value" data-count="89" data-count-suffix="/89">89/89</div>
+                <div class="ekon-metric-lbl mn-metric-label">Regression Tests Passed (100%)</div>
             </div>
-            <div class="step-connector"></div>
-            <div class="step">
-                <div class="step-number">3</div>
-                <h3>Clinical Assessment</h3>
-                <p>Receive immediate predictions, emergency protocols, and printable PDF reports.</p>
+
+            <div class="ekon-metric-card mn-metric mn-reveal mn-delay-2">
+                <div class="ekon-metric-val mn-metric-value">7-Tier</div>
+                <div class="ekon-metric-lbl mn-metric-label">Progressive Address Resolver</div>
+            </div>
+
+            <div class="ekon-metric-card mn-metric mn-reveal mn-delay-3">
+                <div class="ekon-metric-val mn-metric-value">&lt; 50ms</div>
+                <div class="ekon-metric-lbl mn-metric-label">Average Tabular Latency</div>
             </div>
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <!-- DEVELOPER SIGNATURE SHOWCASE (DEVELOPED BY DHARSANKUMAR) -->
-            <div class="developer-showcase-card">
-                <div class="dev-card-left">
-                    <div class="dev-avatar-pulse">
-                        <span>⚡</span>
-                    </div>
-                    <div>
-                        <span class="dev-role-badge">LEAD ARCHITECT & MEDICAL AI ENGINEERING</span>
-                        <h2 class="dev-name-heading">DEVELOPED BY DHARSANKUMAR</h2>
-                        <p class="dev-desc">Architected with Multi-Model Ensemble Intelligence, Deep Convolutional Neural Networks & Automated Clinical Triage Protocols</p>
-                    </div>
+    <!-- DIAGNOSTIC MODULE SHOWCASE SECTION -->
+    <section id="modules" class="container" style="padding-top: 3rem; padding-bottom: 5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1.5rem;">
+            <div>
+                <div class="ekon-chip" style="margin-bottom: 0.75rem;">
+                    <span>[ 02 ] // MULTIMODAL CDSS</span>
                 </div>
-                <div class="dev-card-right">
-                    <span class="dev-tag">MediNova Clinical AI Platform</span>
-                    <span class="dev-tag-verified">✓ Verified Diagnostic System</span>
+                <h2 class="ekon-section-title">
+                    Diagnostic Screening Engines
+                </h2>
+            </div>
+            <a href="/features" class="btn-ekon-secondary" style="font-size: 0.88rem; padding: 10px 22px;">
+                <span>View Full Catalog &amp; Benchmarks →</span>
+            </a>
+        </div>
+        <p class="ekon-section-desc" style="max-width: 680px; margin-bottom: 2.5rem;">
+            Select a disease category to evaluate multi-parametric biochemical parameters, physiological vital envelopes, digitized biosignals, or medical imagery.
+        </p>
+
+        <div class="ekon-modules-grid">
+            <!-- 1. Diabetes Prediction -->
+            <a href="/diabetes" class="ekon-module-card">
+                <div>
+                    <div class="ekon-card-top">
+                        <span class="ekon-card-index">[ 01 ] // METABOLIC</span>
+                        <span class="ekon-modality-badge">Tabular Vitals</span>
+                    </div>
+                    <div class="ekon-card-icon">🩸</div>
+                    <h3 class="ekon-card-title">Diabetes Mellitus</h3>
+                    <p class="ekon-card-desc">
+                        Gradient boosted metabolic panel evaluating fasting glucose, HbA1c glycosylation, BMI, blood pressure, and vascular risk indicators.
+                    </p>
                 </div>
+                <div class="ekon-card-footer">
+                    <span class="ekon-card-inputs">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+                        8 Metabolic Markers
+                    </span>
+                    <div class="ekon-card-arrow">→</div>
+                </div>
+            </a>
+
+            <!-- 2. Heart Disease Prediction -->
+            <a href="/heart" class="ekon-module-card">
+                <div>
+                    <div class="ekon-card-top">
+                        <span class="ekon-card-index">[ 02 ] // CARDIOLOGY</span>
+                        <span class="ekon-modality-badge">13 Vitals</span>
+                    </div>
+                    <div class="ekon-card-icon">🫀</div>
+                    <h3 class="ekon-card-title">Heart Disease</h3>
+                    <p class="ekon-card-desc">
+                        Random Forest classifier analyzing resting blood pressure, serum cholesterol, exercise ST depression, resting ECG, and fluoroscopy vessels.
+                    </p>
+                </div>
+                <div class="ekon-card-footer">
+                    <span class="ekon-card-inputs">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+                        13 Clinical Vitals
+                    </span>
+                    <div class="ekon-card-arrow">→</div>
+                </div>
+            </a>
+
+            <!-- 3. Kidney Disease Prediction -->
+            <a href="/kidney" class="ekon-module-card">
+                <div>
+                    <div class="ekon-card-top">
+                        <span class="ekon-card-index">[ 03 ] // NEPHROLOGY</span>
+                        <span class="ekon-modality-badge">24 Biomarkers</span>
+                    </div>
+                    <div class="ekon-card-icon">🧪</div>
+                    <h3 class="ekon-card-title">Chronic Kidney Disease</h3>
+                    <p class="ekon-card-desc">
+                        Comprehensive renal ensemble evaluating urinary albumin, specific gravity, serum creatinine, blood urea, and electrolyte homeostasis.
+                    </p>
+                </div>
+                <div class="ekon-card-footer">
+                    <span class="ekon-card-inputs">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+                        24 Renal Biomarkers
+                    </span>
+                    <div class="ekon-card-arrow">→</div>
+                </div>
+            </a>
+
+            <!-- 4. Liver Disease Prediction -->
+            <a href="/liver" class="ekon-module-card">
+                <div>
+                    <div class="ekon-card-top">
+                        <span class="ekon-card-index">[ 04 ] // HEPATOLOGY</span>
+                        <span class="ekon-modality-badge">10 Enzymes</span>
+                    </div>
+                    <div class="ekon-card-icon">🧬</div>
+                    <h3 class="ekon-card-title">Hepatic Disorders</h3>
+                    <p class="ekon-card-desc">
+                        Liver function panel screening total bilirubin, transaminases (ALT/AST), alkaline phosphatase, serum albumin, and albumin-globulin ratio.
+                    </p>
+                </div>
+                <div class="ekon-card-footer">
+                    <span class="ekon-card-inputs">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+                        10 Hepatic Parameters
+                    </span>
+                    <div class="ekon-card-arrow">→</div>
+                </div>
+            </a>
+
+            <!-- 5. Breast Cancer Prediction -->
+            <a href="/breast_cancer" class="ekon-module-card">
+                <div>
+                    <div class="ekon-card-top">
+                        <span class="ekon-card-index">[ 05 ] // ONCOLOGY</span>
+                        <span class="ekon-modality-badge">FNA Morphometry</span>
+                    </div>
+                    <div class="ekon-card-icon">🔬</div>
+                    <h3 class="ekon-card-title">Breast Cancer FNA</h3>
+                    <p class="ekon-card-desc">
+                        Cellular morphometric nuclear analysis distinguishing benign tissue architectures from malignant neoplasms with calibrated probability.
+                    </p>
+                </div>
+                <div class="ekon-card-footer">
+                    <span class="ekon-card-inputs">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+                        5 Nucleus Features
+                    </span>
+                    <div class="ekon-card-arrow">→</div>
+                </div>
+            </a>
+
+            <!-- 6. Malaria Image Analysis -->
+            <a href="/malaria" class="ekon-module-card">
+                <div>
+                    <div class="ekon-card-top">
+                        <span class="ekon-card-index">[ 06 ] // PARASITOLOGY</span>
+                        <span class="ekon-modality-badge">Deep Vision CNN</span>
+                    </div>
+                    <div class="ekon-card-icon">🧫</div>
+                    <h3 class="ekon-card-title">Malaria Smear Microscopy</h3>
+                    <p class="ekon-card-desc">
+                        Deep Convolutional Neural Network (CNN) scanning 50x50 Giemsa-stained microscopic blood smears for intracellular Plasmodium falciparum parasites.
+                    </p>
+                </div>
+                <div class="ekon-card-footer">
+                    <span class="ekon-card-inputs">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        Microscopic Smear Image
+                    </span>
+                    <div class="ekon-card-arrow">→</div>
+                </div>
+            </a>
+
+            <!-- 7. Pneumonia Image Analysis -->
+            <a href="/pneumonia" class="ekon-module-card">
+                <div>
+                    <div class="ekon-card-top">
+                        <span class="ekon-card-index">[ 07 ] // PULMONOLOGY</span>
+                        <span class="ekon-modality-badge">Chest Radiography</span>
+                    </div>
+                    <div class="ekon-card-icon">🫁</div>
+                    <h3 class="ekon-card-title">Pneumonia CXR Analysis</h3>
+                    <p class="ekon-card-desc">
+                        Computer vision deep CNN evaluating 150x150 chest radiographs for pulmonary consolidation, alveolar opacification, and bacterial/viral infiltration.
+                    </p>
+                </div>
+                <div class="ekon-card-footer">
+                    <span class="ekon-card-inputs">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        Chest X-Ray (CXR) Scan
+                    </span>
+                    <div class="ekon-card-arrow">→</div>
+                </div>
+            </a>
+
+            <!-- 8. Thyroid Dysfunction (Active) -->
+            <a href="/thyroid" class="ekon-module-card" style="border-color: rgba(0, 240, 255, 0.25);">
+                <div>
+                    <div class="ekon-card-top">
+                        <span class="ekon-card-index">[ 08 ] // ENDOCRINE</span>
+                        <span class="ekon-modality-badge" style="color: var(--primary); border-color: rgba(0, 240, 255, 0.4);">Active CDSS</span>
+                    </div>
+                    <div class="ekon-card-icon">🦋</div>
+                    <h3 class="ekon-card-title">Thyroid Dysfunction</h3>
+                    <p class="ekon-card-desc">
+                        Calibrated Random Forest pipeline evaluating 8 serum analytes (TSH, T3, TT4, T4U, FTI) for primary and secondary hypothyroidism.
+                    </p>
+                </div>
+                <div class="ekon-card-footer">
+                    <span class="ekon-card-inputs">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+                        8 Serum Analytes
+                    </span>
+                    <div class="ekon-card-arrow">→</div>
+                </div>
+            </a>
+
+            <!-- 9. Cardiac Arrhythmia (Active) -->
+            <a href="/arrhythmia" class="ekon-module-card" style="border-color: rgba(0, 240, 255, 0.25);">
+                <div>
+                    <div class="ekon-card-top">
+                        <span class="ekon-card-index">[ 09 ] // BIOSIGNAL</span>
+                        <span class="ekon-modality-badge" style="color: var(--primary); border-color: rgba(0, 240, 255, 0.4);">Active CDSS</span>
+                    </div>
+                    <div class="ekon-card-icon">⚡</div>
+                    <h3 class="ekon-card-title">ECG Arrhythmia Telemetry</h3>
+                    <p class="ekon-card-desc">
+                        Pan-Tompkins QRS beat detector with 3-pole Butterworth bandpass filtering (0.5-40 Hz) analyzing Lead MLII 360 Hz ECG waveforms.
+                    </p>
+                </div>
+                <div class="ekon-card-footer">
+                    <span class="ekon-card-inputs">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                        Lead MLII 360Hz Digitized Waveform
+                    </span>
+                    <div class="ekon-card-arrow">→</div>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <!-- HOW MEDINOVA WORKS (EKON 3-STEP WORKFLOW) -->
+    <section id="how-it-works" class="container" style="padding-top: 3rem; padding-bottom: 5rem;">
+        <div class="ekon-chip" style="margin-bottom: 0.75rem;">
+            <span>[ 03 ] // CLINICAL PROTOCOL</span>
+        </div>
+        <h2 class="ekon-section-title" style="margin-bottom: 1rem;">
+            How MediNova Works
+        </h2>
+        <p class="ekon-section-desc" style="max-width: 650px; margin-bottom: 2.5rem;">
+            A transparent, three-stage diagnostic lifecycle designed for high clinical usability and patient data confidentiality.
+        </p>
+
+        <div class="ekon-workflow-grid">
+            <div class="ekon-step-card">
+                <div class="ekon-step-num">01</div>
+                <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">📋</div>
+                <h3 class="ekon-step-title">1. Input Clinical Data</h3>
+                <p class="ekon-step-desc">
+                    Enter clinical vitals manually into structured parameter envelopes or upload a laboratory report PDF/image for automated extraction.
+                </p>
             </div>
 
-            <div class="footer-content">
-                <div class="footer-brand">
-                    <div class="brand-icon-wrapper" style="width: 32px; height: 32px;">
-                        <svg viewBox="0 0 24 24" style="width: 18px; height: 18px;">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                        </svg>
-                    </div>
-                    <span>MediNova Medical AI</span>
-                </div>
-                <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-                    <a href="/" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">Home</a>
-                    <a href="/features" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">Diagnostic Suite</a>
-                    <a href="/contact" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">Emergency Support</a>
-                </div>
-                <p class="developer-footer-credit">DEVELOPED BY <span class="dev-highlight">DHARSANKUMAR</span></p>
+            <div class="ekon-step-card">
+                <div class="ekon-step-num">02</div>
+                <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">🔬</div>
+                <h3 class="ekon-step-title">2. Calibrated Inference</h3>
+                <p class="ekon-step-desc">
+                    Deterministic machine learning models execute risk stratification, out-of-distribution plausibility checks, and calibrated confidence estimation.
+                </p>
             </div>
 
-            <div class="footer-disclaimer">
-                <strong>CLINICAL DISCLAIMER:</strong> MediNova is an artificial intelligence-assisted decision support system designed for preliminary health risk stratification and educational demonstration. MediNova is not a replacement for licensed clinical diagnosis, radiologist interpretation, or emergency medical response. If you are experiencing an acute medical emergency, contact your local emergency services (112 / 911 / 108) or proceed to the nearest hospital immediately.
+            <div class="ekon-step-card">
+                <div class="ekon-step-num">03</div>
+                <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">🏥</div>
+                <h3 class="ekon-step-title">3. Specialist Consultation</h3>
+                <p class="ekon-step-desc">
+                    Explore verified hospital referral departments, generate coordinate-first navigation routes, and track priority consultation requests.
+                </p>
             </div>
         </div>
-    </footer>
+    </section>
 
-    <!-- Theme & Chatbot Scripts -->
-    <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
-    <script src="{{ url_for('static', filename='chatbot.js') }}?v=3"></script>
+    <!-- LAB REPORT SCANNER CAPABILITY SHOWCASE -->
+    <section id="scanner" class="container" style="padding-top: 2rem; padding-bottom: 4rem;">
+        <div class="feature-showcase-panel">
+            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 3rem; align-items: center;">
+                <div>
+                    <div class="ekon-chip" style="margin-bottom: 1rem;">
+                        <span>FEATURED CAPABILITY // OCR INGESTION</span>
+                    </div>
+                    <h2 class="ekon-section-title" style="margin-bottom: 1rem;">
+                        Smart Medical Lab Report Scanner
+                    </h2>
+                    <p class="ekon-section-desc" style="margin-bottom: 1.5rem;">
+                        Transform unstructured laboratory paperwork into verified diagnostic vectors. MediNova’s ingestion engine parses digital PDFs via <code style="color: var(--primary);">pypdf</code> and scanned physical documents via <code style="color: var(--primary);">pytesseract</code> OCR.
+                    </p>
+
+                    <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 2rem;">
+                        <div style="display: flex; align-items: flex-start; gap: 10px;">
+                            <span style="color: #10b981; font-weight: 700;">✓</span>
+                            <span style="font-size: 0.88rem; color: var(--text-muted);"><strong>Multi-Unit Normalizer:</strong> Converts mmol/L, µmol/L, and g/dL to canonical model units.</span>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 10px;">
+                            <span style="color: #10b981; font-weight: 700;">✓</span>
+                            <span style="font-size: 0.88rem; color: var(--text-muted);"><strong>Dual Execution Modes:</strong> Form pre-fill with highlight glow or zero-click instant triage.</span>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 10px;">
+                            <span style="color: #10b981; font-weight: 700;">✓</span>
+                            <span style="font-size: 0.88rem; color: var(--text-muted);"><strong>Complete Manual Control:</strong> Correct any extracted parameter before model inference.</span>
+                        </div>
+                    </div>
+
+                    <a href="/features#scanner" class="btn-ekon-primary">
+                        <span>Try Lab Report Scanner →</span>
+                    </a>
+                </div>
+
+                <div style="background: var(--bg-surface-elevated); border: 1px dashed var(--border-glass); border-radius: 20px; padding: 2rem; text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📄</div>
+                    <h4 style="color: var(--text-heading); margin-bottom: 0.5rem; font-size: 1.1rem;">Multi-Format Report Ingestion</h4>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; margin-bottom: 1.5rem;">
+                        Drop digital laboratory PDFs or photos (PNG, JPG, WebP) up to 16 MB.
+                    </p>
+                    <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                        <span class="ekon-modality-badge">PDF Streams</span>
+                        <span class="ekon-modality-badge">Tesseract OCR</span>
+                        <span class="ekon-modality-badge">Regex Matcher</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SPECIALIST HOSPITAL DISCOVERY SHOWCASE -->
+    <section class="container" style="padding-top: 1rem; padding-bottom: 6rem;">
+        <div class="feature-showcase-panel" style="border-color: rgba(0, 240, 255, 0.2);">
+            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 3rem; align-items: center;">
+                <div>
+                    <div class="ekon-chip" style="margin-bottom: 1rem;">
+                        <span>CARE NETWORK // LOCATION INTELLIGENCE</span>
+                    </div>
+                    <h2 class="ekon-section-title" style="margin-bottom: 1rem;">
+                        Specialist Hospital Discovery &amp; Routing
+                    </h2>
+                    <p class="ekon-section-desc" style="margin-bottom: 1.5rem;">
+                        Match patient findings exclusively to verified specialty departments. MediNova’s server-side progressive 7-tier geocoder decomposes noisy domestic road conventions into verified geographic coordinates.
+                    </p>
+
+                    <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 2rem;">
+                        <div style="display: flex; align-items: flex-start; gap: 10px;">
+                            <span style="color: var(--primary); font-weight: 700;">✓</span>
+                            <span style="font-size: 0.88rem; color: var(--text-muted);"><strong>Anti-General Medicine Filtering:</strong> Acute conditions route strictly to certified specialty units.</span>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 10px;">
+                            <span style="color: var(--primary); font-weight: 700;">✓</span>
+                            <span style="font-size: 0.88rem; color: var(--text-muted);"><strong>Straight-Line Haversine Precision:</strong> Accurate distance calculation from your active origin.</span>
+                        </div>
+                        <div style="display: flex; align-items: flex-start; gap: 10px;">
+                            <span style="color: var(--primary); font-weight: 700;">✓</span>
+                            <span style="font-size: 0.88rem; color: var(--text-muted);"><strong>Coordinate-First Google Maps Navigation:</strong> Direct driving directions without text ambiguity.</span>
+                        </div>
+                    </div>
+
+                    <a href="/contact" class="btn-ekon-primary">
+                        <span>Find Specialist Hospitals →</span>
+                    </a>
+                </div>
+
+                <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-glass); border-radius: 20px; padding: 2rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+                        <span style="font-size: 0.75rem; font-weight: 700; color: rgba(255, 255, 255, 0.4); text-transform: uppercase;">ACTIVE_ORIGIN STATE</span>
+                        <span style="font-size: 0.72rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 9999px;">GPS EXACT</span>
+                    </div>
+                    <div style="padding: 12px; background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: 10px; margin-bottom: 1rem; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-heading);">
+                        📍 13.0265&deg; N, 80.0159&deg; E
+                    </div>
+                    <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">
+                        Specialty routing automatically excludes facilities rated &le; 3.0 and non-clinical clinics (dental, optical, alternative therapies).
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TRUST & PRIVACY SECTION -->
+    <section id="privacy" class="container" style="padding-bottom: 4rem;">
+        <div style="background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: 20px; padding: 2.5rem; text-align: center;">
+            <div class="ekon-chip" style="margin-bottom: 1rem;">
+                <span>PATIENT CONFIDENTIALITY &amp; SECURITY</span>
+            </div>
+            <h3 class="ekon-section-title" style="font-size: 1.6rem; margin-bottom: 0.8rem;">
+                Architected for Clinical Privacy &amp; Cryptographic Trust
+            </h3>
+            <p class="ekon-section-desc" style="max-width: 720px; margin: 0 auto 1.5rem auto;">
+                Uploaded patient scans are saved strictly outside web roots in private storage, accessible only via 30-minute session-bound tokens. Every screening report is stamped with an HMAC-SHA256 seal and audit QR code.
+            </p>
+            <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                <span class="ekon-modality-badge">Fail-Closed Secrets</span>
+                <span class="ekon-modality-badge">Session CSRF Guard</span>
+                <span class="ekon-modality-badge">HMAC-SHA256 Stamped</span>
+                <span class="ekon-modality-badge">No Third-Party Trackers</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reusable Ekon Editorial Footer -->
+    {% include 'components/ekon_footer.html' %}
+
+    <!-- Ekon UI Kit & Chatbot Scripts -->
+    <script src="{{ url_for('static', filename='js/medinova-ui.js') }}?v=1.0" defer></script>
+    <script src="{{ url_for('static', filename='chatbot.js') }}?v=4" defer></script>
 </body>
 
 </html>

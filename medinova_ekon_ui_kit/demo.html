@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>MediNova — Ekon-inspired UI kit preview</title>
+  <link rel="stylesheet" href="medinova-ekon.css">
+  <script src="medinova-ui.js" defer></script>
+  <style>
+    /* Preview-only reset; the kit itself is in medinova-ekon.css. */
+    .demo-flag { margin: 22px auto 0; color: var(--mn-muted); font-size: .76rem; }
+    .mn-demo-icon { display:inline-grid; width:30px; height:30px; place-items:center; border-radius:9px; background:var(--mn-accent-soft); color:var(--mn-accent); font-weight:800; }
+    .mn-demo-aside { max-width:380px; }
+  </style>
+</head>
+<body>
+  <div class="mn-progress" data-scroll-progress></div>
+  <header class="mn-header">
+    <div class="mn-container mn-nav">
+      <a class="mn-brand" href="#home"><span class="mn-brand-mark">M</span> MediNova</a>
+      <nav class="mn-nav-links" id="demo-menu" data-mobile-menu aria-label="Main navigation">
+        <a href="#modules">Modules</a><a href="#workflow">How it works</a><a href="#scanner">Lab scanner</a>
+      </nav>
+      <div class="mn-nav-actions">
+        <button class="mn-theme-toggle" type="button" data-theme-toggle aria-label="Switch theme" title="Switch theme"><span data-theme-icon></span></button>
+        <button class="mn-button mn-button--primary mn-button--small" type="button" onclick="document.querySelector('#modules').scrollIntoView({behavior:'smooth'})">Explore modules ↗</button>
+        <button class="mn-theme-toggle mn-menu-toggle" type="button" data-mobile-menu-toggle aria-controls="demo-menu" aria-expanded="false" aria-label="Toggle menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="home">
+    <section class="mn-hero mn-container">
+      <div class="mn-hero-grid">
+        <div class="mn-hero-copy mn-reveal">
+          <span class="mn-eyebrow">AI-assisted clinical decision support</span>
+          <h1 class="mn-display">Smarter insights.<br><span class="mn-gradient-text">Better-informed care.</span></h1>
+          <p class="mn-lead">A calmer, clearer way to explore AI-assisted disease predictions, lab report analysis, and specialist discovery.</p>
+          <div class="mn-hero-actions"><a class="mn-button mn-button--primary" href="#modules">Explore diagnostic modules <span aria-hidden="true">↗</span></a><a class="mn-button" href="#workflow">See how it works</a></div>
+          <div class="mn-hero-meta"><span>Seven diagnostic modules</span><span>Responsive by design</span><span>Light + dark theme</span></div>
+        </div>
+        <aside class="mn-hero-aside mn-reveal mn-delay-2"><p class="mn-eyebrow">Built around clarity</p><p class="mn-lead">Thoughtful hierarchy and focused interactions help people move through complex information without visual noise.</p></aside>
+      </div>
+      <div class="mn-hero-visual mn-reveal" aria-label="Illustrative dashboard preview">
+        <div class="mn-hero-visual-inner">
+          <div class="mn-orbit-card"><span class="mn-orbit-icon">✳</span><small>Diagnostic tools</small><strong>07 modules</strong></div>
+          <div class="mn-orbit-card"><span class="mn-orbit-icon">⌁</span><small>Input methods</small><strong>Forms + images</strong></div>
+          <div class="mn-orbit-card"><span class="mn-orbit-icon">↗</span><small>Next step</small><strong>Informed review</strong></div>
+        </div>
+      </div>
+      <p class="demo-flag">Preview content is illustrative. Do not interpret the sample labels as actual clinical results or metrics.</p>
+    </section>
+
+    <div class="mn-marquee" aria-label="MediNova capabilities"><div class="mn-marquee-track" aria-hidden="true">
+      <span class="mn-marquee-item">Clear information</span><span class="mn-marquee-item">Thoughtful tools</span><span class="mn-marquee-item">Responsible AI</span><span class="mn-marquee-item">Accessible design</span><span class="mn-marquee-item">Clear information</span><span class="mn-marquee-item">Thoughtful tools</span><span class="mn-marquee-item">Responsible AI</span><span class="mn-marquee-item">Accessible design</span>
+    </div></div>
+
+    <section class="mn-section mn-container" id="modules">
+      <div class="mn-section-heading mn-reveal"><div><span class="mn-eyebrow">Diagnostic modules</span><h2 class="mn-h2">One focused workspace.<br>Seven ways to get started.</h2><p class="mn-lead">A consistent interface helps each workflow feel familiar while respecting its specific input requirements.</p></div><span class="mn-muted">01 / Modules</span></div>
+      <div class="mn-grid mn-grid--3">
+        <a class="mn-card mn-reveal" href="#modules"><div class="mn-card-top"><span class="mn-card-icon">◈</span><span class="mn-card-index">01 / TABULAR</span></div><h3 class="mn-h3">Diabetes prediction</h3><p>Enter supported clinical measurements and review the returned model output.</p><span class="mn-card-link">Explore workflow <span>↗</span></span></a>
+        <a class="mn-card mn-reveal mn-delay-1" href="#modules"><div class="mn-card-top"><span class="mn-card-icon">♡</span><span class="mn-card-index">02 / TABULAR</span></div><h3 class="mn-h3">Heart disease</h3><p>A clear, structured form for the model's existing input fields.</p><span class="mn-card-link">Explore workflow <span>↗</span></span></a>
+        <a class="mn-card mn-reveal mn-delay-2" href="#modules"><div class="mn-card-top"><span class="mn-card-icon">⌁</span><span class="mn-card-index">03 / TABULAR</span></div><h3 class="mn-h3">Kidney disease</h3><p>Group related values to make a longer clinical form easier to navigate.</p><span class="mn-card-link">Explore workflow <span>↗</span></span></a>
+        <a class="mn-card mn-reveal" href="#modules"><div class="mn-card-top"><span class="mn-card-icon">◉</span><span class="mn-card-index">04 / TABULAR</span></div><h3 class="mn-h3">Liver disease</h3><p>Use clear labels, units, and validation feedback for each supported field.</p><span class="mn-card-link">Explore workflow <span>↗</span></span></a>
+        <a class="mn-card mn-reveal mn-delay-1" href="#modules"><div class="mn-card-top"><span class="mn-card-icon">✳</span><span class="mn-card-index">05 / TABULAR</span></div><h3 class="mn-h3">Breast cancer</h3><p>Keep the model's existing inputs and result behavior intact.</p><span class="mn-card-link">Explore workflow <span>↗</span></span></a>
+        <a class="mn-card mn-reveal mn-delay-2" href="#modules"><div class="mn-card-top"><span class="mn-card-icon">▧</span><span class="mn-card-index">06–07 / VISION</span></div><h3 class="mn-h3">Malaria + pneumonia</h3><p>A consistent upload surface for the existing image-analysis workflows.</p><span class="mn-card-link">Explore workflow <span>↗</span></span></a>
+      </div>
+    </section>
+
+    <section class="mn-section mn-container" id="workflow">
+      <div class="mn-section-heading mn-reveal"><div><span class="mn-eyebrow">A considered workflow</span><h2 class="mn-h2">From input to next step.</h2></div></div>
+      <div class="mn-steps">
+        <article class="mn-step mn-reveal"><span class="mn-step-number">01</span><h3 class="mn-h3">Share supported information</h3><p>Enter measurements or upload a supported report or image. Review extracted data before submitting.</p></article>
+        <article class="mn-step mn-reveal mn-delay-1"><span class="mn-step-number">02</span><h3 class="mn-h3">Review the model output</h3><p>Present only the values returned by the existing system, with context and clear limitations.</p></article>
+        <article class="mn-step mn-reveal mn-delay-2"><span class="mn-step-number">03</span><h3 class="mn-h3">Explore a sensible next step</h3><p>Use specialist discovery or appointment workflows where available, and seek qualified medical advice.</p></article>
+      </div>
+    </section>
+
+    <section class="mn-section mn-container" id="scanner">
+      <div class="mn-cta mn-reveal"><div class="mn-cta-copy"><span class="mn-eyebrow">Lab report scanner</span><h2 class="mn-h2">Less retyping.<br>More room to review.</h2><p class="mn-lead">A focused upload and extraction interface can help users review detected values and correct errors before using them.</p></div><a class="mn-button mn-button--primary" href="#modules">Explore the interface <span aria-hidden="true">↗</span></a></div>
+      <p class="mn-disclaimer" style="margin-top:20px">MediNova provides AI-assisted decision support, not a definitive diagnosis. All extracted clinical values should be reviewed, and predictions require interpretation by a qualified healthcare professional.</p>
+    </section>
+  </main>
+
+  <footer class="mn-footer"><div class="mn-container mn-footer-inner"><a class="mn-brand" href="#home"><span class="mn-brand-mark">M</span> MediNova</a><span>UI kit preview — sample content only</span><div class="mn-footer-links"><a href="#modules">Modules</a><a href="#workflow">How it works</a><button class="mn-button mn-button--small" type="button" data-theme-system>Use device theme</button></div></div></footer>
+</body>
+</html>

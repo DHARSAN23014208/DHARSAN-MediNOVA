@@ -24,7 +24,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cardiovascular Diagnostic - MediNova AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/medinova-ekon.css') }}?v=1.0">
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/report-scanner.css') }}?v=1.0">
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700,800&display=swap">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         /* =====================================================================
@@ -88,11 +91,11 @@
         .form-card .clinical-3col-grid select {
             width: 100% !important;
             height: 46px !important;
-            background-color: #ffffff !important;
-            background: #ffffff !important;
-            border: 1px solid #cbd5e1 !important;
+            background-color: #151519 !important;
+            background: #151519 !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
             border-radius: 8px !important;
-            color: #0f172a !important;
+            color: #ffffff !important;
             font-size: 0.95rem !important;
             font-weight: 500 !important;
             font-family: inherit !important;
@@ -119,7 +122,7 @@
         #heartForm select option,
         .form-card .clinical-3col-grid select option {
             background-color: #ffffff !important;
-            color: #0f172a !important;
+            color: #ffffff !important;
             padding: 8px 12px !important;
         }
 
@@ -129,15 +132,15 @@
         .form-card .clinical-3col-grid input:focus,
         .form-card .clinical-3col-grid select:focus {
             outline: none !important;
-            border-color: #0284c7 !important;
-            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
-            background-color: #ffffff !important;
+            border-color: #00F0FF !important;
+            box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.15) !important;
+            background-color: #18181e !important;
         }
 
         /* Input placeholders */
         #heartForm input::placeholder,
         .form-card .clinical-3col-grid input::placeholder {
-            color: #94a3b8 !important;
+            color: rgba(255, 255, 255, 0.4) !important;
             font-size: 0.88rem !important;
         }
 
@@ -219,6 +222,7 @@
 </head>
 
 <body>
+    <div class="mn-progress" data-scroll-progress></div>
     <!-- Ambient Background -->
     <div class="animated-bg">
         <div class="gradient-orb orb-1"></div>
@@ -227,30 +231,8 @@
     <div class="bg-grid"></div>
 
     <!-- Navigation -->
-    <nav class="navbar">
-        <a href="/" class="nav-brand">
-            <div class="brand-icon-wrapper">
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-            </div>
-            <span class="brand-gradient">MediNova</span>
-            <span class="brand-tag">Cardiology</span>
-        </a>
-
-        <div class="nav-links">
-            <a href="/" class="nav-link">Home</a>
-            <a href="/features" class="nav-link">Diagnostic Suite</a>
-            <a href="/contact" class="nav-link">Emergency & Care</a>
-            <button type="button" class="btn btn-sm btn-outline open-health-passport-btn" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; margin-right: 0.5rem;">
-                <span>📋 Health Passport</span>
-            </button>
-            <a href="/contact" class="nav-emergency-btn">
-                <span class="pulse-dot"></span>
-                <span>24/7 Helpline: 112 / 911</span>
-            </a>
-        </div>
-    </nav>
+    {% set active_page = 'features' %}
+{% include 'components/ekon_navbar.html' %}
 
     <div class="content-wrapper container">
         <a href="/features" class="back-button no-print" style="margin-top: 16px;">
@@ -1037,7 +1019,7 @@
             }
         });
     </script>
-    <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
+    <script src="{{ url_for('static', filename='js/medinova-ui.js') }}?v=1.0" defer></script>
     <script src="{{ url_for('static', filename='chatbot.js') }}?v=3"></script>
     <script src="{{ url_for('static', filename='medical_report.js') }}?v=4.0"></script>
     <script src="{{ url_for('static', filename='js/report-scanner.js') }}?v=1.0"></script>

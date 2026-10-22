@@ -1,17 +1,22 @@
 /* ==========================================================================
    MediNova - Advanced AI Medical Diagnostics Design System
+   Ekon Framer-Inspired Editorial Dark System
    ========================================================================== */
+
+@import url('https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 
 :root,
 [data-theme="dark"] {
-    --bg-main: #070b14;
-    --bg-surface: #0d1527;
-    --bg-surface-elevated: #131f37;
-    --bg-glass: rgba(13, 21, 39, 0.75);
+    --bg-main: #09090b;
+    --bg-surface: #111114;
+    --bg-surface-elevated: #16161c;
+    --bg-glass: rgba(17, 17, 20, 0.85);
     --border-glass: rgba(255, 255, 255, 0.08);
     --border-glass-hover: rgba(6, 182, 212, 0.35);
 
-    --primary: #06b6d4;          /* Medical Cyan */
+    --primary: #00F0FF;          /* Medical Cyan */
     --primary-light: #67e8f9;
     --primary-dark: #0891b2;
     --secondary: #6366f1;        /* Indigo */
@@ -30,10 +35,10 @@
     --warning-bg: rgba(245, 158, 11, 0.12);
     --warning-border: rgba(245, 158, 11, 0.35);
 
-    --text: #f8fafc;
+    --text: #f4f4f5;
     --text-heading: #ffffff;
-    --text-muted: #94a3b8;
-    --text-subtle: #64748b;
+    --text-muted: #a1a1aa;
+    --text-subtle: #71717a;
     --shadow-glow: 0 10px 30px -5px rgba(6, 182, 212, 0.25);
     --shadow-danger-glow: 0 10px 40px -5px rgba(244, 63, 94, 0.35);
 
@@ -86,8 +91,23 @@
     --radius-md: 14px;
     --radius-lg: 20px;
     --radius-xl: 28px;
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-sans: 'Switzer', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color-scheme: dark;
+    /* Ekon Buttons & Dark Surfaces */
+    --btn-primary-bg: #ffffff;
+    --btn-primary-text: #09090b;
+    --btn-primary-border: #ffffff;
+    --btn-primary-hover-bg: #e4e4e7;
+
+    --btn-secondary-bg: rgba(255, 255, 255, 0.05);
+    --btn-secondary-text: #ffffff;
+    --btn-secondary-border: rgba(255, 255, 255, 0.18);
+    --btn-secondary-hover-bg: rgba(255, 255, 255, 0.1);
+    --btn-secondary-hover-border: rgba(255, 255, 255, 0.35);
+
+    --dashboard-preview-bg: #0e0e12;
+    --dashboard-tile-bg: #141418;
+    --card-shadow: 0 24px 60px -15px rgba(0, 0, 0, 0.85);
 }
 
 [data-theme="light"] {
@@ -120,7 +140,7 @@
     --text: #0f172a;                     /* Deep slate text for AAA contrast */
     --text-heading: #0f172a;             /* Pure deep slate */
     --text-muted: #475569;               /* Slate 600 */
-    --text-subtle: #64748b;              /* Slate 500 */
+    --text-subtle: #71717a;              /* Slate 500 */
     --shadow-glow: 0 10px 30px -5px rgba(2, 132, 199, 0.15);
     --shadow-danger-glow: 0 10px 40px -5px rgba(225, 29, 72, 0.15);
 
@@ -173,8 +193,22 @@
     --radius-md: 14px;
     --radius-lg: 20px;
     --radius-xl: 28px;
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-sans: 'Switzer', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color-scheme: light;
+
+    /* Ekon Buttons & Surfaces (Light Theme - WCAG AAA High Contrast) */
+    --btn-primary-bg: #0f172a;
+    --btn-primary-text: #ffffff;
+    --btn-primary-border: #0f172a;
+    --btn-primary-hover-bg: #1e293b;
+
+    --btn-secondary-bg: #ffffff;
+    --btn-secondary-text: #0f172a;
+    --btn-secondary-border: #cbd5e1;
+    --btn-secondary-hover-bg: #f1f5f9;
+
+    --dashboard-preview-bg: #ffffff;
+    --dashboard-tile-bg: #f8fafc;
 }
 
 * {
@@ -4111,4 +4145,1071 @@ input::placeholder {
         display: none !important;
     }
 }
-
+
+
+/* ==========================================================================
+   EKON FRAMER-INSPIRED COMPONENT STYLES & ARCHITECTURE
+   ========================================================================== */
+
+/* ==========================================================================
+   Ekon-Inspired Floating Island Navigation Dock (3-Zone Architecture)
+   ========================================================================== */
+.navbar.mn-nav-wrap {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0.55rem 1.4rem !important;
+    position: fixed !important;
+    top: 14px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: calc(100% - 32px) !important;
+    max-width: 1360px !important;
+    z-index: 1000 !important;
+    background: rgba(12, 13, 16, 0.84) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    border: 1px solid var(--border-glass) !important;
+    border-radius: 9999px !important;
+    box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.5) !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+[data-theme="light"] .navbar.mn-nav-wrap {
+    background: rgba(255, 255, 255, 0.88) !important;
+    border: 1px solid rgba(15, 23, 42, 0.09) !important;
+    box-shadow: 0 14px 32px -8px rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Zone 1: Brand Anchor */
+.navbar-left {
+    display: flex !important;
+    align-items: center !important;
+    flex-shrink: 0 !important;
+}
+
+.nav-brand {
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.65rem !important;
+    text-decoration: none !important;
+    color: var(--text-heading) !important;
+    letter-spacing: -0.03em !important;
+}
+
+.brand-icon-wrapper {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    background: rgba(0, 240, 255, 0.12) !important;
+    border: 1px solid rgba(0, 240, 255, 0.35) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.25) !important;
+}
+
+.brand-icon-wrapper svg {
+    width: 16px !important;
+    height: 16px !important;
+    fill: var(--primary) !important;
+}
+
+.brand-tag {
+    font-size: 0.65rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.12em !important;
+    padding: 0.2rem 0.55rem !important;
+    border-radius: 9999px !important;
+    background: var(--bg-surface-elevated) !important;
+    color: var(--text-subtle) !important;
+    border: 1px solid var(--border-glass) !important;
+}
+
+/* Zone 2: Center Floating Dock (6 Single-Row Links) */
+.navbar-center.mn-center-dock {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+    padding: 0.25rem 0.5rem !important;
+    border-radius: 9999px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-theme="light"] .navbar-center.mn-center-dock {
+    background: rgba(15, 23, 42, 0.03) !important;
+    border: 1px solid rgba(15, 23, 42, 0.06) !important;
+}
+
+.navbar-center .nav-link {
+    color: var(--text-muted) !important;
+    text-decoration: none !important;
+    font-weight: 500 !important;
+    font-size: 0.8125rem !important;
+    padding: 0.35rem 0.7rem !important;
+    border-radius: 9999px !important;
+    white-space: nowrap !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    border: 1px solid transparent !important;
+}
+
+.navbar-center .nav-link:hover {
+    color: var(--text-heading) !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-theme="light"] .navbar-center .nav-link:hover {
+    background: rgba(15, 23, 42, 0.05) !important;
+}
+
+.navbar-center .nav-link.active {
+    color: var(--text-heading) !important;
+    background: rgba(255, 255, 255, 0.09) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    font-weight: 600 !important;
+}
+
+[data-theme="light"] .navbar-center .nav-link.active {
+    background: #ffffff !important;
+    border-color: rgba(15, 23, 42, 0.1) !important;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Zone 3: Right Controls & Actions */
+.navbar-right.mn-right-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.65rem !important;
+    flex-shrink: 0 !important;
+}
+
+.nav-cta-btn {
+    background: var(--btn-primary-bg) !important;
+    color: var(--btn-primary-text) !important;
+    font-weight: 700 !important;
+    font-size: 0.8125rem !important;
+    border-radius: 9999px !important;
+    padding: 0.45rem 1.05rem !important;
+    text-decoration: none !important;
+    border: 1px solid var(--btn-primary-border) !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+}
+
+.nav-cta-btn:hover {
+    background: var(--btn-primary-hover-bg) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Mobile Nav Toggle Button */
+.nav-toggle-btn {
+    display: none;
+    background: transparent;
+    border: 1px solid var(--border-glass);
+    border-radius: 9999px;
+    padding: 0.5rem 0.75rem;
+    color: var(--text-heading);
+    cursor: pointer;
+    font-size: 0.9rem;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Mobile Navigation Drawer */
+.mobile-nav-drawer {
+    display: none;
+    position: fixed;
+    top: 72px;
+    left: 16px;
+    right: 16px;
+    background: rgba(14, 14, 18, 0.98);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--border-glass);
+    border-radius: 20px;
+    padding: 1.25rem;
+    flex-direction: column;
+    gap: 0.75rem;
+    z-index: 999;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.85);
+    animation: drawerReveal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="light"] .mobile-nav-drawer {
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+}
+
+.mobile-nav-drawer.open,
+.mobile-nav-drawer.is-open {
+    display: flex;
+}
+
+@keyframes drawerReveal {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1140px) {
+    .navbar-center.mn-center-dock,
+    .navbar-right.mn-right-actions {
+        display: none !important;
+    }
+    .nav-toggle-btn {
+        display: inline-flex !important;
+    }
+}
+@media (min-width: 1141px) {
+    .nav-toggle-btn {
+        display: none !important;
+    }
+}
+
+/* ==========================================================================
+   Cinematic Medical Hero Section (Reference Composition & Typography)
+   ========================================================================== */
+.cinematic-hero-section {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    padding-top: calc(80px + 3.5rem);
+    padding-bottom: 5rem;
+    overflow: hidden;
+    background: var(--bg-main);
+    transition: background var(--fast) ease;
+}
+
+/* Full-Bleed Cinematic Medical Background */
+.hero-backdrop {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.hero-bg-img {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 25%;
+    opacity: 0.52;
+    filter: contrast(1.12) brightness(0.92) saturate(1.15);
+    transform: scale(1.02);
+    transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, filter 0.4s ease;
+}
+
+[data-theme="light"] .hero-bg-img {
+    opacity: 0.32;
+    filter: contrast(1.08) brightness(1.08) saturate(0.95);
+}
+
+/* Multi-Stop Seamless Gradient & Vignette Overlay */
+.hero-gradient-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    background: 
+        radial-gradient(ellipse 95% 75% at 65% 25%, rgba(8, 9, 11, 0.10) 0%, rgba(8, 9, 11, 0.70) 65%, var(--bg-main) 100%),
+        linear-gradient(to right, rgba(8, 9, 11, 0.92) 0%, rgba(8, 9, 11, 0.35) 55%, rgba(8, 9, 11, 0.80) 100%);
+}
+
+[data-theme="light"] .hero-gradient-overlay {
+    background: 
+        radial-gradient(ellipse 95% 75% at 65% 25%, rgba(248, 250, 252, 0.20) 0%, rgba(248, 250, 252, 0.75) 65%, var(--bg-main) 100%),
+        linear-gradient(to right, rgba(248, 250, 252, 0.94) 0%, rgba(248, 250, 252, 0.45) 55%, rgba(248, 250, 252, 0.86) 100%);
+}
+
+/* Subtle Ambient Cyan Glow Behind Visual Focal Point */
+.hero-ambient-glow {
+    position: absolute;
+    top: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(1000px, 90vw);
+    height: 480px;
+    background: radial-gradient(ellipse, rgba(0, 240, 255, 0.08) 0%, rgba(2, 132, 199, 0.04) 40%, transparent 70%);
+    filter: blur(60px);
+    z-index: 1;
+    pointer-events: none;
+}
+
+[data-theme="light"] .hero-ambient-glow {
+    background: radial-gradient(ellipse, rgba(2, 132, 199, 0.09) 0%, rgba(79, 70, 229, 0.04) 45%, transparent 70%);
+}
+
+/* Architectural Fine Translucent Vertical Grid Lines (Reference visual match) */
+.hero-grid-lines {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: 1360px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-left: 1px dashed var(--border-glass);
+    border-right: 1px dashed var(--border-glass);
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.grid-line {
+    border-right: 1px dashed var(--border-glass);
+    height: 100%;
+}
+
+@media (max-width: 900px) {
+    .hero-grid-lines {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .hero-grid-lines .grid-line:nth-child(n+3) {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .hero-grid-lines {
+        display: none;
+    }
+}
+
+/* Hero Content Container */
+.hero-container {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+}
+
+/* Editorial Split Headline */
+.editorial-headline-wrapper {
+    margin: 1.5rem 0 1.25rem 0;
+}
+
+.cinematic-editorial-title {
+    font-family: var(--font-sans);
+    line-height: 1.05;
+    letter-spacing: -0.038em;
+    margin: 0;
+}
+
+.headline-part-primary {
+    display: block;
+    font-size: clamp(2.6rem, 5.5vw, 4.8rem);
+    font-weight: 800;
+    color: var(--text-heading);
+    letter-spacing: -0.04em;
+}
+
+.headline-part-accent {
+    display: block;
+    font-size: clamp(2.4rem, 5.2vw, 4.4rem);
+    font-weight: 400;
+    color: var(--text-heading);
+    margin-top: 0.25rem;
+}
+
+.headline-part-accent em {
+    font-style: italic;
+    font-weight: 500;
+    font-family: 'Newsreader', 'Playfair Display', Georgia, serif;
+    background: var(--brand-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    padding-right: 0.15em;
+}
+
+/* Supporting Description */
+.cinematic-editorial-desc {
+    max-width: 660px;
+    font-size: clamp(1.05rem, 1.8vw, 1.22rem);
+    line-height: 1.62;
+    color: var(--text-muted);
+    margin: 1.25rem 0 2rem 0;
+    font-weight: 400;
+}
+
+/* CTA Group */
+.cinematic-cta-group {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.cinematic-cta-group .btn-ekon-primary .btn-arrow {
+    display: inline-block;
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: transform 0.25s ease;
+}
+
+.cinematic-cta-group .btn-ekon-primary:hover .btn-arrow {
+    transform: translateX(4px);
+}
+
+/* Bottom Editorial Metadata Row (Reference layout) */
+.hero-bottom-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding-top: 2rem;
+    margin-top: 2.5rem;
+    border-top: 1px solid var(--border-glass);
+}
+
+.hero-bottom-meta .meta-col-left {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.hero-bottom-meta .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.hero-bottom-meta .meta-val {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-heading);
+    letter-spacing: -0.01em;
+}
+
+.hero-bottom-meta .meta-lbl {
+    font-size: 0.72rem;
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.hero-bottom-meta .meta-separator {
+    width: 1px;
+    height: 24px;
+    background: var(--border-glass);
+}
+
+.hero-bottom-meta .meta-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    background: rgba(0, 240, 255, 0.04);
+    border: 1px solid rgba(0, 240, 255, 0.18);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.hero-bottom-meta .meta-status-pill .pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+}
+
+/* ==========================================================================
+   Ekon Editorial Typography & Chips (Adaptive Light / Dark)
+   ========================================================================== */
+.ekon-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 14px;
+    border-radius: 9999px;
+    border: 1px solid var(--border-glass);
+    background: var(--bg-surface-elevated);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    width: fit-content;
+    transition: background var(--fast) ease, border-color var(--fast) ease, color var(--fast) ease;
+}
+
+.ekon-chip-pulse {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary);
+    box-shadow: 0 0 10px var(--primary);
+    animation: blinkDot 1.6s infinite;
+}
+
+.ekon-editorial-title {
+    font-family: var(--font-sans);
+    font-size: clamp(2.4rem, 5.2vw, 4.2rem);
+    font-weight: 800;
+    letter-spacing: -0.038em;
+    line-height: 1.06;
+    color: var(--text-heading) !important;
+    margin: 1.25rem 0 1.5rem 0;
+    transition: color var(--fast) ease;
+}
+
+.ekon-editorial-desc {
+    font-size: clamp(1.05rem, 1.8vw, 1.2rem);
+    color: var(--text-muted) !important;
+    max-width: 700px;
+    line-height: 1.65;
+    margin-bottom: 2.25rem;
+    font-weight: 400;
+    transition: color var(--fast) ease;
+}
+
+.ekon-section-title {
+    font-family: var(--font-sans);
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text-heading) !important;
+    margin: 0;
+    line-height: 1.15;
+    transition: color var(--fast) ease;
+}
+
+.ekon-section-desc {
+    color: var(--text-muted) !important;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin: 0;
+    transition: color var(--fast) ease;
+}
+
+.ekon-hero-disclaimer {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--text-subtle) !important;
+    line-height: 1.5;
+    transition: color var(--fast) ease;
+}
+
+/* Ekon High-Contrast Pill Buttons (Theme Adaptive) */
+.btn-ekon-primary {
+    background: var(--btn-primary-bg) !important;
+    color: var(--btn-primary-text) !important;
+    font-weight: 700 !important;
+    border-radius: 9999px !important;
+    padding: 13px 30px !important;
+    font-size: 0.95rem !important;
+    text-decoration: none !important;
+    border: 1px solid var(--btn-primary-border) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-ekon-primary:hover {
+    background: var(--btn-primary-hover-bg) !important;
+    color: var(--btn-primary-text) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15) !important;
+}
+
+.btn-ekon-secondary {
+    background: var(--btn-secondary-bg) !important;
+    color: var(--btn-secondary-text) !important;
+    font-weight: 600 !important;
+    border-radius: 9999px !important;
+    padding: 13px 30px !important;
+    font-size: 0.95rem !important;
+    text-decoration: none !important;
+    border: 1px solid var(--btn-secondary-border) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04) !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-ekon-secondary:hover {
+    background: var(--btn-secondary-hover-bg) !important;
+    border-color: var(--btn-secondary-hover-border) !important;
+    color: var(--btn-secondary-text) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ==========================================================================
+   Ekon Tech Dashboard Preview (Theme Adaptive)
+   ========================================================================== */
+.ekon-dashboard-preview {
+    background: var(--dashboard-preview-bg);
+    border: 1px solid var(--border-glass);
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: var(--card-shadow);
+    margin-top: 3.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: background var(--fast) ease, border-color var(--fast) ease, box-shadow var(--fast) ease;
+}
+
+.dashboard-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-glass);
+    margin-bottom: 20px;
+}
+
+.dashboard-dot-group {
+    display: flex;
+    gap: 7px;
+}
+
+.dashboard-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--border-glass-hover);
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 18px;
+}
+
+@media (max-width: 900px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.dashboard-stat-tile {
+    background: var(--dashboard-tile-bg);
+    border: 1px solid var(--border-glass);
+    border-radius: 16px;
+    padding: 20px;
+    transition: background var(--fast) ease, border-color var(--fast) ease;
+}
+
+.dashboard-stat-tile h4 {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-subtle) !important;
+    margin-bottom: 8px;
+}
+
+.dashboard-stat-tile .stat-num {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text-heading) !important;
+    letter-spacing: -0.03em;
+    margin-bottom: 4px;
+}
+
+.dashboard-stat-tile .stat-sub {
+    font-size: 0.8rem;
+    color: var(--text-muted) !important;
+}
+
+.feature-showcase-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-glass);
+    border-radius: 24px;
+    padding: 3rem;
+    margin: 4rem 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+    transition: background var(--fast) ease, border-color var(--fast) ease, box-shadow var(--fast) ease;
+}
+
+@media (max-width: 768px) {
+    .feature-showcase-panel {
+        padding: 1.75rem;
+    }
+}
+
+/* ==========================================================================
+   Ekon Infinite Marquee Ticker (Theme Adaptive)
+   ========================================================================== */
+.ekon-marquee-wrap {
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 1.4rem 0;
+    border-top: 1px solid var(--border-glass);
+    border-bottom: 1px solid var(--border-glass);
+    background: var(--bg-surface-elevated);
+    position: relative;
+    user-select: none;
+    transition: background var(--fast) ease, border-color var(--fast) ease;
+}
+
+.ekon-marquee-track {
+    display: inline-flex;
+    gap: 2.5rem;
+    animation: ekonMarqueeAnimation 32s linear infinite;
+    will-change: transform;
+}
+
+.ekon-marquee-item {
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.ekon-marquee-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--primary);
+}
+
+@keyframes ekonMarqueeAnimation {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ekon-marquee-track {
+        animation: none !important;
+    }
+}
+
+/* ==========================================================================
+   Ekon Metric Counters Grid (Theme Adaptive)
+   ========================================================================== */
+.ekon-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    margin: 3.5rem 0 5rem 0;
+}
+
+@media (max-width: 900px) {
+    .ekon-metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 540px) {
+    .ekon-metrics-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ekon-metric-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-glass);
+    border-radius: 18px;
+    padding: 1.75rem 1.5rem;
+    transition: all 0.25s ease;
+    box-shadow: var(--card-shadow);
+}
+
+.ekon-metric-card:hover {
+    border-color: var(--border-glass-hover);
+    transform: translateY(-2px);
+}
+
+.ekon-metric-val {
+    font-family: var(--font-sans);
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: var(--text-heading) !important;
+    line-height: 1.1;
+    margin-bottom: 0.4rem;
+    letter-spacing: -0.04em;
+}
+
+.ekon-metric-lbl {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-subtle) !important;
+}
+
+/* ==========================================================================
+   Ekon Diagnostic Module Cards (Portfolio Grid)
+   ========================================================================== */
+.ekon-modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+    margin-top: 2.5rem;
+}
+
+@media (max-width: 600px) {
+    .ekon-modules-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ekon-module-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-glass);
+    border-radius: 20px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+}
+
+.ekon-module-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--border-glass-hover);
+}
+
+.ekon-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.ekon-card-index {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text-subtle) !important;
+    text-transform: uppercase;
+}
+
+.ekon-modality-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 9999px;
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-glass);
+    color: var(--text-muted) !important;
+}
+
+.ekon-card-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    display: inline-block;
+}
+
+.ekon-card-title {
+    font-family: var(--font-sans);
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--text-heading) !important;
+    margin-bottom: 0.6rem;
+}
+
+.ekon-card-desc {
+    font-size: 0.9rem;
+    color: var(--text-muted) !important;
+    line-height: 1.55;
+    margin-bottom: 1.5rem;
+}
+
+.ekon-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border-glass);
+}
+
+.ekon-card-inputs {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-subtle) !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ekon-card-arrow {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-glass);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    transition: all 0.25s ease;
+}
+
+.ekon-module-card:hover .ekon-card-arrow {
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-text);
+    transform: translateX(3px);
+}
+
+/* ==========================================================================
+   Ekon 3-Step Clinical Workflow (Theme Adaptive)
+   ========================================================================== */
+.ekon-workflow-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 2.5rem;
+}
+
+@media (max-width: 840px) {
+    .ekon-workflow-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ekon-step-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-glass);
+    border-radius: 20px;
+    padding: 32px 28px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+}
+
+.ekon-step-num {
+    font-family: var(--font-sans);
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: var(--border-glass);
+    line-height: 1;
+    position: absolute;
+    top: 20px;
+    right: 24px;
+}
+
+.ekon-step-title {
+    font-family: var(--font-sans);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-heading) !important;
+    margin: 1.5rem 0 0.6rem 0;
+    letter-spacing: -0.02em;
+}
+
+.ekon-step-desc {
+    font-size: 0.9rem;
+    color: var(--text-muted) !important;
+    line-height: 1.6;
+}
+
+/* ==========================================================================
+   Ekon Editorial Footer (Theme Adaptive)
+   ========================================================================== */
+.ekon-footer {
+    border-top: 1px solid var(--border-glass);
+    padding: 5rem 0 3rem 0;
+    background: var(--bg-surface);
+    margin-top: 6rem;
+    transition: background var(--fast) ease, border-color var(--fast) ease;
+}
+
+.ekon-footer-wordmark {
+    font-family: var(--font-sans);
+    font-size: clamp(2.2rem, 6vw, 4.8rem);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    color: var(--text-heading) !important;
+    line-height: 1;
+    margin-bottom: 2rem;
+}
+
+.ekon-footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 3rem;
+    padding-bottom: 3rem;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+@media (max-width: 900px) {
+    .ekon-footer-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 540px) {
+    .ekon-footer-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ekon-footer-col h5 {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-subtle) !important;
+    margin-bottom: 1.25rem;
+}
+
+.ekon-footer-col ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.ekon-footer-col a {
+    color: var(--text-muted) !important;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
+}
+
+.ekon-footer-col a:hover {
+    color: var(--text-heading) !important;
+}
+
+.ekon-footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding-top: 2rem;
+    font-size: 0.82rem;
+    color: var(--text-subtle) !important;
+}

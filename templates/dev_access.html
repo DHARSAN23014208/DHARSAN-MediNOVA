@@ -24,6 +24,9 @@
     <title>MediNova - Internal Developer Portal & Google Sheets Audit</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/medinova-ekon.css') }}?v=1.0">
+
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700,800&display=swap">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -536,6 +539,7 @@
 </head>
 
 <body class="dev-portal">
+    <div class="mn-progress" data-scroll-progress></div>
     <!-- Ambient Background Elements -->
     <div class="animated-bg">
         <div class="gradient-orb orb-1"></div>
@@ -1008,5 +1012,6 @@
             }
         }
     </script>
+    <script src="{{ url_for('static', filename='js/medinova-ui.js') }}?v=1.0" defer></script>
 </body>
 </html>

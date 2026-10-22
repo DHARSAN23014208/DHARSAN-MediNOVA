@@ -21,7 +21,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Official Report Verification - MediNova Clinical AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/medinova-ekon.css') }}?v=1.0">
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/report-scanner.css') }}?v=1.0">
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700,800&display=swap">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <style>
         .navbar {
@@ -196,28 +199,15 @@
     </style>
 </head>
 <body>
+    <div class="mn-progress" data-scroll-progress></div>
     <div class="animated-bg">
         <div class="gradient-orb orb-1"></div>
         <div class="gradient-orb orb-2"></div>
     </div>
     <div class="bg-grid"></div>
 
-    <nav class="navbar" id="topNavbar" style="padding-right: 24px; box-sizing: border-box;">
-        <a href="/" class="nav-brand">
-            <div class="brand-icon-wrapper">
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-            </div>
-            <span class="brand-gradient">MediNova</span>
-            <span class="brand-tag">Verification</span>
-        </a>
-        <div class="nav-links">
-            <a href="/" class="nav-link">Home</a>
-            <a href="/features" class="nav-link">Diagnostic Suite</a>
-            <a href="/contact" class="nav-link">Care Network</a>
-        </div>
-    </nav>
+    {% set active_page = 'features' %}
+{% include 'components/ekon_navbar.html' %}
 
     <div class="content-wrapper container">
         <div class="verify-card glass-panel" id="verificationView">
@@ -413,6 +403,6 @@
             window.exitVerification = exitVerification;
         })();
     </script>
-    <script src="{{ url_for('static', filename='theme.js') }}?v=2"></script>
+    <script src="{{ url_for('static', filename='js/medinova-ui.js') }}?v=1.0" defer></script>
 </body>
 </html>
