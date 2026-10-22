@@ -13,6 +13,9 @@
 
 Designed for resource-constrained clinical edge deployments (e.g., cloud containers with $\le 512\,\text{MB}$ RAM limits), MediNova strictly enforces lazy model loading, out-of-distribution (OOD) biomarker validation envelopes, session-bound CSRF protection, and defense-in-depth HTTP security headers.
 
+> 📋 **Operational Workflows & Sequence Specifications:**  
+> For complete step-by-step sequence diagrams, patient triage flows, and state machines, see [WORKFLOW.md](WORKFLOW.md).
+
 ### High-Level System Architecture
 
 ```mermaid
@@ -24,6 +27,7 @@ flowchart TB
         ECGUI["Biosignal Telemetry Workstation (MIT-BIH Waveform Canvas)"]
         ThyroidUI["Endocrine Panel Workstation (8 Analyte Biomarker Gauges)"]
         HospitalUI["Care Network Discovery & Specialist Booking Table"]
+        ActiveOriginMgr["Centralized ACTIVE_ORIGIN State Machine (contact.html)"]
         TrackerUI["Patient Appointment Tracker & ICS Slip"]
         VerifyUI["HMAC-SHA256 Report Verification Portal"]
     end
@@ -41,6 +45,7 @@ flowchart TB
         Routes["Clinical Screening Routes (/heart, /diabetes, /thyroid, /arrhythmia, etc.)"]
         RoadmapGate["Governed Roadmap Gate (403 Forbidden for Inactive Candidates)"]
         ScanAPI["Report Processing Pipeline (/api/reports/process)"]
+        GeocodeProxyAPI["Progressive Geocoder Proxy (/api/hospitals/geocode)"]
         HospAPI["Specialty Discovery API (/api/hospitals/search)"]
         AptAPI["Appointment Controller (/api/appointments/...)"]
         DevAPI["Developer Portal (/developer/patient-records)"]
@@ -68,6 +73,7 @@ flowchart TB
 
     subgraph ExternalTier ["External Integration & Cloud Services"]
         OSM["OpenStreetMap Photon / Nominatim Geocoder & Overpass API"]
+        GMapsRouting["Google Maps Dynamic Directions (Coordinate-First Routing)"]
         GSheets["Google Sheets API v4 (Private Asynchronous Patient Logging)"]
         SMTPService["SMTP Mail Gateway (2FA OTP & Clinic Dispatch)"]
     end
@@ -250,23 +256,115 @@ The report scanner enables triage from diagnostic paperwork (PDFs or photos of l
 
 ---
 
-### 2.7 Verified Care Network & Disease-Specific Hospital Discovery
+### 2.7 Verified Care Network & Geospatial Hospital Discovery Engine
 
-MediNova features a location-aware healthcare discovery engine that matches diagnostic findings to verified specialist hospital departments.
+MediNova features a location-aware, privacy-preserving healthcare discovery engine that matches clinical findings to verified hospital departments, calculates straight-line distances from the patient's active coordinates, and generates coordinate-first Google Maps navigation routes.
 
-#### Specialty Mapping Rules
-- **Pneumonia:** Pulmonology, Respiratory Medicine, Chest Medicine, Thoracic Care (*Generic Internal Medicine explicitly disallowed*).
-- **Heart Disease:** Cardiology, Interventional Cardiology, Cardiothoracic Surgery (CTVS).
-- **Diabetes:** Endocrinology, Diabetology, Diabetes and Metabolism.
-- **Kidney Disease:** Nephrology, Renal Medicine, Hemodialysis Services.
-- **Liver Disease:** Hepatology, Gastroenterology, Hepatobiliary (HPB) Surgery.
-- **Breast Cancer:** Medical Oncology, Surgical Oncology, Breast Cancer Center.
-- **Malaria:** Infectious Diseases, Tropical Medicine, Clinical Parasitology.
-- **Thyroid Dysfunction:** Endocrinology, Endocrine Surgery, Thyroid & Metabolism Center.
-- **Cardiac Arrhythmia:** Cardiac Electrophysiology, Arrhythmia & Pacemaker Clinic, Cardiology.
+#### 2.7.1 Progressive 7-Tier Query Decomposition Pipeline
+Real-world patient location inputs—particularly within the Indian healthcare context—frequently contain composite addresses with highway designations (e.g., `(NH-4)`), educational campus landmarks, taluk names, and district boundaries (e.g., `"Saveetha Engineering College, Saveetha Nagar, (NH-4), Sriperumbudur Taluk, Kanchipuram District, Chennai, Tamil Nadu, 602105"`). Standard single-query geocoders fail to resolve such compound strings.
 
-#### Non-Clinical Exclusion Policy
-Strict regex filters discard facilities dedicated exclusively to alternative therapies (Ayurveda, Homeopathy, Unani, Siddha), dentistry, or optometry to ensure patient safety.
+MediNova implements a progressive 7-tier candidate decomposition engine in `utils/hospital_service.py` (`normalize_address()` and `generate_progressive_candidates()`):
+
+```mermaid
+flowchart TD
+    Raw["Raw User Address Input"] --> Norm["normalize_address(): Strip Plus-Codes, Normalize Unicode Dashes & Parenthesized Highways (NH-4) -> NH-4"]
+    Norm --> T1["Tier 1: Exact Cleaned Query"]
+    T1 -->|No match| T2["Tier 2: Country-Biased Query (+ ', India')"]
+    T2 -->|No match| T3["Tier 3: Locality Query (Remove Highway & Road Labels)"]
+    T3 -->|No match| T4["Tier 4: Locality + District/Town + State"]
+    T4 -->|No match| T5["Tier 5: District/Town + State"]
+    T5 -->|No match| T6["Tier 6: 6-Digit Indian PIN Code (+ ', India')"]
+    T6 -->|No match| T7["Tier 7: Approximate Major City Center (Flagged approximateCityCenter=true)"]
+    T1 -->|Match| Coords["Resolved Geo-Coordinates [Lat, Lon]"]
+    T2 -->|Match| Coords
+    T3 -->|Match| Coords
+    T4 -->|Match| Coords
+    T5 -->|Match| Coords
+    T6 -->|Match| Coords
+    T7 -->|Match| Coords
+    T7 -->|No match| Failure["Return HTTP 404 (success=false, location_not_found)"]
+```
+
+1. **Tier 1 (Exact Cleaned Query):** Preprocessed string with duplicate commas, excess whitespace, and plus-codes removed.
+2. **Tier 2 (Country-Biased Query):** Appends `", India"` to anchor ambiguous domestic town names.
+3. **Tier 3 (Locality Without Road Noise):** Strips road noise tokens (`NH-4`, `Expressway`, `Bypass`, `Main Road`, `Lane`, `Street`, `Plot No`, `Door No`) to isolate landmark and sub-locality tokens.
+4. **Tier 4 (Locality + District/Town + State):** Composite token combining the neighborhood with its administrative district and state.
+5. **Tier 5 (District/Town + State):** Fallback to administrative taluk / district boundary.
+6. **Tier 6 (6-Digit Indian PIN Code):** Extracts `\b[1-9][0-9]{5}\b` pattern to resolve the postal delivery centroid.
+7. **Tier 7 (Approximate City Center):** Resolves major urban metropolitan center only when explicitly contained within the input. **Crucial Governance Invariant:** If Tier 7 is utilized, the payload explicitly returns `"approximateCityCenter": true` and `"resolutionLevel": "city_approximate"`. It is never silently substituted as an exact patient location.
+
+#### 2.7.2 Multi-Provider Geocoding Architecture
+Direct browser calls to external geocoding endpoints are blocked by CORS policies and forbidden User-Agent header restrictions. MediNova routes all geocoding through a server-side proxy endpoint:
+
+$$\text{POST } \texttt{/api/hospitals/geocode} \longrightarrow \texttt{resolve\_any\_address(address)}$$
+
+The resolver queries OpenStreetMap Nominatim with strict HTTP compliance (`User-Agent: MediNova-Clinical-App/5.0.0`, `timeout=6.0s`) and automatically falls back to the Komoot Photon API (`timeout=5.0s`, SSL verified) if Nominatim encounters rate limits or connection failures.
+
+#### 2.7.3 Centralized `ACTIVE_ORIGIN` State Architecture
+To eliminate race conditions across multiple origin input methods (manual text search, browser GPS geolocation, and quick metro city selector buttons), `templates/contact.html` maintains a single centralized client-side state machine:
+
+```javascript
+let ACTIVE_ORIGIN = {
+    userOriginCoords: null,            // [lat, lng] or null
+    userOriginAddress: '',             // Raw input or metro label
+    userOriginResolvedAddress: '',     // Canonical geocoded address string
+    userOriginSource: 'none',          // 'browser_geolocation' | 'address_search' | 'metro_quick_button' | 'approximate_city_center'
+    userOriginPrecision: 'unresolved'  // 'gps_exact' | 'geocoded_high' | 'geocoded_locality' | 'geocoded_pincode' | 'city_approximate'
+};
+```
+
+**State Synchronization Invariants:**
+- Every origin update (manual search, browser GPS, or quick metro click) writes directly to `ACTIVE_ORIGIN` before hospital filtering begins.
+- Quick Metro buttons (Chennai, Delhi, Mumbai, Bengaluru, Hyderabad, Kolkata) populate the address input text box and update `ACTIVE_ORIGIN` with verified metropolitan coordinates.
+- Browser GPS invokes `navigator.geolocation.getCurrentPosition` with `enableHighAccuracy: true`, sets `userOriginSource = 'browser_geolocation'`, and sets `userOriginPrecision = 'gps_exact'`.
+- Failed searches invoke `clearActiveOrigin()`, resetting `ACTIVE_ORIGIN` to initial null values and immediately emptying `ALL_RECOMMENDATIONS = []`.
+
+#### 2.7.4 Straight-Line Haversine Distance & Coordinate-First Navigation Model
+All hospital distances are computed strictly via the Haversine formula on spherical coordinates:
+
+$$d = 2R \arcsin \left( \sqrt{ \sin^2\left(\frac{\Delta \phi}{2}\right) + \cos(\phi_1)\cos(\phi_2)\sin^2\left(\frac{\Delta \lambda}{2}\right) } \right)$$
+
+where $R = 6371.0\,\text{km}$, $\phi$ is latitude in radians, and $\lambda$ is longitude in radians.
+
+**Dynamic Coordinate-First Google Maps Navigation URLs:**  
+To prevent text-based location ambiguity and incorrect route origins, MediNova generates Google Maps directions URLs using strict coordinate pairs:
+
+$$\texttt{https://www.google.com/maps/dir/?api=1\&origin=}\mathbf{LAT}\%2C\mathbf{LNG}\texttt{\&destination=}\mathbf{DEST}\texttt{\&travelmode=driving}$$
+
+If `ACTIVE_ORIGIN.userOriginCoords` is available (e.g. `13.0265, 80.0159`), the origin parameter is formatted as `13.026500%2C80.015900`. If coordinates are unavailable, the system safely falls back to URI-encoded textual address strings.
+
+#### 2.7.5 Specialty Mapping & Anti-General Medicine Clinical Governance
+MediNova strictly enforces condition-to-department specialization. Patients screening positive for serious organ-specific pathologies must not be directed to general outpatient departments:
+
+| Condition | Verified Clinical Departments Required | Disallowed Departments |
+| :--- | :--- | :--- |
+| **Pneumonia** | Pulmonology, Respiratory Medicine, Chest Medicine, Thoracic Care | *Internal Medicine, General Medicine, OPD* |
+| **Heart Disease** | Cardiology, Interventional Cardiology, Cardiothoracic Surgery (CTVS) | *General Practice, Family Medicine* |
+| **Diabetes** | Endocrinology, Diabetology, Diabetes and Metabolism | *General Medicine* |
+| **Kidney Disease** | Nephrology, Renal Medicine, Hemodialysis Services | *General Surgery* |
+| **Liver Disease** | Hepatology, Gastroenterology, Hepatobiliary (HPB) Surgery | *General Medicine* |
+| **Breast Cancer** | Medical Oncology, Surgical Oncology, Breast Cancer Center | *General Gynecology* |
+| **Thyroid Dysfunction**| Endocrinology, Endocrine Surgery, Thyroid Center | *General Medicine* |
+| **Cardiac Arrhythmia**| Cardiac Electrophysiology, Arrhythmia & Pacemaker Clinic, Cardiology | *General Practice* |
+| **Malaria** | Infectious Diseases, Tropical Medicine, Clinical Parasitology | *Alternative Medicine* |
+
+#### 2.7.6 Non-Clinical Exclusion Policies
+Strict regex filters automatically discard facilities dedicated exclusively to alternative therapies (Ayurveda, Homeopathy, Unani, Siddha), standalone dental clinics, and optical shops to safeguard patients facing acute or specialized conditions. Furthermore, any facility with an aggregated patient rating $\le 3.0$ is filtered out.
+
+#### 2.7.7 Progressive Radius Auto-Expansion
+When no verified specialist hospital is found within the user-selected radius (e.g., 5 km), the search auto-expands progressively:
+
+$$5\,\text{km} \longrightarrow 15\,\text{km} \longrightarrow 30\,\text{km} \longrightarrow 50\,\text{km} \longrightarrow 100\,\text{km}$$
+
+The UI explicitly displays an informative banner informing the patient of the expanded search radius and the nearest verified facility distance.
+
+#### 2.7.8 Fail-Safe State Synchronization & Anti-Stale Data Flushing
+When address resolution fails or a non-existent location is queried:
+1. `clearActiveOrigin()` is triggered immediately.
+2. The active origin coordinates, query strings, and precision tokens are purged from memory.
+3. The recommendation cache is completely emptied: `ALL_RECOMMENDATIONS = []`.
+4. The DOM hospital table is cleared and replaced with a clean *"Location Not Found"* advisory banner.
+5. Stale distance estimates from previous searches are never permitted to persist in the user interface.
 
 ---
 
@@ -455,13 +553,14 @@ The test suite validates every layer of the MediNova architecture without relyin
 python -m unittest discover tests
 ```
 
-**Execution Result:** `Ran 78 tests in 6.372s — OK (0 failures, 0 errors, 100% pass rate)`
+**Execution Result:** `Ran 89 tests in 7.519s — OK (0 failures, 0 errors, 100% pass rate)`
 
 | Test Suite File | Test Scope & Focus | Test Count | Key Invariants Verified |
 | :--- | :--- | :---: | :--- |
 | [`tests/test_audit_fixes.py`](file:///c:/Users/admin/Desktop/DHARSAN-MediNOVA/tests/test_audit_fixes.py) | Security, Outbox, Privacy & Contracts | **22** | Production fail-closed, OTP non-leakage, 60s rate limit, 5-attempt lockout, private image session tokens, Pillow verify, coordinate bounding boxes, radius limits, state machine transitions, formula injection sanitization, HMAC report signing. |
 | [`tests/test_care_network.py`](file:///c:/Users/admin/Desktop/DHARSAN-MediNOVA/tests/test_care_network.py) | Verified Hospital Discovery Engine | **8** | Specialty matching for all conditions, Pulmonology specialty isolation, rating $> 3.0$ filter, progressive expansion (5 to 100 km), authoritative registry cross-referencing. |
-| [`tests/test_scanner_pipeline.py`](file:///c:/Users/admin/Desktop/DHARSAN-MediNOVA/tests/test_scanner_pipeline.py) | Report Scanner & OCR Ingestion | **24** | Synthetic PDF extraction, OCR token extraction, unit conversions, biomarker dictionary normalization, instant prediction pipeline. |
+| [`tests/test_location_and_navigation.py`](file:///c:/Users/admin/Desktop/DHARSAN-MediNOVA/tests/test_location_and_navigation.py) | 7-Tier Geocoding, Active Origin & Navigation | **9** | Progressive 7-tier query decomposition, address normalization (highway tokens `(NH-4)` $\to$ `NH-4`, dashes, plus-codes), straight-line Haversine calculations, coordinate-first Google Maps directions URL formatting (`origin=LAT%2CLNG&destination=DEST`), `ACTIVE_ORIGIN` state transitions, fail-safe recommendation clearing (`ALL_RECOMMENDATIONS = []`), and zero generic city center substitution leakage. |
+| [`tests/test_scanner_pipeline.py`](file:///c:/Users/admin/Desktop/DHARSAN-MediNOVA/tests/test_scanner_pipeline.py) | Report Scanner & OCR Ingestion | **26** | Synthetic PDF extraction, OCR token extraction, unit conversions, biomarker dictionary normalization, instant prediction pipeline, corrupted stream recovery. |
 | [`tests/test_nextgen_cdss.py`](file:///c:/Users/admin/Desktop/DHARSAN-MediNOVA/tests/test_nextgen_cdss.py) | Next-Gen CDSS, Model Registry, Signals & Security | **24** | Master registry manifest validation, SHA-256 integrity checks, physiological plausibility envelopes (OOD bounds), Pan-Tompkins QRS detection, Butterworth filtering, thyroid model inference, ECG arrhythmia inference, roadmap condition gating (403), CSRF protection enforcement, HTTP security headers, system telemetry API. |
 
 ---

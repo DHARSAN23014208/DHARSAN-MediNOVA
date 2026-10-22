@@ -493,20 +493,50 @@ def calculate_haversine_distance(lat1: float, lon1: float, lat2: float, lon2: fl
 
 
 def normalize_address(address: str) -> str:
-    """Clean and standardize an address string, stripping plus codes and noise."""
-    if not address:
+    """Clean and standardize an address string, stripping plus codes, unicode dashes, and punctuation noise."""
+    if not address or not isinstance(address, str):
         return ""
-    cleaned = re.sub(r'^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},?\s*', '', address, flags=re.IGNORECASE)
-    cleaned = re.sub(r'\b[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}\b,?\s*', '', cleaned, flags=re.IGNORECASE)
-    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-    return cleaned
+    s = address.strip()
+    # Normalize unicode hyphens, dashes, and quotes
+    s = s.replace("\u2013", "-").replace("\u2014", "-").replace("\u2212", "-")
+    s = s.replace("\u2018", "'").replace("\u2019", "'").replace("\u201c", '"').replace("\u201d", '"')
+    # Strip plus codes
+    s = re.sub(r'^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},?\s*', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'\b[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}\b,?\s*', '', s, flags=re.IGNORECASE)
+    # Standardize highway designations e.g. (NH-4), (NH 4), (NH-48) -> NH-4 / NH-48
+    s = re.sub(r'\(\s*(NH[-\s]*\d+[A-Z]?)\s*\)', r' \1 ', s, flags=re.IGNORECASE)
+    s = re.sub(r'\bNH\s*(\d+)\b', r'NH-\1', s, flags=re.IGNORECASE)
+    # Repeated commas and spaces
+    s = re.sub(r'[,;]+', ',', s)
+    s = re.sub(r'\s*,\s*', ', ', s)
+    s = re.sub(r'\s+', ' ', s).strip(' ,')
+    return s
 
 
 # ==============================================================================
-# 4. UNIVERSAL ADDRESS GEOCODING (NOMINATIM & PHOTON)
+# 4. UNIVERSAL ADDRESS GEOCODING (NOMINATIM PROGRESSIVE & PHOTON FALLBACK)
 # ==============================================================================
 
-def _try_nominatim_query(query: str, countrycodes: Optional[str] = None) -> Optional[Dict[str, Any]]:
+CITY_CENTROIDS: Dict[str, Dict[str, Any]] = {
+    "delhi": {"latitude": 28.6139, "longitude": 77.2090, "display_name": "New Delhi, Delhi, India", "city": "New Delhi", "state": "Delhi", "country": "India"},
+    "new delhi": {"latitude": 28.6139, "longitude": 77.2090, "display_name": "New Delhi, Delhi, India", "city": "New Delhi", "state": "Delhi", "country": "India"},
+    "chennai": {"latitude": 13.0827, "longitude": 80.2707, "display_name": "Chennai, Tamil Nadu, India", "city": "Chennai", "state": "Tamil Nadu", "country": "India"},
+    "mumbai": {"latitude": 19.0760, "longitude": 72.8777, "display_name": "Mumbai, Maharashtra, India", "city": "Mumbai", "state": "Maharashtra", "country": "India"},
+    "bengaluru": {"latitude": 12.9716, "longitude": 77.5946, "display_name": "Bengaluru, Karnataka, India", "city": "Bengaluru", "state": "Karnataka", "country": "India"},
+    "bangalore": {"latitude": 12.9716, "longitude": 77.5946, "display_name": "Bengaluru, Karnataka, India", "city": "Bengaluru", "state": "Karnataka", "country": "India"},
+    "hyderabad": {"latitude": 17.3850, "longitude": 78.4867, "display_name": "Hyderabad, Telangana, India", "city": "Hyderabad", "state": "Telangana", "country": "India"},
+    "kolkata": {"latitude": 22.5726, "longitude": 88.3639, "display_name": "Kolkata, West Bengal, India", "city": "Kolkata", "state": "West Bengal", "country": "India"}
+}
+
+INDIAN_STATES: Set[str] = {
+    "tamil nadu", "karnataka", "maharashtra", "delhi", "telangana", "west bengal",
+    "kerala", "andhra pradesh", "gujarat", "uttar pradesh", "haryana", "punjab",
+    "rajasthan", "madhya pradesh", "bihar", "odisha", "assam", "goa", "chandigarh",
+    "puducherry", "pondicherry", "jharkhand", "chhattisgarh", "uttarakhand", "himachal pradesh"
+}
+
+
+def _try_nominatim_query(query: str, countrycodes: Optional[str] = "in") -> Optional[Dict[str, Any]]:
     url = "https://nominatim.openstreetmap.org/search"
     params = {
         "q": query,
@@ -524,19 +554,24 @@ def _try_nominatim_query(query: str, countrycodes: Optional[str] = None) -> Opti
             results = resp.json()
             if results and len(results) > 0:
                 item = results[0]
-                addr = item.get("address", {})
-                city = addr.get("city") or addr.get("town") or addr.get("suburb") or addr.get("county") or ""
-                state = addr.get("state") or ""
-                country = addr.get("country") or ""
-                return {
-                    "latitude": float(item["lat"]),
-                    "longitude": float(item["lon"]),
-                    "display_name": item.get("display_name", query),
-                    "city": city,
-                    "state": state,
-                    "country": country,
-                    "source": "OpenStreetMap Nominatim"
-                }
+                lat = float(item["lat"])
+                lon = float(item["lon"])
+                if -90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0 and not (lat == 0.0 and lon == 0.0):
+                    addr = item.get("address", {})
+                    city = addr.get("city") or addr.get("town") or addr.get("suburb") or addr.get("village") or addr.get("county") or ""
+                    state = addr.get("state") or ""
+                    country = addr.get("country") or ""
+                    pincode = addr.get("postcode") or ""
+                    return {
+                        "latitude": lat,
+                        "longitude": lon,
+                        "display_name": item.get("display_name", query),
+                        "city": city,
+                        "state": state,
+                        "country": country,
+                        "pincode": pincode,
+                        "source": "OpenStreetMap Nominatim"
+                    }
     except Exception as e:
         logger.debug(f"[NOMINATIM QUERY FAIL]: {e}")
     return None
@@ -555,31 +590,140 @@ def _try_photon_query(query: str) -> Optional[Dict[str, Any]]:
                 feat = features[0]
                 coords = feat.get("geometry", {}).get("coordinates", [])
                 if len(coords) >= 2:
-                    props = feat.get("properties", {})
-                    name = props.get("name", query)
-                    city = props.get("city") or props.get("district") or ""
-                    state = props.get("state", "")
-                    country = props.get("country", "")
-                    parts = [p for p in [name, city, state, country] if p]
-                    label = ", ".join(parts) if parts else name
-                    return {
-                        "latitude": float(coords[1]),
-                        "longitude": float(coords[0]),
-                        "display_name": label,
-                        "city": city,
-                        "state": state,
-                        "country": country,
-                        "source": "Photon (Komoot)"
-                    }
+                    lon = float(coords[0])
+                    lat = float(coords[1])
+                    if -90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0 and not (lat == 0.0 and lon == 0.0):
+                        props = feat.get("properties", {})
+                        name = props.get("name", query)
+                        city = props.get("city") or props.get("district") or props.get("county") or ""
+                        state = props.get("state", "")
+                        country = props.get("country", "")
+                        pincode = props.get("postcode", "")
+                        parts = [p for p in [name, city, state, country] if p]
+                        label = ", ".join(parts) if parts else name
+                        return {
+                            "latitude": lat,
+                            "longitude": lon,
+                            "display_name": label,
+                            "city": city,
+                            "state": state,
+                            "country": country,
+                            "pincode": pincode,
+                            "source": "Photon (Komoot)"
+                        }
     except Exception as e:
         logger.debug(f"[PHOTON QUERY FAIL]: {e}")
     return None
 
 
-def resolve_any_address(query: str) -> Optional[Dict[str, Any]]:
-    """Resolve an address or city using Nominatim with Photon fallback."""
-    if not query or not query.strip():
-        return None
+def generate_progressive_candidates(raw_input: str) -> List[Tuple[str, str]]:
+    """
+    Generate progressive query variants in decreasing order of specificity:
+    1. The original address, normalized for search.
+    2. The complete normalized address with 'India' added.
+    3. Locality segments without road/highway designations.
+    4. Specific locality combined with district/town and state.
+    5. District or town combined with state.
+    6. Six-digit Indian PIN code candidates.
+    """
+    norm = normalize_address(raw_input)
+    if not norm:
+        return []
+
+    candidates: List[Tuple[str, str]] = []
+    seen: Set[str] = set()
+
+    def add_cand(q: str, level: str):
+        q_clean = q.strip(' ,')
+        if q_clean and q_clean.lower() not in seen:
+            seen.add(q_clean.lower())
+            candidates.append((q_clean, level))
+
+    # Tier 1: Exact normalized
+    add_cand(norm, "exact_normalized")
+
+    # Tier 2: Exact with country
+    if "india" not in norm.lower():
+        add_cand(f"{norm}, India", "exact_country_biased")
+
+    segments = [s.strip() for s in norm.split(',') if s.strip()]
+    pincode_match = re.search(r'\b(\d{6})\b', norm)
+    pincode = pincode_match.group(1) if pincode_match else None
+
+    road_pattern = re.compile(
+        r'\b(nh[-\s]*\d+|highway|expressway|bypass|road|salai|marg|lane|street|circle|junction|flyover)\b',
+        re.IGNORECASE
+    )
+    non_road = [s for s in segments if not road_pattern.search(s) and not re.search(r'^\d{6}$', s)]
+
+    # Tier 3: Locality without highway/road noise
+    if len(non_road) >= 2 and len(non_road) != len(segments):
+        add_cand(", ".join(non_road), "locality_without_road")
+        if "india" not in ", ".join(non_road).lower():
+            add_cand(", ".join(non_road) + ", India", "locality_without_road_country")
+
+    # Identify state if present
+    state_candidate = ""
+    for seg in reversed(segments):
+        if seg.lower() in INDIAN_STATES:
+            state_candidate = seg
+            break
+
+    # Tier 4: Locality combinations with town/district and state
+    if len(non_road) >= 3:
+        if state_candidate:
+            add_cand(f"{non_road[1]}, {non_road[2]}, {state_candidate}", "locality_town_state")
+            add_cand(f"{non_road[0]}, {non_road[1]}, {state_candidate}", "locality_pair_state")
+        add_cand(f"{non_road[0]}, {non_road[1]}", "locality_pair")
+        add_cand(f"{non_road[1]}, {non_road[2]}", "locality_town")
+        add_cand(f"{non_road[0]}, {non_road[2]}", "locality_town")
+
+    if len(segments) > 2:
+        for i in range(1, len(segments) - 1):
+            sub = ", ".join(segments[i:])
+            add_cand(sub, "sub_address")
+
+    # Tier 5: District/Town + State
+    if len(non_road) >= 2 and state_candidate:
+        add_cand(f"{non_road[-2]}, {state_candidate}", "town_state")
+
+    # Tier 6: PIN code
+    if pincode:
+        if non_road:
+            add_cand(f"{non_road[0]}, {pincode}, India", "pincode_locality")
+            if len(non_road) > 1:
+                add_cand(f"{non_road[-1]}, {pincode}, India", "pincode_town")
+        add_cand(f"{pincode}, India", "pincode_country")
+        add_cand(pincode, "pincode_exact")
+
+    return candidates
+
+
+def resolve_any_address(query: str) -> Dict[str, Any]:
+    """
+    Robust multi-tier address resolution pipeline.
+    Progressively resolves detailed addresses, localities, suburbs, roads, highways,
+    and PIN codes without destroying useful information or silently substituting
+    a generic city centre.
+    Returns a structured dictionary with success status, coordinates, resolution level, and source.
+    """
+    if not query or not isinstance(query, str) or not query.strip():
+        return {
+            "success": False,
+            "latitude": None,
+            "longitude": None,
+            "originalAddress": query or "",
+            "resolvedAddress": None,
+            "queryUsed": None,
+            "resolutionLevel": "unresolved",
+            "source": None,
+            "city": "",
+            "state": "",
+            "country": "",
+            "pincode": "",
+            "display_name": "",
+            "error": "Address input is empty."
+        }
 
     cleaned = normalize_address(query)
     cache_key = f"geo:{cleaned.lower()}"
@@ -589,38 +733,121 @@ def resolve_any_address(query: str) -> Optional[Dict[str, Any]]:
         if now - cached_time < CACHE_TTL_SECONDS:
             return cached_val
 
-    # Specific city lookup overrides for accurate centroid when searching major metros
-    city_centroids = {
-        "delhi": {"latitude": 28.6139, "longitude": 77.2090, "display_name": "New Delhi, Delhi, India", "city": "New Delhi", "state": "Delhi", "country": "India"},
-        "new delhi": {"latitude": 28.6139, "longitude": 77.2090, "display_name": "New Delhi, Delhi, India", "city": "New Delhi", "state": "Delhi", "country": "India"},
-        "chennai": {"latitude": 13.0827, "longitude": 80.2707, "display_name": "Chennai, Tamil Nadu, India", "city": "Chennai", "state": "Tamil Nadu", "country": "India"},
-        "mumbai": {"latitude": 19.0760, "longitude": 72.8777, "display_name": "Mumbai, Maharashtra, India", "city": "Mumbai", "state": "Maharashtra", "country": "India"},
-        "bengaluru": {"latitude": 12.9716, "longitude": 77.5946, "display_name": "Bengaluru, Karnataka, India", "city": "Bengaluru", "state": "Karnataka", "country": "India"},
-        "bangalore": {"latitude": 12.9716, "longitude": 77.5946, "display_name": "Bengaluru, Karnataka, India", "city": "Bengaluru", "state": "Karnataka", "country": "India"},
-        "hyderabad": {"latitude": 17.3850, "longitude": 78.4867, "display_name": "Hyderabad, Telangana, India", "city": "Hyderabad", "state": "Telangana", "country": "India"},
-        "kolkata": {"latitude": 22.5726, "longitude": 88.3639, "display_name": "Kolkata, West Bengal, India", "city": "Kolkata", "state": "West Bengal", "country": "India"}
-    }
-
+    # Authoritative Metro Centroid lookup ONLY when query itself explicitly equals that metro
     q_lower = cleaned.lower()
-    if q_lower in city_centroids:
-        res = dict(city_centroids[q_lower])
-        res["source"] = "Authoritative Metro Geocoding"
-        _GEO_CACHE[cache_key] = (now, res)
-        return res
+    for metro_key, metro_data in CITY_CENTROIDS.items():
+        if q_lower in (
+            metro_key,
+            f"{metro_key}, india",
+            f"{metro_key}, {metro_data['state'].lower()}",
+            f"{metro_key}, {metro_data['state'].lower()}, india"
+        ):
+            res = {
+                "success": True,
+                "latitude": metro_data["latitude"],
+                "longitude": metro_data["longitude"],
+                "originalAddress": query,
+                "resolvedAddress": metro_data["display_name"],
+                "queryUsed": cleaned,
+                "resolutionLevel": "metro_centroid",
+                "source": "Authoritative Metro Geocoding",
+                "city": metro_data["city"],
+                "state": metro_data["state"],
+                "country": metro_data["country"],
+                "pincode": "",
+                "display_name": metro_data["display_name"]
+            }
+            _GEO_CACHE[cache_key] = (now, res)
+            return res
 
-    # 1. Direct Nominatim
-    res = _try_nominatim_query(cleaned)
-    if res:
-        _GEO_CACHE[cache_key] = (now, res)
-        return res
+    candidates = generate_progressive_candidates(query)
 
-    # 2. Photon fallback
-    res = _try_photon_query(cleaned)
-    if res:
-        _GEO_CACHE[cache_key] = (now, res)
-        return res
+    # Progressive fallback execution
+    for q_cand, level in candidates:
+        # 1. Nominatim with India countrycode bias
+        geo = _try_nominatim_query(q_cand, countrycodes="in")
+        if geo:
+            res = {
+                "success": True,
+                "latitude": geo["latitude"],
+                "longitude": geo["longitude"],
+                "originalAddress": query,
+                "resolvedAddress": geo["display_name"],
+                "queryUsed": q_cand,
+                "resolutionLevel": level,
+                "source": geo["source"],
+                "city": geo.get("city", ""),
+                "state": geo.get("state", ""),
+                "country": geo.get("country", ""),
+                "pincode": geo.get("pincode", ""),
+                "display_name": geo["display_name"]
+            }
+            _GEO_CACHE[cache_key] = (now, res)
+            return res
 
-    return None
+        # 2. Photon fallback
+        geo = _try_photon_query(q_cand)
+        if geo:
+            res = {
+                "success": True,
+                "latitude": geo["latitude"],
+                "longitude": geo["longitude"],
+                "originalAddress": query,
+                "resolvedAddress": geo["display_name"],
+                "queryUsed": q_cand,
+                "resolutionLevel": level,
+                "source": geo["source"],
+                "city": geo.get("city", ""),
+                "state": geo.get("state", ""),
+                "country": geo.get("country", ""),
+                "pincode": geo.get("pincode", ""),
+                "display_name": geo["display_name"]
+            }
+            _GEO_CACHE[cache_key] = (now, res)
+            return res
+
+    # Tier 7: Recognized city-level result ONLY when input actually refers to that city
+    # and explicitly marked as approximate_city per Requirement 4
+    for metro_key, metro_data in CITY_CENTROIDS.items():
+        if re.search(r'\b' + re.escape(metro_key) + r'\b', q_lower):
+            res = {
+                "success": True,
+                "latitude": metro_data["latitude"],
+                "longitude": metro_data["longitude"],
+                "originalAddress": query,
+                "resolvedAddress": f"{metro_data['display_name']} (Approximate City Centre)",
+                "queryUsed": metro_key,
+                "resolutionLevel": "approximate_city",
+                "source": "Authoritative Metro Geocoding (Approximate)",
+                "city": metro_data["city"],
+                "state": metro_data["state"],
+                "country": metro_data["country"],
+                "pincode": "",
+                "display_name": f"{metro_data['display_name']} (Approximate)",
+                "is_approximate": True,
+                "notice": f"Specific locality could not be resolved. Approximate coordinates for {metro_data['city']} city centre applied."
+            }
+            _GEO_CACHE[cache_key] = (now, res)
+            return res
+
+    # Location could not be resolved
+    res = {
+        "success": False,
+        "latitude": None,
+        "longitude": None,
+        "originalAddress": query,
+        "resolvedAddress": None,
+        "queryUsed": None,
+        "resolutionLevel": "unresolved",
+        "source": None,
+        "city": "",
+        "state": "",
+        "country": "",
+        "pincode": "",
+        "display_name": "",
+        "error": "Location not found. Please refine your search or select a Quick Metro above."
+    }
+    return res
 
 geocode_address = resolve_any_address
 
@@ -864,12 +1091,12 @@ def filter_and_rank_hospitals(
 
         # Google Maps navigation link
         origin_str = ""
-        if patient_address and patient_address.strip() and patient_address != "Location Not Provided":
+        if patient_lat is not None and patient_lon is not None:
+            origin_str = f"{float(patient_lat):.6f}%2C{float(patient_lon):.6f}"
+        elif patient_address and patient_address.strip() and patient_address != "Location Not Provided":
             origin_str = urllib.parse.quote_plus(normalize_address(patient_address))
-        elif patient_lat is not None and patient_lon is not None:
-            origin_str = f"{patient_lat},{patient_lon}"
 
-        dest_str = f"{hosp.get('latitude')},{hosp.get('longitude')}" if hosp.get("latitude") else urllib.parse.quote_plus(name)
+        dest_str = f"{float(hosp['latitude']):.6f}%2C{float(hosp['longitude']):.6f}" if (hosp.get("latitude") and hosp.get("longitude")) else urllib.parse.quote_plus(name)
         if origin_str:
             hosp["directions_url"] = f"https://www.google.com/maps/dir/?api=1&origin={origin_str}&destination={dest_str}&travelmode=driving"
         else:
@@ -942,10 +1169,10 @@ def discover_hospitals_for_patient(
     # Step 1: Resolve manual query if coordinates not given
     if (patient_lat is None or patient_lon is None) and manual_query:
         geo_res = resolve_any_address(manual_query)
-        if geo_res:
+        if geo_res and geo_res.get("success"):
             patient_lat = geo_res["latitude"]
             patient_lon = geo_res["longitude"]
-            location_label = geo_res["display_name"]
+            location_label = geo_res.get("resolvedAddress") or geo_res.get("display_name")
             geocoded_origin = geo_res
 
     # Step 2: Reverse geocode coordinates if needed
@@ -954,6 +1181,33 @@ def discover_hospitals_for_patient(
 
     has_coords = patient_lat is not None and patient_lon is not None
     requested_radius_km = int(radius_km) if radius_km else 25
+
+    # If manual query was supplied but could not be resolved, do NOT return success or global centres
+    if not has_coords and manual_query:
+        return {
+            "status": "location_not_found",
+            "condition": mapping,
+            "location": {
+                "latitude": None,
+                "longitude": None,
+                "display_name": "Location Not Found",
+                "requested_radius_km": requested_radius_km,
+                "effective_radius_km": requested_radius_km,
+                "auto_expanded": False,
+                "expansion_message": f"Location '{manual_query}' could not be resolved. Please refine your search or select a Quick Metro above.",
+                "has_coordinates": False
+            },
+            "filters_applied": {
+                "disease": canonical_cond_id,
+                "specialty": primary_spec,
+                "min_rating": min_rating,
+                "strict_specialty_verified": True,
+                "strict_legal_verification": True
+            },
+            "counts": {"total": 0, "nearby": 0, "global_centres": 0},
+            "recommendations": [],
+            "urgent_notice": mapping.get("urgent_warning") if mapping.get("requires_urgent_assessment") else None
+        }
 
     # Prepare candidate pool from the authoritative verified registry
     candidate_pool: List[Dict[str, Any]] = list(VERIFIED_HOSPITAL_REGISTRY)

@@ -809,7 +809,9 @@ MODULE_SCHEMAS: Dict[str, Dict[str, Any]] = {
                 "range": (0.1, 15.0),
                 "normal_range": (0.8, 2.0),
                 "required_for_prediction": False,
-                "is_core_analyte": True
+                "is_core_analyte": True,
+                "baseline_default": 1.8,
+                "default_reason": "Standard biochemical median Total T3 baseline (1.8 ng/mL)"
             },
             "TT4": {
                 "type": "float",
@@ -819,10 +821,12 @@ MODULE_SCHEMAS: Dict[str, Dict[str, Any]] = {
                     r"\btt4\b", r"total\s*t4", r"serum\s*t4", r"total\s*thyroxine",
                     r"\bt4\b", r"s\.t4"
                 ],
-                "range": (0.5, 35.0),
+                "range": (0.5, 350.0),
                 "normal_range": (4.5, 12.0),
                 "required_for_prediction": False,
-                "is_core_analyte": True
+                "is_core_analyte": True,
+                "baseline_default": 103.0,
+                "default_reason": "Standard biochemical median Total T4 baseline (103 µg/dL)"
             },
             "T4U": {
                 "type": "float",
@@ -844,7 +848,7 @@ MODULE_SCHEMAS: Dict[str, Dict[str, Any]] = {
                 "aliases": [
                     r"\bfti\b", r"free\s*thyroxine\s*index", r"free\s*t4\s*index"
                 ],
-                "range": (5.0, 350.0),
+                "range": (0.1, 350.0),
                 "normal_range": (1.2, 4.2),
                 "required_for_prediction": False,
                 "baseline_default": 107.0,
@@ -1234,6 +1238,11 @@ def _extract_numeric_with_reference_filtering(
         val_str = m.group(1)
         try:
             val = float(val_str)
+            # Automatic unit normalization if ng/dL reported for ng/mL analyte (1 ng/dL = 0.01 ng/mL)
+            after_snippet = clean_text[m.end():m.end() + 20].lower()
+            if unit and unit.lower() == "ng/ml" and ("ng/dl" in after_snippet or "ng / dl" in after_snippet):
+                val = round(val / 100.0, 3)
+
             # Check plausible medical range
             if val_range:
                 min_v, max_v = val_range
@@ -1244,8 +1253,7 @@ def _extract_numeric_with_reference_filtering(
             # Bonus if immediately followed by expected unit
             unit_bonus = 0
             if unit:
-                after_snippet = clean_text[m.end():m.end() + 15].lower()
-                if unit.lower() in after_snippet or "%" in after_snippet:
+                if unit.lower() in after_snippet or "%" in after_snippet or "ng/dl" in after_snippet:
                     unit_bonus = -50  # effectively decreases distance
 
             candidates.append((dist + unit_bonus, val, m.group(0), m.start(), m.end()))
@@ -1435,6 +1443,11 @@ def process_report_pipeline(
         if not can_predict:
             missing_bc = [schema["fields"][k]["label"] for k in bc_required if k not in extracted_vals]
             warnings.append(f"Incomplete fine-needle aspirate cytology panel. Missing required measurements: {', '.join(missing_bc)}.")
+
+    elif module_name == "thyroid":
+        can_predict = ("TSH" in extracted_vals) or ("T3" in extracted_vals) or ("TT4" in extracted_vals)
+        if not can_predict:
+            warnings.append("Insufficient thyroid biomarkers: At least one primary thyroid analyte (TSH, T3, or TT4) must be present to evaluate thyroid function.")
 
     if engine_used == "local_ocr_unavailable" and not extracted_vals:
         warnings.append(

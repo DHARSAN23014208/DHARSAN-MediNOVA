@@ -660,12 +660,48 @@
 
     <!-- HOSPITAL DISCOVERY & APPOINTMENT MANAGEMENT CONTROLLER -->
     <script>
-        // State Management
+        // =====================================================================
+        // CENTRAL ACTIVE-ORIGIN STATE MANAGEMENT (REQUIREMENT 5)
+        // =====================================================================
+        const ACTIVE_ORIGIN = {
+            userOriginCoords: null,          // Resolved { lat: number, lng: number } | null
+            userOriginAddress: '',           // Raw user input, 'Current GPS Location', or 'Quick Metro: City'
+            userOriginResolvedAddress: '',   // Geocoder resolved address label
+            userOriginSource: 'none',        // 'address' | 'gps' | 'quick_metro' | 'none'
+            userOriginPrecision: 'unresolved'// 'exact_normalized' | 'locality' | 'suburb' | 'pincode' | 'gps_high_accuracy' | 'metro_centroid' | 'approximate_city'
+        };
+
+        // Legacy compatibility sync
+        let PATIENT_COORDS = { lat: null, lon: null, label: 'Location Not Provided' };
         let CURRENT_SPECIALTIES = {};
         let ALL_RECOMMENDATIONS = [];
         let CURRENT_SELECTED_HOSPITAL = null;
-        let PATIENT_COORDS = { lat: null, lon: null, label: 'Location Not Provided' };
         let SEARCH_RADIUS_KM = 25;
+        let CURRENT_SEARCH_REQUEST_ID = 0;
+
+        function updateActiveOrigin(coords, address, resolvedAddress, source, precision) {
+            ACTIVE_ORIGIN.userOriginCoords = coords ? {
+                lat: coords.lat,
+                lng: (coords.lng !== undefined ? coords.lng : coords.lon)
+            } : null;
+            ACTIVE_ORIGIN.userOriginAddress = address || '';
+            ACTIVE_ORIGIN.userOriginResolvedAddress = resolvedAddress || '';
+            ACTIVE_ORIGIN.userOriginSource = source || 'none';
+            ACTIVE_ORIGIN.userOriginPrecision = precision || 'unresolved';
+
+            // Sync legacy structure
+            PATIENT_COORDS.lat = ACTIVE_ORIGIN.userOriginCoords ? ACTIVE_ORIGIN.userOriginCoords.lat : null;
+            PATIENT_COORDS.lon = ACTIVE_ORIGIN.userOriginCoords ? ACTIVE_ORIGIN.userOriginCoords.lng : null;
+            PATIENT_COORDS.label = ACTIVE_ORIGIN.userOriginResolvedAddress || ACTIVE_ORIGIN.userOriginAddress || 'Location Not Provided';
+        }
+
+        function clearActiveOrigin(failedAddress = '') {
+            updateActiveOrigin(null, failedAddress, '', 'none', 'unresolved');
+            ALL_RECOMMENDATIONS = [];
+            CURRENT_SELECTED_HOSPITAL = null;
+            const selBanner = document.getElementById('selectedHospitalBanner');
+            if (selBanner) selBanner.style.display = 'none';
+        }
 
         // Initialize minimum date to today
         document.addEventListener('DOMContentLoaded', function() {
@@ -749,33 +785,46 @@
             fetchHospitals();
         }
 
-        // Request token to prevent stale out-of-order responses from overwriting the latest search
-        let CURRENT_SEARCH_REQUEST_ID = 0;
-
         // =====================================================================
-        // ROBUST MULTI-STAGE ADDRESS GEOCODER (STEP 1 - STEP 4 + BACKEND/PHOTON)
+        // REUSABLE ADDRESS-RESOLUTION PIPELINE (REQUIREMENT 1, 2, 3)
         // =====================================================================
         async function resolveAnyAddress(rawInput) {
             if (!rawInput || typeof rawInput !== 'string') return null;
 
-            // Step 1 (Sanitize):
-            // Strip out Google Plus Codes using regex: /^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},?\s*/i and embedded plus codes
             let cleaned = rawInput.trim();
+            // Strip Google Plus Codes
             cleaned = cleaned.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},?\s*/i, '');
             cleaned = cleaned.replace(/\b[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}\b,?\s*/i, '');
-            cleaned = cleaned.replace(/\u2013/g, ' ').replace(/\u2014/g, ' ').replace(/\s*[-–—]\s*/g, ' ');
-            cleaned = cleaned.replace(/,\s*,+/g, ',');
+            // Convert Unicode dashes and hyphens
+            cleaned = cleaned.replace(/\u2013/g, '-').replace(/\u2014/g, '-').replace(/\u2212/g, '-');
+            // Normalize highway designations e.g. (NH-4), (NH 4) -> NH-4
+            cleaned = cleaned.replace(/\(\s*(NH[-\s]*\d+[A-Z]?)\s*\)/gi, ' $1 ');
+            cleaned = cleaned.replace(/\bNH\s*(\d+)\b/gi, 'NH-$1');
+            // Normalize commas and whitespace
+            cleaned = cleaned.replace(/[,;]+/g, ',');
+            cleaned = cleaned.replace(/\s*,\s*/g, ', ');
             cleaned = cleaned.replace(/\s+/g, ' ').trim().replace(/^,+|,+$/g, '');
 
             if (!cleaned || cleaned.length < 2) return null;
 
-            // Helper to execute Nominatim search
+            // 1. Authoritative Backend Geocoder (Executes 7-tier progressive resolution server-side)
+            try {
+                const resp = await fetch(`/api/hospitals/geocode?query=${encodeURIComponent(cleaned)}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.status === 'success' && data.location && data.location.success) {
+                        return data.location;
+                    }
+                }
+            } catch (e) {
+                console.debug('Backend geocoder proxy attempt failed:', e);
+            }
+
+            // 2. Client-side fallback if backend unreachable
             async function tryNominatim(q, biasIndia = true) {
                 try {
                     let url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&q=${encodeURIComponent(q)}`;
-                    if (biasIndia) {
-                        url += '&countrycodes=in';
-                    }
+                    if (biasIndia) url += '&countrycodes=in';
                     const resp = await fetch(url, { headers: { 'Accept-Language': 'en' } });
                     if (resp.ok) {
                         const results = await resp.json();
@@ -783,7 +832,7 @@
                             const item = results[0];
                             const lat = parseFloat(item.lat);
                             const lon = parseFloat(item.lon);
-                            if (!isNaN(lat) && !isNaN(lon) && isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                            if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 && !(lat === 0 && lon === 0)) {
                                 const addr = item.address || {};
                                 const locality = addr.city || addr.town || addr.suburb || addr.village || addr.county || '';
                                 const state = addr.state || '';
@@ -791,14 +840,18 @@
                                 const parts = [locality, state, country].filter(Boolean);
                                 const label = parts.length > 0 ? parts.join(', ') : (item.display_name || q);
                                 return {
+                                    success: true,
                                     latitude: lat,
                                     longitude: lon,
+                                    originalAddress: rawInput,
+                                    resolvedAddress: item.display_name || label,
                                     display_name: label,
-                                    full_display_name: item.display_name || q,
+                                    queryUsed: q,
+                                    resolutionLevel: 'client_nominatim',
+                                    source: 'OpenStreetMap Nominatim',
                                     city: locality,
                                     state: state,
-                                    country: country,
-                                    source: 'OpenStreetMap Nominatim'
+                                    country: country
                                 };
                             }
                         }
@@ -809,81 +862,7 @@
                 return null;
             }
 
-            // Step 2 (Exact Cleaned Search): Query geocoding API with cleaned string + country code bias (countrycodes=in)
-            let res = await tryNominatim(cleaned, true);
-            if (!res) {
-                // If biased search had no result, try global search
-                res = await tryNominatim(cleaned, false);
-            }
-            if (res) return res;
-
-            // Extract segments and PIN code
-            const segments = cleaned.split(',').map(s => s.trim()).filter(Boolean);
-            const pincodeMatch = cleaned.match(/\b(\d{6})\b/);
-            const pincode = pincodeMatch ? pincodeMatch[1] : null;
-
-            // Step 3 (Locality + City + Pincode Fallback):
-            // If Step 2 returns 0 results, extract 6-digit PIN and locality/city segments, query <Locality>, <City>, <State>, <Pincode>
-            if (segments.length > 1) {
-                for (let i = 1; i < segments.length; i++) {
-                    const sub = segments.slice(i).join(', ').trim();
-                    if (sub && sub.length >= 3) {
-                        res = await tryNominatim(sub, true);
-                        if (res) return res;
-                    }
-                }
-            }
-
-            if (pincode) {
-                const nonPinSegments = segments.filter(s => !s.match(/\b\d{6}\b/));
-                if (nonPinSegments.length > 0) {
-                    const locPinQuery = `${nonPinSegments.slice(-2).join(', ')}, ${pincode}`;
-                    res = await tryNominatim(locPinQuery, true);
-                    if (res) {
-                        res.display_name = `PIN ${pincode} (${res.display_name})`;
-                        return res;
-                    }
-                }
-            }
-
-            // Step 4 (Pincode + City Fallback):
-            // Query using the 6-digit PIN code and city/state so it always centers accurately on the user's immediate town/postal zone
-            if (pincode) {
-                const nonPinSegments = segments.filter(s => !s.match(/\b\d{6}\b/));
-                const cityCandidate = nonPinSegments.length > 0 ? nonPinSegments[nonPinSegments.length - 1] : 'India';
-                const pinQueries = [
-                    `${pincode}, ${cityCandidate}`,
-                    `${pincode}, India`,
-                    pincode
-                ];
-                for (const pq of pinQueries) {
-                    res = await tryNominatim(pq, true);
-                    if (res) {
-                        res.display_name = `PIN ${pincode} Area (${res.display_name})`;
-                        return res;
-                    }
-                }
-            }
-
-            // Backend Geocoder Proxy (Runs 4-stage pipeline server-side; handles CORS / adblock blocks)
-            try {
-                const resp = await fetch(`/api/hospitals/geocode?query=${encodeURIComponent(cleaned)}`);
-                if (resp.ok) {
-                    const data = await resp.json();
-                    if (data.status === 'success' && data.location) {
-                        return data.location;
-                    }
-                }
-            } catch (e) {
-                console.debug('Backend geocoder proxy attempt:', e);
-            }
-
-            // Photon Backup Geocoder
-            const photonCandidates = [cleaned];
-            if (segments.length > 1) photonCandidates.push(segments.slice(1).join(', '));
-            if (pincode) photonCandidates.push(`${pincode}, India`);
-
-            for (const q of photonCandidates.slice(0, 3)) {
+            async function tryPhoton(q) {
                 try {
                     const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=1`;
                     const resp = await fetch(url);
@@ -896,7 +875,7 @@
                             if (coords && coords.length >= 2) {
                                 const lon = parseFloat(coords[0]);
                                 const lat = parseFloat(coords[1]);
-                                if (!isNaN(lat) && !isNaN(lon) && isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                                if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 && !(lat === 0 && lon === 0)) {
                                     const props = feat.properties || {};
                                     const name = props.name || q;
                                     const city = props.city || props.district || props.county || '';
@@ -905,22 +884,54 @@
                                     const parts = [name, city, state, country].filter(Boolean);
                                     const label = parts.length > 0 ? parts.join(', ') : name;
                                     return {
+                                        success: true,
                                         latitude: lat,
                                         longitude: lon,
+                                        originalAddress: rawInput,
+                                        resolvedAddress: label,
                                         display_name: label,
-                                        full_display_name: label,
+                                        queryUsed: q,
+                                        resolutionLevel: 'client_photon',
+                                        source: 'Photon (Komoot)',
                                         city: city,
                                         state: state,
-                                        country: country,
-                                        source: 'Photon (Komoot)'
+                                        country: country
                                     };
                                 }
                             }
                         }
                     }
                 } catch (e) {
-                    console.debug('Photon client attempt:', e);
+                    console.debug('Photon client attempt failed:', e);
                 }
+                return null;
+            }
+
+            // Progressive candidate queries on client
+            const segments = cleaned.split(',').map(s => s.trim()).filter(Boolean);
+            const roadRegex = /\b(nh[-\s]*\d+|highway|expressway|bypass|road|salai|marg|lane|street|circle|junction|flyover)\b/i;
+            const nonRoadSegments = segments.filter(s => !roadRegex.test(s) && !/^\d{6}$/.test(s));
+            const pincodeMatch = cleaned.match(/\b(\d{6})\b/);
+            const pincode = pincodeMatch ? pincodeMatch[1] : null;
+
+            const clientCandidates = [cleaned];
+            if (!cleaned.toLowerCase().includes('india')) clientCandidates.push(cleaned + ', India');
+            if (nonRoadSegments.length >= 2 && nonRoadSegments.length !== segments.length) {
+                clientCandidates.push(nonRoadSegments.join(', '));
+                clientCandidates.push(nonRoadSegments.join(', ') + ', India');
+            }
+            if (nonRoadSegments.length >= 3) {
+                clientCandidates.push(`${nonRoadSegments[0]}, ${nonRoadSegments[1]}`);
+                clientCandidates.push(`${nonRoadSegments[1]}, ${nonRoadSegments[2]}`);
+            }
+            if (pincode) {
+                clientCandidates.push(`${pincode}, India`);
+            }
+
+            for (const q of clientCandidates) {
+                let res = await tryNominatim(q, true);
+                if (!res) res = await tryPhoton(q);
+                if (res) return res;
             }
 
             return null;
@@ -944,10 +955,10 @@
         }
 
         // =====================================================================
-        // GEOLOCATION & MANUAL SEARCH TRIGGERS
+        // GEOLOCATION, QUICK METROS, AND SEARCH TRIGGERS (REQUIREMENTS 5, 6, 7)
         // =====================================================================
 
-        // 3. Accurate Geolocation API Integration
+        // 3. Accurate Browser Geolocation API Integration
         function requestBrowserGeolocation() {
             const btn = document.getElementById('btnUseGeolocation');
             const manualInput = document.getElementById('manualLocationInput');
@@ -962,10 +973,11 @@
             updateLocationPill('⏳ Acquiring live GPS coordinates...', false);
             renderSearchingState('Detecting your live geographic position...');
 
-            // Clear any stale text in manual address input
+            // Clear any stale text and metro chip highlights
             if (manualInput) {
                 manualInput.value = '';
             }
+            document.querySelectorAll('.city-chip').forEach(c => c.classList.remove('active'));
 
             navigator.geolocation.getCurrentPosition(
                 async function(position) {
@@ -973,50 +985,78 @@
 
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
+                    const accuracy = position.coords.accuracy || 10;
+                    const precisionLabel = accuracy <= 100 ? 'gps_high_accuracy' : 'gps_approximate';
 
-                    // Set the Active Location coordinates directly to the GPS (lat, lng)
-                    PATIENT_COORDS.lat = lat;
-                    PATIENT_COORDS.lon = lon;
-                    PATIENT_COORDS.label = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+                    // Set Active Origin directly from GPS coordinates
+                    updateActiveOrigin(
+                        { lat: lat, lng: lon },
+                        'Current GPS Location',
+                        `${lat.toFixed(4)}, ${lon.toFixed(4)}`,
+                        'gps',
+                        precisionLabel
+                    );
 
                     btn.disabled = false;
                     btn.innerHTML = '<span>📍 Location Detected ✓</span>';
                     btn.style.background = '#10b981';
 
-                    // Update pill immediately and fetch facilities within the selected radius
-                    updateLocationPill(`📍 Active Location: (${lat.toFixed(4)}, ${lon.toFixed(4)}) — Fetching facilities...`, false);
+                    updateLocationPill(`📍 Active Location: GPS (${lat.toFixed(4)}, ${lon.toFixed(4)}) — Fetching facilities...`, false);
                     fetchHospitals();
 
-                    // Reverse geocode to get human-readable address from exact GPS (lat, lng)
+                    // Reverse geocode to get human-readable locality label
                     const locLabel = await reverseGeocode(lat, lon);
                     if (thisReqId !== CURRENT_SEARCH_REQUEST_ID) return;
 
-                    PATIENT_COORDS.label = locLabel;
-                    if (manualInput) {
-                        manualInput.value = locLabel;
+                    if (locLabel && !locLabel.startsWith('Coordinates:')) {
+                        updateActiveOrigin(
+                            { lat: lat, lng: lon },
+                            locLabel,
+                            locLabel,
+                            'gps',
+                            precisionLabel
+                        );
+                        if (manualInput) {
+                            manualInput.value = locLabel;
+                        }
+                        updateLocationPill(`📍 Active Location: ${locLabel} (${lat.toFixed(4)}, ${lon.toFixed(4)}) — ${ALL_RECOMMENDATIONS.length} facilities within ${SEARCH_RADIUS_KM} km`, false);
                     }
-                    updateLocationPill(`📍 Active Location: ${locLabel} (${lat.toFixed(4)}, ${lon.toFixed(4)}) — ${ALL_RECOMMENDATIONS.length} facilities within ${SEARCH_RADIUS_KM} km`, false);
                 },
                 function(error) {
                     if (thisReqId !== CURRENT_SEARCH_REQUEST_ID) return;
                     btn.disabled = false;
                     btn.innerHTML = '<span>📍 Use My Current Location</span>';
                     btn.style.background = '';
+
+                    clearActiveOrigin();
+
                     let msg = 'Could not access location.';
                     if (error.code === error.PERMISSION_DENIED) {
-                        msg = 'Location permission was denied. You can still search by city, address, or postal code below.';
+                        msg = 'Location permission was denied. You can search by city, address, or postal code below.';
                     } else if (error.code === error.TIMEOUT) {
                         msg = 'Location request timed out. Please enter your address or city manually.';
+                    } else if (error.code === error.POSITION_UNAVAILABLE) {
+                        msg = 'GPS location is currently unavailable. Please enter your address or city manually.';
                     }
-                    updateLocationPill('Location Access Denied (Manual Search Available)', true);
+                    updateLocationPill('Location Access Denied / Unavailable (Manual Search Available)', true);
                     renderEmptyTable(msg);
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
 
-        // Quick Metro City Chip Selector
-        async function selectQuickCity(cityName) {
+        // Authoritative Quick Metro Coordinates
+        const QUICK_METROS = {
+            'Chennai': { lat: 13.0827, lng: 80.2707, label: 'Chennai, Tamil Nadu, India' },
+            'Delhi': { lat: 28.6139, lng: 77.2090, label: 'New Delhi, Delhi, India' },
+            'Mumbai': { lat: 19.0760, lng: 72.8777, label: 'Mumbai, Maharashtra, India' },
+            'Bengaluru': { lat: 12.9716, lng: 77.5946, label: 'Bengaluru, Karnataka, India' },
+            'Hyderabad': { lat: 17.3850, lng: 78.4867, label: 'Hyderabad, Telangana, India' },
+            'Kolkata': { lat: 22.5726, lng: 88.3639, label: 'Kolkata, West Bengal, India' }
+        };
+
+        // Quick Metro Chip Selector
+        function selectQuickCity(cityName) {
             const manualInput = document.getElementById('manualLocationInput');
             if (manualInput) {
                 manualInput.value = cityName;
@@ -1028,7 +1068,20 @@
                     chip.classList.remove('active');
                 }
             });
-            await triggerManualLocationSearch();
+
+            const metro = QUICK_METROS[cityName];
+            if (metro) {
+                const thisReqId = ++CURRENT_SEARCH_REQUEST_ID;
+                updateActiveOrigin(
+                    { lat: metro.lat, lng: metro.lng },
+                    cityName,
+                    metro.label,
+                    'quick_metro',
+                    'metro_centroid'
+                );
+                updateLocationPill(`📍 Active Location: ${cityName} (${metro.lat.toFixed(4)}, ${metro.lng.toFixed(4)}) — Searching facilities...`, false);
+                fetchHospitals();
+            }
         }
 
         // 4. Manual Location Search Trigger
@@ -1040,30 +1093,40 @@
             }
 
             const thisReqId = ++CURRENT_SEARCH_REQUEST_ID;
-            updateLocationPill('⏳ Resolving location...', false);
-            renderSearchingState(`Resolving location: "${rawInput}"...`);
+            document.querySelectorAll('.city-chip').forEach(c => c.classList.remove('active'));
+            updateLocationPill(`⏳ Resolving location: "${rawInput}"...`, false);
+            renderSearchingState(`Resolving address: "${rawInput}"...`);
 
             try {
                 const res = await resolveAnyAddress(rawInput);
                 if (thisReqId !== CURRENT_SEARCH_REQUEST_ID) return;
 
-                if (res) {
-                    PATIENT_COORDS.lat = res.latitude;
-                    PATIENT_COORDS.lon = res.longitude;
-                    PATIENT_COORDS.label = res.display_name;
+                if (res && res.latitude !== null && res.longitude !== null && res.success !== false) {
+                    const resolvedLabel = res.resolvedAddress || res.display_name || rawInput;
+                    const precisionLabel = res.resolutionLevel || 'locality';
+                    updateActiveOrigin(
+                        { lat: res.latitude, lng: res.longitude },
+                        rawInput,
+                        resolvedLabel,
+                        'address',
+                        precisionLabel
+                    );
 
-                    updateLocationPill(`📍 Active Location: ${res.display_name} (${res.latitude.toFixed(4)}, ${res.longitude.toFixed(4)})`, false);
+                    let pillNotice = `📍 Active Location: ${resolvedLabel} (${res.latitude.toFixed(4)}, ${res.longitude.toFixed(4)})`;
+                    if (res.is_approximate || precisionLabel === 'approximate_city') {
+                        pillNotice += ' [Approximate City Centre]';
+                    }
+                    updateLocationPill(pillNotice, false);
                     fetchHospitals();
                 } else {
-                    PATIENT_COORDS.lat = null;
-                    PATIENT_COORDS.lon = null;
-                    PATIENT_COORDS.label = 'Location Not Found';
-                    updateLocationPill('Location not found. Please refine the city or address.', true);
-                    renderEmptyTable('Location not found. Please refine your search or select a Quick Metro above.');
+                    clearActiveOrigin(rawInput);
+                    updateLocationPill(`Location not found for "${rawInput}". Please refine search or pick a Quick Metro.`, true);
+                    renderEmptyTable(`Location not found for "${escapeHtml(rawInput)}". Please refine your search or select a Quick Metro above.`);
                 }
             } catch (err) {
                 if (thisReqId !== CURRENT_SEARCH_REQUEST_ID) return;
                 console.error('Geocoding error:', err);
+                clearActiveOrigin(rawInput);
                 updateLocationPill('Error resolving location. Please try again or select a Quick Metro.', true);
                 renderEmptyTable('Error resolving location. Please check your network connection.');
             }
@@ -1081,10 +1144,10 @@
                 });
             }
 
-            if (PATIENT_COORDS.lat !== null && PATIENT_COORDS.lon !== null) {
+            if (ACTIVE_ORIGIN.userOriginCoords && ACTIVE_ORIGIN.userOriginCoords.lat !== null) {
                 fetchHospitals();
             } else {
-                applyFiltersAndRender();
+                renderEmptyTable('Please select "Use My Current Location" or click a Quick Metro (e.g. Delhi, Chennai, Mumbai) above to search strictly verified hospitals.');
             }
         }
 
@@ -1093,16 +1156,19 @@
             const thisReqId = ++CURRENT_SEARCH_REQUEST_ID;
             const condition = document.getElementById('conditionSelect').value || 'pneumonia';
 
-            if (PATIENT_COORDS.lat === null || PATIENT_COORDS.lon === null) {
+            if (!ACTIVE_ORIGIN.userOriginCoords || ACTIVE_ORIGIN.userOriginCoords.lat === null || ACTIVE_ORIGIN.userOriginCoords.lng === null) {
+                ALL_RECOMMENDATIONS = [];
                 renderEmptyTable('Please select "Use My Current Location" or click a Quick Metro (e.g. Delhi, Chennai, Mumbai) above to search strictly verified hospitals.');
                 return;
             }
 
-            renderSearchingState(`Searching verified healthcare facilities within ${SEARCH_RADIUS_KM} km of ${PATIENT_COORDS.label}...`);
+            const activeLat = ACTIVE_ORIGIN.userOriginCoords.lat;
+            const activeLng = ACTIVE_ORIGIN.userOriginCoords.lng;
+            const activeLabel = ACTIVE_ORIGIN.userOriginResolvedAddress || ACTIVE_ORIGIN.userOriginAddress;
 
-            const manualText = (document.getElementById('manualLocationInput')?.value || '').trim();
-            const queryParam = manualText ? `&query=${encodeURIComponent(manualText)}` : '';
-            const url = `/api/hospitals/search?condition=${encodeURIComponent(condition)}&radius_km=${SEARCH_RADIUS_KM}&min_rating=3.0&lat=${PATIENT_COORDS.lat}&lon=${PATIENT_COORDS.lon}${queryParam}&include_global=false`;
+            renderSearchingState(`Searching verified healthcare facilities within ${SEARCH_RADIUS_KM} km of ${activeLabel}...`);
+
+            const url = `/api/hospitals/search?condition=${encodeURIComponent(condition)}&radius_km=${SEARCH_RADIUS_KM}&min_rating=3.0&lat=${activeLat}&lon=${activeLng}&include_global=false`;
 
             try {
                 const resp = await fetch(url);
@@ -1111,10 +1177,6 @@
                 const data = await resp.json();
                 if (data.status === 'success') {
                     ALL_RECOMMENDATIONS = data.recommendations || [];
-
-                    if (data.location && data.location.display_name && PATIENT_COORDS.label === 'Location Not Provided') {
-                        PATIENT_COORDS.label = data.location.display_name;
-                    }
 
                     // Smart Radius Auto-Expansion Banner
                     const banner = document.getElementById('autoExpansionBanner');
@@ -1135,10 +1197,11 @@
 
                     const count = ALL_RECOMMENDATIONS.length;
                     const effectiveRadius = data.location ? data.location.effective_radius_km : SEARCH_RADIUS_KM;
-                    updateLocationPill(`📍 Active Location: ${PATIENT_COORDS.label} — ${count} verified hospitals (Coverage: ${effectiveRadius} km, Rating > 3.0)`, false);
+                    updateLocationPill(`📍 Active Location: ${activeLabel} — ${count} verified hospitals (Coverage: ${effectiveRadius} km, Rating > 3.0)`, false);
 
                     applyFiltersAndRender();
                 } else {
+                    ALL_RECOMMENDATIONS = [];
                     renderEmptyTable(data.message || 'Hospital discovery encountered an error. Please adjust the location or radius.');
                 }
             } catch (err) {
@@ -1339,38 +1402,32 @@
 
         let CURRENT_MODAL_HOSPITAL = null;
 
-        // Accurate Google Maps Directions URL from What Address the User Entered to Selected Hospital
+        // Accurate Google Maps Directions URL from Active Origin to Selected Hospital (Requirement 11)
         function getGoogleMapsDirectionsUrl(hosp) {
             if (!hosp) return '#';
 
-            let dest = '';
+            let originStr = '';
+            if (ACTIVE_ORIGIN.userOriginCoords && ACTIVE_ORIGIN.userOriginCoords.lat !== null && ACTIVE_ORIGIN.userOriginCoords.lng !== null) {
+                const lat = Number(ACTIVE_ORIGIN.userOriginCoords.lat).toFixed(6);
+                const lng = Number(ACTIVE_ORIGIN.userOriginCoords.lng).toFixed(6);
+                originStr = `${lat}%2C${lng}`;
+            }
+
+            let destStr = '';
             if (hosp.latitude && hosp.longitude) {
-                dest = `${hosp.latitude},${hosp.longitude}`;
+                const hLat = Number(hosp.latitude).toFixed(6);
+                const hLng = Number(hosp.longitude).toFixed(6);
+                destStr = `${hLat}%2C${hLng}`;
             } else if (hosp.address) {
-                dest = encodeURIComponent((hosp.name || '') + ', ' + hosp.address);
+                destStr = encodeURIComponent((hosp.name ? hosp.name + ', ' : '') + hosp.address);
             } else {
-                dest = encodeURIComponent(hosp.name || 'Hospital');
+                destStr = encodeURIComponent(hosp.name || 'Hospital');
             }
 
-            const enteredText = (document.getElementById('manualLocationInput')?.value || '').trim();
-            let origin = '';
-
-            if (enteredText) {
-                const cleanOrigin = enteredText
-                    .replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},?\s*/i, '')
-                    .replace(/\b[A-Z0-9]{4,8}\+[A-Z0-9]{2,4}\b,?\s*/i, '')
-                    .trim();
-                origin = encodeURIComponent(cleanOrigin || enteredText);
-            } else if (PATIENT_COORDS && PATIENT_COORDS.lat !== null && PATIENT_COORDS.lon !== null) {
-                origin = `${PATIENT_COORDS.lat},${PATIENT_COORDS.lon}`;
-            } else if (PATIENT_COORDS && PATIENT_COORDS.label && PATIENT_COORDS.label !== 'Location Not Provided') {
-                origin = encodeURIComponent(PATIENT_COORDS.label);
+            if (originStr) {
+                return `https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${destStr}&travelmode=driving`;
             }
-
-            if (origin) {
-                return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=driving`;
-            }
-            return `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`;
+            return `https://www.google.com/maps/dir/?api=1&destination=${destStr}&travelmode=driving`;
         }
 
         function openDirectionsForHospital(hospId, event) {
@@ -1397,9 +1454,9 @@
             if (!hosp) return;
             CURRENT_MODAL_HOSPITAL = hosp;
 
-            const enteredOrigin = (document.getElementById('manualLocationInput')?.value || '').trim() ||
-                                  (PATIENT_COORDS && PATIENT_COORDS.label !== 'Location Not Provided' ? PATIENT_COORDS.label : '') ||
-                                  (PATIENT_COORDS.lat !== null ? `${PATIENT_COORDS.lat.toFixed(4)}, ${PATIENT_COORDS.lon.toFixed(4)}` : 'Current Location');
+            const enteredOrigin = ACTIVE_ORIGIN.userOriginResolvedAddress ||
+                                  ACTIVE_ORIGIN.userOriginAddress ||
+                                  (ACTIVE_ORIGIN.userOriginCoords ? `${ACTIVE_ORIGIN.userOriginCoords.lat.toFixed(4)}, ${ACTIVE_ORIGIN.userOriginCoords.lng.toFixed(4)}` : 'Current Location');
             const fromEl = document.getElementById('modalHospFromAddress');
             if (fromEl) fromEl.textContent = enteredOrigin;
 

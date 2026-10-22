@@ -137,10 +137,10 @@
             <div class="sandbox-group">
                 <span class="sandbox-group-label">OCR Lab Reports (PDF):</span>
                 <div class="sandbox-pill-cluster">
-                    <button type="button" class="btn-sandbox-pill pill-report-pos" id="scannerSamplePosBtn" title="Load synthetic positive PDF report into scanner">
+                    <button type="button" class="btn-sandbox-pill pill-report-pos" id="scannerSamplePosBtn" onclick="loadSampleReport('positive', this)" title="Load synthetic positive PDF report into scanner">
                         <span>⚠️ Sample Positive PDF</span>
                     </button>
-                    <button type="button" class="btn-sandbox-pill pill-report-neg" id="scannerSampleNegBtn" title="Load synthetic negative PDF report into scanner">
+                    <button type="button" class="btn-sandbox-pill pill-report-neg" id="scannerSampleNegBtn" onclick="loadSampleReport('negative', this)" title="Load synthetic negative PDF report into scanner">
                         <span>🛡️ Sample Negative PDF</span>
                     </button>
                 </div>

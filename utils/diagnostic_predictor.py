@@ -823,6 +823,10 @@ def predict_thyroid(
     def _parse_val(k, default_val):
         v = data.get(k)
         if v is None or str(v).strip() == "":
+            v = data.get(k.lower())
+        if v is None or str(v).strip() == "":
+            v = data.get(k.upper())
+        if v is None or str(v).strip() == "":
             return float(feat_medians.get(k, default_val))
         try:
             return float(v)

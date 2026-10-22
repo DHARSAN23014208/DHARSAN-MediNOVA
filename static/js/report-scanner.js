@@ -293,8 +293,11 @@
         }
 
         activeFile = file;
+        window.activeScannerFile = file;
+        if (container) container._activeFile = file;
 
-        // 2. Update UI Preview Card
+        // 2. Update UI Preview Card & Dropzone
+        var dropZone = container.querySelector('.scanner-drop-zone') || container.querySelector('.scanner-dropzone');
         var placeholderArea = container.querySelector('.scanner-placeholder-area');
         var previewArea = container.querySelector('.scanner-file-preview');
         var filenameEl = container.querySelector('.scanner-filename');
@@ -302,6 +305,9 @@
         var fileIconEl = container.querySelector('.scanner-file-icon');
         var imgThumbEl = container.querySelector('.scanner-thumbnail-img');
 
+        if (dropZone) {
+            dropZone.classList.add('has-file', 'drag-active');
+        }
         if (placeholderArea) placeholderArea.style.display = 'none';
         if (previewArea) previewArea.style.display = 'flex';
 
@@ -326,17 +332,33 @@
             }
         }
 
-        // Enable Action Buttons
-        var autofillBtn = container.querySelector('#scannerAutofillBtn');
-        var instantBtn = container.querySelector('#scannerInstantPredictBtn');
-        if (autofillBtn) autofillBtn.disabled = false;
-        if (instantBtn) instantBtn.disabled = false;
+        // Enable Action Buttons & explicitly clear disabled attribute / styles
+        var autofillBtn = container.querySelector('#scannerAutofillBtn') || document.querySelector('#scannerAutofillBtn');
+        var instantBtn = container.querySelector('#scannerInstantPredictBtn') || document.querySelector('#scannerInstantPredictBtn');
+        if (autofillBtn) {
+            autofillBtn.disabled = false;
+            autofillBtn.removeAttribute('disabled');
+            autofillBtn.style.opacity = '1';
+            autofillBtn.style.pointerEvents = 'auto';
+            autofillBtn.style.cursor = 'pointer';
+        }
+        if (instantBtn) {
+            instantBtn.disabled = false;
+            instantBtn.removeAttribute('disabled');
+            instantBtn.style.opacity = '1';
+            instantBtn.style.pointerEvents = 'auto';
+            instantBtn.style.cursor = 'pointer';
+        }
 
         hideSummaryCard(container);
     }
 
     function resetScannerState(container) {
         activeFile = null;
+        window.activeScannerFile = null;
+        if (container) container._activeFile = null;
+
+        var dropZone = container.querySelector('.scanner-drop-zone') || container.querySelector('.scanner-dropzone');
         var placeholderArea = container.querySelector('.scanner-placeholder-area');
         var previewArea = container.querySelector('.scanner-file-preview');
         var fileInput = container.querySelector('#scannerFileInput');
@@ -346,11 +368,24 @@
 
         if (fileInput) fileInput.value = '';
         if (cameraFallbackInput) cameraFallbackInput.value = '';
+        if (dropZone) dropZone.classList.remove('has-file', 'drag-active');
         if (placeholderArea) placeholderArea.style.display = 'block';
         if (previewArea) previewArea.style.display = 'none';
 
-        if (autofillBtn) autofillBtn.disabled = true;
-        if (instantBtn) instantBtn.disabled = true;
+        if (autofillBtn) {
+            autofillBtn.disabled = true;
+            autofillBtn.setAttribute('disabled', 'disabled');
+            autofillBtn.style.opacity = '';
+            autofillBtn.style.pointerEvents = '';
+            autofillBtn.style.cursor = '';
+        }
+        if (instantBtn) {
+            instantBtn.disabled = true;
+            instantBtn.setAttribute('disabled', 'disabled');
+            instantBtn.style.opacity = '';
+            instantBtn.style.pointerEvents = '';
+            instantBtn.style.cursor = '';
+        }
 
         hideSummaryCard(container);
     }
@@ -519,42 +554,159 @@
         var negBtn = container.querySelector('#scannerSampleNegBtn');
 
         if (posBtn) {
-            posBtn.addEventListener('click', function (e) {
+            posBtn.onclick = function (e) {
                 e.preventDefault();
-                loadSyntheticSample(container, 'positive');
-            });
+                loadSyntheticSample(container, 'positive', posBtn);
+            };
         }
 
         if (negBtn) {
-            negBtn.addEventListener('click', function (e) {
+            negBtn.onclick = function (e) {
                 e.preventDefault();
-                loadSyntheticSample(container, 'negative');
-            });
+                loadSyntheticSample(container, 'negative', negBtn);
+            };
         }
     }
 
-    function loadSyntheticSample(container, sampleType) {
-        var filename = activeModule + '_sample_' + sampleType + '.pdf';
-        var sampleUrl = '/static/samples/' + filename;
+    async function loadSyntheticSample(container, sampleType, clickedBtn) {
+        if (!container) {
+            container = document.querySelector('.medinova-scanner-container');
+        }
+        if (!clickedBtn && container) {
+            clickedBtn = container.querySelector(sampleType === 'positive' ? '#scannerSamplePosBtn' : '#scannerSampleNegBtn');
+        }
 
-        showScannerProgress(container, 'Loading synthetic ' + sampleType + ' test report...');
+        var originalHtml = clickedBtn ? clickedBtn.innerHTML : '';
 
-        fetch(sampleUrl)
-            .then(function (res) {
-                if (!res.ok) throw new Error('Sample file not found: ' + sampleUrl);
-                return res.blob();
-            })
-            .then(function (blob) {
-                var file = new File([blob], filename, { type: 'application/pdf' });
-                handleSelectedFile(file, container);
+        // 3a. Show a subtle loading state on the clicked button
+        if (clickedBtn) {
+            clickedBtn.disabled = true;
+            clickedBtn.setAttribute('disabled', 'disabled');
+            clickedBtn.classList.add('loading');
+            clickedBtn.style.opacity = '0.75';
+            clickedBtn.innerHTML = '<span>⏳ Loading ' + (sampleType === 'positive' ? 'Positive' : 'Negative') + '...</span>';
+        }
+        if (container) {
+            showScannerProgress(container, 'Loading synthetic ' + sampleType + ' test report...');
+        }
+
+        var mod = activeModule || (container ? container.getAttribute('data-module') : '') || detectModuleFromPath() || 'diabetes';
+        var primaryName = mod + '_sample_' + sampleType + '.pdf';
+        var genericName = 'sample_' + sampleType + '.pdf';
+
+        var candidateSources = [
+            { url: '/static/samples/' + primaryName, filename: primaryName },
+            { url: '/static/samples/' + genericName, filename: genericName },
+            { url: '/api/sample-report/' + encodeURIComponent(mod) + '/' + encodeURIComponent(sampleType), filename: primaryName },
+            { url: '/api/sample-report/' + encodeURIComponent(sampleType), filename: genericName }
+        ];
+
+        try {
+            // 3b. fetch() the corresponding PDF file from the backend as a Blob
+            var targetBlob = null;
+            var resolvedFilename = genericName;
+            var fetchErrorMsg = '';
+
+            for (var i = 0; i < candidateSources.length; i++) {
+                try {
+                    var resp = await fetch(candidateSources[i].url);
+                    if (resp.ok) {
+                        targetBlob = await resp.blob();
+                        resolvedFilename = candidateSources[i].filename;
+                        break;
+                    } else {
+                        fetchErrorMsg = 'HTTP ' + resp.status + ' (' + candidateSources[i].url + ')';
+                    }
+                } catch (netErr) {
+                    fetchErrorMsg = netErr.message;
+                }
+            }
+
+            if (!targetBlob) {
+                throw new Error('Unable to retrieve synthetic sample report: ' + fetchErrorMsg);
+            }
+
+            // 3c. Convert the Blob into a JavaScript File object
+            var sampleFile = new File([targetBlob], resolvedFilename, { type: 'application/pdf' });
+
+            // 3d. Use DataTransfer to assign the File directly to the hidden <input type="file"> element
+            var fileInput = (container && container.querySelector('#scannerFileInput')) || document.querySelector('#scannerFileInput');
+            if (fileInput) {
+                try {
+                    var dt = new DataTransfer();
+                    dt.items.add(sampleFile);
+                    fileInput.files = dt.files;
+                } catch (dtErr) {
+                    console.warn('[MediNova Scanner] DataTransfer assignment exception:', dtErr);
+                }
+            }
+
+            // 3e. Update JavaScript state variables holding currently selected file
+            activeFile = sampleFile;
+            window.activeScannerFile = sampleFile;
+            if (container) container._activeFile = sampleFile;
+
+            // 4a. Dispatch a 'change' event on the file input element
+            if (fileInput) {
+                fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            // 4b. Update drag-and-drop zone UI to display loaded sample file name & active styling
+            if (container) {
+                handleSelectedFile(sampleFile, container);
+
+                var dropZone = container.querySelector('.scanner-drop-zone') || container.querySelector('.scanner-dropzone');
+                if (dropZone) dropZone.classList.add('has-file', 'drag-active');
+
+                var filenameEl = container.querySelector('.scanner-filename');
+                if (filenameEl) {
+                    filenameEl.textContent = sampleFile.name + ' (Loaded)';
+                }
+
+                // 4c. Explicitly remove disabled attribute and disabled styling/opacity from action buttons
+                var autofillBtn = container.querySelector('#scannerAutofillBtn') || document.querySelector('#scannerAutofillBtn');
+                var instantBtn = container.querySelector('#scannerInstantPredictBtn') || document.querySelector('#scannerInstantPredictBtn');
+                if (autofillBtn) {
+                    autofillBtn.disabled = false;
+                    autofillBtn.removeAttribute('disabled');
+                    autofillBtn.style.opacity = '1';
+                    autofillBtn.style.pointerEvents = 'auto';
+                    autofillBtn.style.cursor = 'pointer';
+                }
+                if (instantBtn) {
+                    instantBtn.disabled = false;
+                    instantBtn.removeAttribute('disabled');
+                    instantBtn.style.opacity = '1';
+                    instantBtn.style.pointerEvents = 'auto';
+                    instantBtn.style.cursor = 'pointer';
+                }
+            }
+
+            showScannerToast('Loaded ' + sampleType + ' synthetic report: ' + resolvedFilename, 'info');
+
+        } catch (err) {
+            console.error('[MediNova Scanner] Sample report loading error:', err);
+            showScannerToast('Failed to load sample: ' + (err.message || 'Network error'), 'danger');
+        } finally {
+            if (clickedBtn) {
+                clickedBtn.disabled = false;
+                clickedBtn.removeAttribute('disabled');
+                clickedBtn.classList.remove('loading');
+                clickedBtn.style.opacity = '';
+                if (originalHtml) clickedBtn.innerHTML = originalHtml;
+            }
+            if (container) {
                 hideScannerProgress(container);
-                showScannerToast('Loaded ' + sampleType + ' synthetic report: ' + filename, 'info');
-            })
-            .catch(function (err) {
-                hideScannerProgress(container);
-                showScannerToast('Failed to load sample: ' + err.message, 'danger');
-            });
+            }
+        }
     }
+
+    // Expose globally for both inline onclick handlers and programmatic testing
+    window.loadSampleReport = function (sampleType, btnElement) {
+        var container = (btnElement && btnElement.closest('.medinova-scanner-container')) || document.querySelector('.medinova-scanner-container');
+        loadSyntheticSample(container, sampleType, btnElement);
+    };
+    window.loadSyntheticSample = loadSyntheticSample;
 
     /**
      * Unified Backend API Execution: POST /api/scan-report/<module_name>
@@ -680,13 +832,24 @@
      * Finds form element by name, id, or prefixed id and updates value.
      */
     function setFormFieldValue(fieldKey, value) {
+        var lower = String(fieldKey).toLowerCase();
+        var upper = String(fieldKey).toUpperCase();
         var candidates = [
             `input[name="${fieldKey}"]`,
+            `input[name="${lower}"]`,
+            `input[name="${upper}"]`,
             `select[name="${fieldKey}"]`,
+            `select[name="${lower}"]`,
+            `select[name="${upper}"]`,
             `#${fieldKey}`,
+            `#${lower}`,
+            `#${upper}`,
             `#k_${fieldKey}`,
+            `#k_${lower}`,
             `#l_${fieldKey}`,
-            `#bc_${fieldKey}`
+            `#l_${lower}`,
+            `#bc_${fieldKey}`,
+            `#bc_${lower}`
         ];
 
         var el = null;
@@ -1343,8 +1506,17 @@
     }
 
     function disableButtons(container, disable) {
-        var btns = container.querySelectorAll('.scanner-action-btn, #scannerSamplePosBtn, #scannerSampleNegBtn');
-        btns.forEach(function (b) { b.disabled = disable; });
+        var btns = container.querySelectorAll('.btn-scanner-action, .scanner-action-btn, #scannerSamplePosBtn, #scannerSampleNegBtn, #scannerAutofillBtn, #scannerInstantPredictBtn');
+        btns.forEach(function (b) {
+            b.disabled = disable;
+            if (disable) {
+                b.setAttribute('disabled', 'disabled');
+            } else {
+                b.removeAttribute('disabled');
+                b.style.opacity = '1';
+                b.style.pointerEvents = 'auto';
+            }
+        });
     }
 
     function showScannerToast(message, type) {
@@ -1398,12 +1570,16 @@
         } else if (typeof window.fillBreastCancerSample === 'function' && (!activeModule || activeModule === 'breast_cancer')) {
             window.fillBreastCancerSample(type);
             showScannerToast('Populated ' + type + ' breast morphology biopsy values.', 'info');
+        } else if (typeof window.fillThyroidSample === 'function' && (!activeModule || activeModule === 'thyroid')) {
+            window.fillThyroidSample(type);
+            showScannerToast('Populated ' + type + ' thyroid panel test values.', 'info');
         } else {
             if (typeof fillDiabetesSample === 'function') fillDiabetesSample(type);
             else if (typeof fillHeartSample === 'function') fillHeartSample(type);
             else if (typeof fillKidneySample === 'function') fillKidneySample(type);
             else if (typeof fillLiverSample === 'function') fillLiverSample(type);
             else if (typeof fillBreastCancerSample === 'function') fillBreastCancerSample(type);
+            else if (typeof fillThyroidSample === 'function') fillThyroidSample(type);
         }
     };
 

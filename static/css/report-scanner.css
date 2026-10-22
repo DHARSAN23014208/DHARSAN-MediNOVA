@@ -644,9 +644,17 @@
     transition: all 0.2s ease;
 }
 
-.btn-sandbox-pill:hover {
+.btn-sandbox-pill:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-sandbox-pill.loading,
+.btn-sandbox-pill:disabled {
+    opacity: 0.65;
+    cursor: wait !important;
+    pointer-events: none;
+    transform: none !important;
 }
 
 .pill-report-pos:hover {

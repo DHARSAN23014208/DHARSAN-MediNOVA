@@ -496,6 +496,30 @@
             btn.disabled = true;
             btn.innerHTML = '<span>Analyzing Thyroid Analytes...</span>';
         });
+
+        function fillThyroidSample(type) {
+            if (type === 'positive') {
+                document.getElementById('age').value = 58;
+                document.getElementById('sex').value = 'Female';
+                document.getElementById('on_thyroxine').value = '0';
+                document.getElementById('tsh').value = 12.5;
+                document.getElementById('t3').value = 0.55;
+                document.getElementById('tt4').value = 22.0;
+                document.getElementById('t4u').value = 1.15;
+                document.getElementById('fti').value = 19.1;
+            } else {
+                document.getElementById('age').value = 34;
+                document.getElementById('sex').value = 'Female';
+                document.getElementById('on_thyroxine').value = '0';
+                document.getElementById('tsh').value = 1.85;
+                document.getElementById('t3').value = 1.8;
+                document.getElementById('tt4').value = 103.0;
+                document.getElementById('t4u').value = 0.98;
+                document.getElementById('fti').value = 107.0;
+            }
+        }
+        window.fillThyroidSample = fillThyroidSample;
     </script>
+    <script src="{{ url_for('static', filename='js/report-scanner.js') }}?v=1.0"></script>
 </body>
 </html>

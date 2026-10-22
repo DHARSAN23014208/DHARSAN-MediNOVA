@@ -5,24 +5,28 @@
 [![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15+-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)](https://tensorflow.org)
 [![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-1.4+-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org)
 [![XGBoost](https://img.shields.io/badge/XGBoost-Ensemble-185a9d?style=for-the-badge)](https://xgboost.ai)
-[![Tests](https://img.shields.io/badge/Tests-54%20Passed%20%E2%80%A2%20100%25-brightgreen?style=for-the-badge)](tests/)
-[![Security](https://img.shields.io/badge/Security-Fail--Closed%20%E2%80%A2%20HMAC--SHA256-blueviolet?style=for-the-badge)](ARCHITECTURE.md#4-security--privacy-framework)
+[![Tests](https://img.shields.io/badge/Tests-89%20Passed%20%E2%80%A2%20100%25-brightgreen?style=for-the-badge)](tests/)
+[![Workflows](https://img.shields.io/badge/Workflows-Validated%208--Stage-informational?style=for-the-badge)](WORKFLOW.md)
+[![Security](https://img.shields.io/badge/Security-Fail--Closed%20%E2%80%A2%20HMAC--SHA256-blueviolet?style=for-the-badge)](ARCHITECTURE.md#3-strict-security--clinical-privacy-hardening)
 
-**MediNova** is an enterprise-grade Clinical Decision Support System (CDSS) that bridges multi-parametric machine learning, deep convolutional neural networks, optical character recognition (OCR), geospatial healthcare discovery, priority appointment lifecycle tracking, cryptographic document authentication, and asynchronous cloud synchronization.
+**MediNova** is an enterprise-grade Clinical Decision Support System (CDSS) that bridges multi-parametric machine learning, deep convolutional neural networks, digital biosignal processing (ECG), optical character recognition (OCR), geospatial healthcare discovery, priority appointment lifecycle tracking, cryptographic document authentication, and asynchronous cloud synchronization.
 
-> 📖 **Full System Architecture & Workflow Specification:**  
-> For detailed architectural diagrams, sequence diagrams, database schemas, and state-machine transitions, review the complete [MediNova System Architecture & End-to-End Workflow Specification](ARCHITECTURE.md).
+> 📖 **Full System Architecture & Operational Workflow Specifications:**  
+> - For detailed architectural diagrams, database schemas, and security frameworks, see [ARCHITECTURE.md](ARCHITECTURE.md).  
+> - For step-by-step operational sequence flows, data contracts, and state machine diagrams, see [WORKFLOW.md](WORKFLOW.md).
 
 ---
 
 ## 🌟 Key Functional Pillars & Subsystems
 
-### 1. 🔬 Seven Diagnostic Disease Modules
+### 1. 🔬 Nine Diagnostic Disease Modules (Multimodal CDSS)
 - **Heart Disease:** Random Forest classifier analyzing 13 cardiovascular vitals (Resting BP, Cholesterol, EKG, ST Depression, Thallium, etc.).
 - **Diabetes:** XGBoost gradient booster evaluating 8 metabolic markers (HbA1c, Glucose, BMI, Blood Pressure, Insulin, etc.).
 - **Kidney Disease:** Random Forest ensemble evaluating 24 renal biomarkers (Serum Creatinine, Blood Urea, Specific Gravity, Albumin, etc.).
 - **Liver Disease:** Random Forest classifier screening 10 hepatic enzymes and parameters (Bilirubin, ALT, AST, Albumin, A/G Ratio).
 - **Breast Cancer:** Cellular morphometry classifier assessing 5 fine-needle aspirate (FNA) nucleus parameters.
+- **Thyroid Dysfunction:** Calibrated Random Forest pipeline evaluating 8 endocrine analytes (TSH, T3, TT4, T4U, FTI, Age, Sex, On Thyroxine). Brier score: 0.0024; Sensitivity: 100%, Specificity: 99.78%.
+- **Cardiac Arrhythmia:** Digital biosignal feature extraction (Pan-Tompkins QRS detector, Butterworth bandpass filter 0.5–40 Hz) analyzing Lead MLII 360 Hz ECG waveforms across 9 morphological metrics. Sensitivity: 97.78%, Specificity: 100%.
 - **Malaria:** Deep Convolutional Neural Network (CNN) analyzing $50 \times 50 \times 3$ microscopic thin blood smear images.
 - **Pneumonia:** Deep Convolutional Neural Network (CNN) analyzing $150 \times 150 \times 3$ chest radiograph (CXR) scans.
 - **Confidence Integrity:** Eliminates hardcoded confidence fallbacks (no fake 95.0%). Calibrated probabilities are rendered when available; discrete models report *"Not Stated (Categorical Assessment)"* with `confidence_score = None`.
@@ -30,7 +34,7 @@
 ### 2. 📄 Medical Report Scanner & Extraction Engine
 - **Multi-Format Ingestion:** Ingests digital PDFs and image lab reports (PNG, JPG, JPEG, WebP) up to 16 MB.
 - **Text & OCR Extraction:** Uses `pypdf` for clean digital text extraction and `pytesseract` OCR for scanned paperwork.
-- **Biomarker Matcher & Unit Normalizer:** Parses clinical synonyms and converts laboratory units (e.g., $\text{mmol/L} \to \text{mg/dL}$).
+- **Biomarker Matcher & Unit Normalizer:** Parses clinical synonyms and converts laboratory units (e.g., $\text{mmol/L} \to \text{mg/dL}$, $\mu\text{mol/L} \to \text{mg/dL}$).
 - **Instant Triage Mode:** Automatically populates diagnostic input fields or directly triggers predictive inference.
 
 ### 3. 🔐 Cryptographic Report Integrity & Dynamic QR Codes
@@ -40,8 +44,17 @@
 
 ### 4. 🏥 Verified Care Network & Disease-Specific Hospital Discovery
 - **Strict Specialty Matching:** Matches conditions exclusively to verified departments (e.g., Pneumonia $\to$ Pulmonology/Respiratory care; generic Internal Medicine is strictly disallowed).
-- **Geocoding & Bounded Search:** OpenStreetMap / Photon geocoding with server-side coordinate boundaries ($-90 \le \text{lat} \le 90$, $-180 \le \text{lon} \le 180$) and radius options ($1 \le \text{radius\_km} \le 100$).
-- **Progressive Auto-Expansion:** Gradually expands search from 5 km up to 100 km when local facilities are scarce, accompanied by clear UI notice.
+- **Progressive 7-Tier Geocoding Engine:** Unified server-side resolver (`resolve_any_address`) decomposing noisy addresses:
+  1. *Exact Normalized Query* (Unicode dash/quote cleanup, plus-code removal, highway label cleaning e.g. `(NH-4)` $\to$ `NH-4`)
+  2. *India Country-Biased Query*
+  3. *Locality Query* stripped of road/highway noise
+  4. *Locality + District/Town + State*
+  5. *District/Town + State*
+  6. *6-Digit Indian PIN Code*
+  7. *Approximate Major City Center* (explicitly flagged; never silently substituted)
+- **Centralized `ACTIVE_ORIGIN` State Machine:** Authoritative client-side state manager (`userOriginCoords`, `userOriginAddress`, `userOriginResolvedAddress`, `userOriginSource`, `userOriginPrecision`) synchronizing manual searches, browser GPS, and quick metro buttons.
+- **Accurate Distances & Coordinate-First Navigation:** Accurate straight-line Haversine distance calculations and direct Google Maps navigation links (`origin=LAT%2CLNG&destination=DEST&travelmode=driving`).
+- **Fail-Safe State Synchronization:** Search failures immediately clear active coordinates and empty the recommendation table (`ALL_RECOMMENDATIONS = []`), guaranteeing zero stale data retention.
 - **Rating & Non-Clinical Filters:** Excludes facilities with ratings $\le 3.0$ and discards alternative medicine, dental, and optical clinics.
 
 ### 5. 📅 Priority Appointment Lifecycle State Machine
@@ -76,6 +89,8 @@
 | **Kidney Disease** | 24 Renal Biomarkers | Random Forest Ensemble | **~98%** | CKD Risk vs. Healthy Renal Function |
 | **Liver Disease** | 10 Hepatic Parameters | Random Forest Classifier | **~75%** | Hepatic Risk Detected vs. Normal Function |
 | **Breast Cancer** | 5 Cellular Nucleus Metrics | Fine-Needle Aspirate Classifier | **~95%** | Malignant Neoplasm vs. Benign Tissue |
+| **Thyroid Dysfunction** | 8 Serum Analytes | Calibrated Random Forest Pipeline | **~99.8%** | Hypothyroidism vs. Euthyroid (Normal) |
+| **Cardiac Arrhythmia** | 360 Hz ECG Waveform (Lead MLII) | Biosignal Feature Ensemble (Pan-Tompkins) | **~99.7%** | Arrhythmic Ectopy (PVC) vs. Normal Sinus |
 | **Malaria** | Thin Blood Smear Images ($50\times50$) | Fast Deep CNN (Keras) | **~95%+** | Parasitized (Infected) vs. Uninfected |
 | **Pneumonia** | Chest Radiographs ($150\times150$) | Deep Radiography CNN (Keras) | **~90%+** | Pulmonary Infiltrates vs. Clear Lungs |
 
@@ -86,7 +101,8 @@
 ```
 DHARSAN-MediNOVA/
 ├── app.py                         # Main Flask application, routes, AI Copilot, auth gates
-├── ARCHITECTURE.md                # End-to-end system architecture & workflow specification
+├── ARCHITECTURE.md                # End-to-end system architecture & subsystem specification
+├── WORKFLOW.md                    # Complete operational sequence flows & state machines
 ├── requirements.txt               # Production Python dependencies
 ├── Dockerfile                     # Multi-stage production container definition
 ├── render.yaml                    # Cloud deployment specification for Render
@@ -97,19 +113,26 @@ DHARSAN-MediNOVA/
 ├── medinova_appointments.db       # SQLite database (appointments & sheets_outbox)
 ├── report_verifications.db        # SQLite database (HMAC seals & report verification)
 ├── models/                        # Serialized ML & deep learning model weights
+│   ├── model_registry.json        # Master manifest with SHA-256 digests & clinical bounds
 │   ├── heart_disease_model.pkl
 │   ├── diabetes_model.pkl
 │   ├── kidney_model.pkl
 │   ├── liver_model.pkl
 │   ├── breast_cancer_model.pkl
+│   ├── thyroid_model.pkl
+│   ├── ecg_arrhythmia_model.pkl
 │   ├── malaria_cnn_model_fast.h5
 │   └── pneumonia_model_new.h5
 ├── private_uploads/               # Session-gated patient scans (HIPAA-aligned privacy)
 ├── utils/                         # Modular business logic & services
-│   ├── diagnostic_predictor.py    # Shared multi-parametric prediction & confidence scoring
+│   ├── diagnostic_predictor.py    # Multi-parametric prediction & confidence scoring
+│   ├── clinical_validation.py     # Out-of-distribution (OOD) & physiological bounds check
+│   ├── signal_processor.py        # ECG Pan-Tompkins QRS detector & Butterworth filter
+│   ├── model_registry.py          # Master manifest loader & SHA-256 integrity checker
+│   ├── inference_service.py       # Unified clinical inference dispatcher
 │   ├── report_scanner.py          # PDF text extraction & Tesseract OCR pipeline
 │   ├── report_verifier.py         # HMAC-SHA256 integrity sealing & QR code generator
-│   ├── hospital_service.py        # Specialty mapping, geocoding & progressive radius search
+│   ├── hospital_service.py        # 7-tier geocoding, specialty mapping & radius search
 │   ├── verified_hospital_registry.py # Authoritative verified hospital registry & credentials
 │   ├── appointment_db.py          # Thread-safe SQLite database & state-machine transitions
 │   ├── calendar_service.py        # RFC 5545 iCalendar (.ics) & Google Calendar links
@@ -123,9 +146,11 @@ DHARSAN-MediNOVA/
 │   ├── kidney.html                # 24-biomarker renal panel & multilingual summary
 │   ├── liver.html                 # Hepatic panel & multilingual summary
 │   ├── breast_cancer.html         # Oncology FNA morphometry & multilingual summary
+│   ├── thyroid.html               # Endocrine panel assessment & multilingual summary
+│   ├── arrhythmia.html            # ECG biosignal telemetry & waveform canvas
 │   ├── malaria.html               # Microscopic vision screening & private preview
 │   ├── pneumonia.html             # Chest radiograph vision screening & private preview
-│   ├── contact.html               # Verified Care Network, Hospital Finder & Appointment Tracking
+│   ├── contact.html               # Care Network, ACTIVE_ORIGIN Finder & Appointment Tracking
 │   ├── verify_report.html         # Official cryptographic report verification view
 │   └── dev_access.html            # Authenticated 2FA developer portal & admin dashboard
 ├── static/                        # Static assets (obsidian dark theme)
@@ -133,10 +158,12 @@ DHARSAN-MediNOVA/
 │   ├── medical_report.js          # Client-side scanner integration, PDF preview, OCR parser
 │   ├── chatbot.js                 # AI Clinical Copilot client (TTS, voice recognition)
 │   └── samples/                   # Pre-bundled demo images and synthetic lab reports
-└── tests/                         # Automated unit & integration regression test suite
+└── tests/                         # Automated unit & integration regression test suite (89 tests)
     ├── test_audit_fixes.py        # Security, OTP, privacy, outbox, transitions, confidence (22 tests)
     ├── test_care_network.py       # Specialty matching, radius bounds, geocoding (8 tests)
-    └── test_scanner_pipeline.py   # OCR, PDF extraction, unit conversions, instant predict (24 tests)
+    ├── test_location_and_navigation.py # 7-tier geocoder, ACTIVE_ORIGIN state, Google Maps URLs (9 tests)
+    ├── test_nextgen_cdss.py       # Model registry, SHA-256 checks, signals, thyroid, OOD (24 tests)
+    └── test_scanner_pipeline.py   # OCR, PDF extraction, unit conversions, instant predict (26 tests)
 ```
 
 ---
@@ -187,12 +214,14 @@ python -m unittest discover tests
 
 **Test Execution Summary:**
 ```text
-Ran 54 tests in 3.685s
+Ran 89 tests in 7.519s
 OK
 ```
-- **`tests/test_audit_fixes.py`** (22 tests): Fail-closed secrets, OTP leak-free 2FA, 60s cooldown, 5-attempt lockout, image upload isolation, hospital coordinate limits, state machine transitions, `None` confidence handling, spreadsheet formula injection defense, HMAC report seals.
-- **`tests/test_care_network.py`** (8 tests): Pulmonology isolation, rating $> 3.0$ filter, radius auto-expansion, geocoding fallback.
-- **`tests/test_scanner_pipeline.py`** (24 tests): PDF parsing, OCR term matching, unit normalization, instant triage inference.
+- **[`tests/test_audit_fixes.py`](file:///c:/Users/admin/Desktop/DHARSAN-MediNOVA/tests/test_audit_fixes.py)** (22 tests): Fail-closed secrets, OTP leak-free 2FA, 60s cooldown, 5-attempt lockout, image upload isolation, hospital coordinate limits, state machine transitions, `None` confidence handling, spreadsheet formula injection defense, HMAC report seals.
+- **[`tests/test_care_network.py`](file:///c:/Users/admin/Desktop/DHARSAN-MediNOVA/tests/test_care_network.py)** (8 tests): Pulmonology isolation, rating $> 3.0$ filter, radius auto-expansion, geocoding fallback.
+- **[`tests/test_location_and_navigation.py`](file:///c:/Users/admin/Desktop/DHARSAN-MediNOVA/tests/test_location_and_navigation.py)** (9 tests): 7-tier progressive query candidate generation, address normalization, straight-line Haversine calculations, coordinate-first Google Maps directions URL formatting, `ACTIVE_ORIGIN` state transitions, and fail-safe recommendation clearing.
+- **[`tests/test_nextgen_cdss.py`](file:///c:/Users/admin/Desktop/DHARSAN-MediNOVA/tests/test_nextgen_cdss.py)** (24 tests): Model registry SHA-256 manifest validation, physiological plausibility envelopes (OOD bounds), Pan-Tompkins QRS beat detection, Butterworth filtering, thyroid model inference, ECG arrhythmia inference, roadmap condition gating (HTTP 403), CSRF protection enforcement, HTTP security headers.
+- **[`tests/test_scanner_pipeline.py`](file:///c:/Users/admin/Desktop/DHARSAN-MediNOVA/tests/test_scanner_pipeline.py)** (26 tests): PDF parsing, OCR term matching, unit normalization, instant triage inference, corrupt stream recovery.
 
 ---
 

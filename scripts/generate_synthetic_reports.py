@@ -18,6 +18,46 @@ SAMPLES_DIR = os.path.join(BASE_DIR, "static", "samples")
 os.makedirs(SAMPLES_DIR, exist_ok=True)
 
 REPORTS_DATA = {
+    # 0. Generic Standard Clinical Reports
+    "sample_positive.pdf": {
+        "title": "Comprehensive Clinical Diagnostic Biomarker Panel",
+        "patient": {"Age": "62 yrs", "Gender": "Male", "Sample ID": "SYN-LAB-POS-9001", "Status": "Elevated Clinical Risk"},
+        "analytes": [
+            ("Glycated Hemoglobin (HbA1c)", "8.8", "%", "4.0 - 5.6"),
+            ("Fasting Blood Glucose", "215", "mg/dL", "70 - 99"),
+            ("Serum Cholesterol", "285", "mg/dL", "125 - 200"),
+            ("Resting Blood Pressure (BP)", "155", "mm Hg", "90 - 120"),
+            ("Body Mass Index (BMI)", "33.5", "kg/m²", "18.5 - 24.9"),
+            ("ST Depression (Oldpeak)", "2.8", "", "0.0 - 1.0"),
+            ("Serum Creatinine", "2.8", "mg/dL", "0.6 - 1.2"),
+            ("Total Bilirubin", "3.5", "mg/dL", "0.2 - 1.2"),
+            ("Patient Age", "62", "years", "18 - 85"),
+            ("Biological Gender", "Male", "", "Male / Female"),
+            ("Hypertension History", "Positive", "", "Negative"),
+            ("Coronary Heart Disease", "Positive", "", "Negative"),
+            ("Smoking Status", "Current", "", "Never / Non-Smoker")
+        ]
+    },
+    "sample_negative.pdf": {
+        "title": "Comprehensive Clinical Diagnostic Biomarker Panel",
+        "patient": {"Age": "32 yrs", "Gender": "Female", "Sample ID": "SYN-LAB-NEG-1002", "Status": "Normal / Optimal Baseline"},
+        "analytes": [
+            ("Glycated Hemoglobin (HbA1c)", "5.1", "%", "4.0 - 5.6"),
+            ("Fasting Blood Glucose", "86", "mg/dL", "70 - 99"),
+            ("Serum Cholesterol", "175", "mg/dL", "125 - 200"),
+            ("Resting Blood Pressure (BP)", "118", "mm Hg", "90 - 120"),
+            ("Body Mass Index (BMI)", "22.4", "kg/m²", "18.5 - 24.9"),
+            ("ST Depression (Oldpeak)", "0.2", "", "0.0 - 1.0"),
+            ("Serum Creatinine", "0.9", "mg/dL", "0.6 - 1.2"),
+            ("Total Bilirubin", "0.7", "mg/dL", "0.2 - 1.2"),
+            ("Patient Age", "32", "years", "18 - 85"),
+            ("Biological Gender", "Female", "", "Male / Female"),
+            ("Hypertension History", "Negative", "", "Negative"),
+            ("Coronary Heart Disease", "Negative", "", "Negative"),
+            ("Smoking Status", "Never", "", "Never / Non-Smoker")
+        ]
+    },
+
     # 1. Diabetes
     "diabetes_sample_positive.pdf": {
         "title": "Comprehensive Glycemic & Metabolic Biomarker Panel",
@@ -187,6 +227,34 @@ REPORTS_DATA = {
             ("Mean Nuclear Perimeter", "73.18", "µm", "40.0 - 89.9"),
             ("Mean Nuclear Area", "398.0", "µm²", "140.0 - 499.0"),
             ("Mean Smoothness Index", "0.0825", "", "0.06 - 0.099")
+        ]
+    },
+    "thyroid_sample_positive.pdf": {
+        "title": "Comprehensive Thyroid Profile (TSH, T3, TT4) & Endocrine Panel",
+        "patient": {"Age": "58 yrs", "Gender": "Female", "Sample ID": "SYN-THYR-9901", "Status": "Hypothyroid Profile"},
+        "analytes": [
+            ("Thyroid Stimulating Hormone (TSH)", "12.5", "µIU/mL", "0.4 - 4.5"),
+            ("Total Triiodothyronine (T3)", "0.55", "ng/mL", "0.8 - 2.0"),
+            ("Total Thyroxine (TT4)", "3.8", "µg/dL", "4.5 - 12.0"),
+            ("T4 Uptake Ratio (T4U)", "1.15", "", "0.8 - 1.3"),
+            ("Free Thyroxine Index (FTI)", "3.3", "", "1.2 - 4.2"),
+            ("Patient Age", "58", "years", "18 - 85"),
+            ("Biological Gender", "Female", "", "Male / Female"),
+            ("On Thyroxine Medication", "Negative", "", "Negative / Positive")
+        ]
+    },
+    "thyroid_sample_negative.pdf": {
+        "title": "Comprehensive Thyroid Profile (TSH, T3, TT4) & Endocrine Panel",
+        "patient": {"Age": "34 yrs", "Gender": "Female", "Sample ID": "SYN-THYR-1044", "Status": "Euthyroid Baseline"},
+        "analytes": [
+            ("Thyroid Stimulating Hormone (TSH)", "1.85", "µIU/mL", "0.4 - 4.5"),
+            ("Total Triiodothyronine (T3)", "1.45", "ng/mL", "0.8 - 2.0"),
+            ("Total Thyroxine (TT4)", "8.2", "µg/dL", "4.5 - 12.0"),
+            ("T4 Uptake Ratio (T4U)", "0.98", "", "0.8 - 1.3"),
+            ("Free Thyroxine Index (FTI)", "3.2", "", "1.2 - 4.2"),
+            ("Patient Age", "34", "years", "18 - 85"),
+            ("Biological Gender", "Female", "", "Male / Female"),
+            ("On Thyroxine Medication", "Negative", "", "Negative / Positive")
         ]
     }
 }

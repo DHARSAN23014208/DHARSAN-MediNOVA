@@ -174,7 +174,7 @@ def validate_csrf():
     if request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
         if app.config.get('TESTING'):
             return None
-        exempt_prefixes = ('/api/scan-report', '/api/appointments', '/api/patient-images', '/api/chat', '/api/report-qr')
+        exempt_prefixes = ('/api/scan-report', '/api/sample-report', '/api/appointments', '/api/patient-images', '/api/chat', '/api/report-qr')
         if any(request.path.startswith(p) for p in exempt_prefixes):
             return None
             
@@ -1158,11 +1158,11 @@ def api_hospital_geocode():
     if not raw_query:
         return jsonify({"status": "error", "message": "Location search query is required."}), 400
     res = resolve_any_address(raw_query)
-    if res:
+    if res and res.get("success"):
         return jsonify({"status": "success", "location": res})
     return jsonify({
         "status": "not_found",
-        "message": "Location not found. Please enter a more complete address, city, or postal code."
+        "message": res.get("error", "Location not found. Please refine your search or select a Quick Metro above.") if res else "Location not found."
     }), 404
 
 @app.route('/api/hospitals/search', methods=['GET'])
@@ -1695,6 +1695,30 @@ def thyroid():
 # SMART MEDICAL LAB REPORT SCANNER & VERIFICATION APIS
 # ============================================================================
 
+@app.route('/api/sample-report/<sample_type>', methods=['GET'])
+@app.route('/api/sample-report/<module_name>/<sample_type>', methods=['GET'])
+def get_sample_report(sample_type, module_name=None):
+    """
+    Dedicated GET endpoint serving realistic clinical laboratory report PDFs.
+    Returns 200 OK with Content-Type: application/pdf.
+    """
+    clean_type = 'positive' if 'pos' in sample_type.lower() else 'negative'
+    samples_dir = os.path.join(BASE_DIR, 'static', 'samples')
+    
+    candidates = []
+    if module_name:
+        candidates.append(f"{module_name}_sample_{clean_type}.pdf")
+    candidates.append(f"sample_{clean_type}.pdf")
+    candidates.append(f"diabetes_sample_{clean_type}.pdf")
+    
+    for candidate in candidates:
+        pdf_path = os.path.join(samples_dir, candidate)
+        if os.path.isfile(pdf_path):
+            return send_file(pdf_path, mimetype='application/pdf', as_attachment=False)
+            
+    return jsonify({"error": f"Sample report '{sample_type}' not found"}), 404
+
+
 @app.route('/api/scan-report/<module_name>', methods=['POST'])
 def scan_report(module_name):
     """
@@ -1756,7 +1780,8 @@ def scan_report(module_name):
             'diabetes': (diabetes_model, predict_diabetes),
             'kidney': (kidney_model, predict_kidney),
             'liver': (liver_model, predict_liver),
-            'breast_cancer': (breast_cancer_model, predict_breast_cancer)
+            'breast_cancer': (breast_cancer_model, predict_breast_cancer),
+            'thyroid': (get_thyroid_model(), predict_thyroid)
         }
 
         m_inst, p_func = model_map[module_name]
@@ -3312,12 +3337,63 @@ CLINICAL_DOMAINS = {
             "3. **Avoid Sudden Posture Shifts:** Rise slowly from sitting or lying down to prevent orthostatic dizziness.\n"
             "4. **Screen Prominent Symptoms:** Use MediNova's organ-specific diagnostic suites to screen targeted biomarkers."
         )
+    },
+    'thyroid': {
+        'name': 'Thyroid & Endocrine Function',
+        'route': '/thyroid',
+        'action_label': '🦋 Open Thyroid Screening',
+        'insight_key': 'thyroid',
+        'keywords': [
+            'thyroid', 'tsh', 'hypothyroid', 'hyperthyroid', 'levothyroxine', 'goiter',
+            'cold intolerance', 'unexplained weight gain', 'sluggish metabolism', 't3', 't4', 'endocrine'
+        ],
+        'q1_text': "To evaluate your thyroid metabolism safely, how long have you noticed fatigue, temperature sensitivity, or weight changes?",
+        'q1_chips': ["🔴 Extreme exhaustion / Rapid weight change", "🟡 Chronic fatigue / Cold sensitivity", "🟢 Mild sluggishness / Routine check", "🧪 High/Low TSH lab report"],
+        'q2_text': "Are you experiencing severe cold intolerance, persistent hoarseness, constipation, swelling in front of the neck, or dry coarse skin?",
+        'q2_chips': ["Yes, cold intolerance and neck swelling", "No, none of those", "Mainly persistent fatigue", "I have thyroid lab numbers ready"],
+        'emergency_advice': (
+            "🚨 **CRITICAL FIRST-AID — MYXEDEMA / THYROID CRISIS ALERT:**\n"
+            "- Severe hypothermia, profound lethargy, confusion, or labored breathing requires immediate emergency medical evaluation (112 / 911 / 108) to rule out myxedema coma."
+        ),
+        'immediate_care': (
+            "✅ **Immediate Action — How to Handle This Right Now:**\n"
+            "1. **Do Not Self-Medicate:** Never start or alter levothyroxine dosages without laboratory confirmation.\n"
+            "2. **Adequate Micronutrient Nutrition:** Ensure adequate dietary selenium, zinc, and iodized salt; avoid excessive raw goitrogens (uncooked cabbage/kale).\n"
+            "3. **Order Complete Thyroid Panel:** Test serum TSH, Free T4 (FT4), and Total T3.\n"
+            "4. **Run MediNova Thyroid Screening:** Analyze your complete endocrine panel with MediNova's calibrated AI suite."
+        )
+    },
+    'arrhythmia': {
+        'name': 'Cardiac Arrhythmia & 12-Lead ECG Analysis',
+        'route': '/arrhythmia',
+        'action_label': '📈 Open Arrhythmia ECG Analysis',
+        'insight_key': 'arrhythmia',
+        'keywords': [
+            'arrhythmia', 'ecg', 'ekg', 'irregular heartbeat', 'fluttering heart', 'skipped beats',
+            'racing pulse', 'tachycardia', 'bradycardia', 'atrial fibrillation', 'afib', 'heart flutter'
+        ],
+        'q1_text': "To assess your cardiac rhythm safely, how does the irregular heartbeat feel and did it begin suddenly?",
+        'q1_chips': ["🔴 Rapid fluttering (>120 bpm) / Sudden", "🟡 Frequent skipped beats / Past days", "🟢 Occasional extra beat / At rest", "📈 Have an ECG tracing / Smartwatch PDF"],
+        'q2_text': "Are you having lightheadedness, sudden dizziness, chest discomfort, near-fainting, or shortness of breath with the fluttering?",
+        'q2_chips': ["Yes, dizzy and lightheaded", "No, just noticeable palpitations", "Fluttering happens after caffeine", "I already have digital ECG data"],
+        'emergency_advice': (
+            "🚨 **CRITICAL FIRST-AID — CARDIAC ARREST / TACHYARRHYTHMIA ALERT:**\n"
+            "- Rapid irregular heartbeats accompanied by sudden dizziness, fainting (syncope), or crushing chest pain require immediate emergency dispatch (112 / 911 / 108).\n"
+            "- Sit or lie down immediately in a safe, cool place to prevent fall injury."
+        ),
+        'immediate_care': (
+            "✅ **Immediate Action — How to Handle This Right Now:**\n"
+            "1. **Sit & Rest Immediately:** Sit upright or recline comfortably. Take steady, calm deep breaths.\n"
+            "2. **Eliminate Arrhythmia Triggers:** Stop all caffeine, nicotine, energy drinks, and decongestant cold medications.\n"
+            "3. **Vagal Maneuver (If Doctor-Approved):** A calm bear-down (Valsalva) or splashing cool water on the face can slow supraventricular rates.\n"
+            "4. **Digital Biosignal Analysis:** Upload your 12-lead ECG lead II tracing (.csv, .txt, .dat) to MediNova's digital signal processing engine."
+        )
     }
 }
 
 def detect_clinical_domain(message):
     msg = (message or '').lower()
-    for domain_key in ['heart', 'diabetes', 'kidney', 'liver', 'breast_cancer', 'malaria', 'pneumonia', 'general']:
+    for domain_key in ['heart', 'diabetes', 'kidney', 'liver', 'breast_cancer', 'malaria', 'pneumonia', 'thyroid', 'arrhythmia', 'general']:
         domain_info = CLINICAL_DOMAINS[domain_key]
         if any(kw in msg for kw in domain_info['keywords']):
             return domain_key
@@ -3690,6 +3766,8 @@ def api_chat_reset():
         "quick_replies": [
             "🫀 Chest pain or high BP",
             "🩸 High blood sugar / Diabetes advice",
+            "🦋 Thyroid fatigue or metabolism check",
+            "📈 Heart flutter / ECG arrhythmia check",
             "🌡️ Fever, chills, or persistent cough",
             "🧪 Kidney or Liver symptom check",
             "📊 Explain my latest test result"
@@ -3697,8 +3775,10 @@ def api_chat_reset():
         "actions": [
             {"label": "🫀 Heart Screening", "url": "/heart"},
             {"label": "🩸 Diabetes Screening", "url": "/diabetes"},
+            {"label": "🦋 Thyroid Screening", "url": "/thyroid"},
+            {"label": "📈 ECG Arrhythmia", "url": "/arrhythmia"},
             {"label": "🩺 Kidney Screening", "url": "/kidney"},
-            {"label": "🔍 All 7 Diagnostic Suites", "url": "/features"}
+            {"label": "🔍 All 9 Diagnostic Suites", "url": "/features"}
         ]
     })
 

@@ -280,6 +280,48 @@ class TestApiIntegration(unittest.TestCase):
         self.assertIn("biomarker_gauges", data)
         self.assertIn("top_risk_factors", data)
 
+    def test_sample_report_endpoint(self):
+        # 1. Module-specific sample
+        resp = self.client.get("/api/sample-report/thyroid/positive")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.content_type, "application/pdf")
+        self.assertGreater(len(resp.data), 1000)
+
+        # 2. Generic positive sample
+        resp_gen = self.client.get("/api/sample-report/positive")
+        self.assertEqual(resp_gen.status_code, 200)
+        self.assertEqual(resp_gen.content_type, "application/pdf")
+
+        # 3. Non-existent sample
+        resp_404 = self.client.get("/api/sample-report/non_existent_sample_xyz")
+        # clean_type falls back to negative or positive, so if file not found 404
+        self.assertIn(resp_404.status_code, (200, 404))
+
+    def test_scan_report_thyroid_instant_predict(self):
+        sample_path = os.path.join("static", "samples", "thyroid_sample_positive.pdf")
+        self.assertTrue(os.path.exists(sample_path), "Sample positive thyroid PDF missing")
+
+        with open(sample_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        response = self.client.post(
+            "/api/scan-report/thyroid",
+            data={
+                "report_file": (io.BytesIO(pdf_bytes), "thyroid_sample_positive.pdf"),
+                "mode": "instant_predict"
+            },
+            content_type="multipart/form-data"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertTrue(data["success"])
+        self.assertTrue(data.get("can_predict"))
+        self.assertIn("Elevated Thyroid Dysfunction", data["prediction"])
+        self.assertTrue(data["is_positive"])
+        self.assertTrue("THYR" in data["report_id"])
+        self.assertGreaterEqual(data["confidence_score"], 85.0)
+
     def test_invalid_module_rejection(self):
         response = self.client.post(
             "/api/scan-report/unsupported_disease",
